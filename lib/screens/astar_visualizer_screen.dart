@@ -1,14 +1,15 @@
+import 'dart:ui';
 import 'package:ai_algo_app/core/problem_definition.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
+import '../core/app_theme.dart';
 import '../core/grid_problem.dart';
 import '../core/search_algorithms.dart';
 import '../services/algorithm_executor.dart';
-// removed unused import
 import '../widgets/algorithm_recommendation_card.dart';
-import '../widgets/animated_number_display.dart';
 import '../models/grid_node.dart';
 import '../state/grid_controller.dart';
+import '../widgets/visualizer_widgets.dart';
 
 class AStarVisualizerScreen extends StatefulWidget {
   const AStarVisualizerScreen({super.key});
@@ -32,15 +33,12 @@ class _AStarVisualizerScreenState extends State<AStarVisualizerScreen> {
   double _executionSpeed = 1.0;
   String _statusMessage = 'Ready to solve';
 
-  final Color backgroundColor = const Color(0xFF07131F);
-  final Color cardColor = const Color(0xFF0E2233);
-  final Color accentColor = const Color(0xFFFFA500);
-  final Color exploredColor = const Color(0xFF2196F3);
-  final Color pathColor = const Color(0xFF4CAF50);
+  static const Color exploredColor = AppTheme.cellExplored;
+  static const Color pathColor = AppTheme.cellPath;
 
   Duration get _stepDelay {
-    final milliseconds = (180 / _executionSpeed).round().clamp(10, 1800);
-    return Duration(milliseconds: milliseconds);
+    final ms = (180 / _executionSpeed).round().clamp(10, 1800);
+    return Duration(milliseconds: ms);
   }
 
   @override
@@ -66,7 +64,6 @@ class _AStarVisualizerScreenState extends State<AStarVisualizerScreen> {
 
   Future<void> _solvePuzzle() async {
     if (_isSolving) return;
-
     _initializeProblem();
 
     setState(() {
@@ -76,7 +73,7 @@ class _AStarVisualizerScreenState extends State<AStarVisualizerScreen> {
       _path = [];
       _stepCount = 0;
       _nodesExplored = 0;
-      _statusMessage = 'Starting A* search...';
+      _statusMessage = 'Starting A* search…';
     });
 
     _executor = AlgorithmExecutor<GridCoordinate>(
@@ -86,12 +83,10 @@ class _AStarVisualizerScreenState extends State<AStarVisualizerScreen> {
 
     try {
       await _executor!.start();
-
       await _stepSubscription?.cancel();
       _stepSubscription = _executor!.stepStream.listen(
         (step) {
           if (!mounted) return;
-
           setState(() {
             _explored = step.explored;
             _path = step.path;
@@ -113,17 +108,13 @@ class _AStarVisualizerScreenState extends State<AStarVisualizerScreen> {
               _isSolving = false;
               _statusMessage = 'Error: $error';
             });
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('Error: $error')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error: $error')),
+            );
           }
         },
         onDone: () {
-          if (mounted) {
-            setState(() {
-              _isSolving = false;
-            });
-          }
+          if (mounted) setState(() => _isSolving = false);
         },
       );
     } catch (e) {
@@ -159,9 +150,7 @@ class _AStarVisualizerScreenState extends State<AStarVisualizerScreen> {
   }
 
   void _reset() {
-    if (_isSolving) {
-      _executor?.stop();
-    }
+    if (_isSolving) _executor?.stop();
     _stepSubscription?.cancel();
     _stepSubscription = null;
     _executor = null;
@@ -181,20 +170,9 @@ class _AStarVisualizerScreenState extends State<AStarVisualizerScreen> {
     _reset();
   }
 
-  Future<void> _autoSolve() async {
-    // Run through entire solve without manual step control
-    if (_isSolving) return;
-
-    _solvePuzzle();
-    // Continue automatically - the stream listener will handle updates
-    // Auto mode just means never pausing the executor
-  }
-
   @override
   void dispose() {
-    if (_isSolving) {
-      _executor?.stop();
-    }
+    if (_isSolving) _executor?.stop();
     _stepSubscription?.cancel();
     _executor?.dispose();
     _controller.dispose();
@@ -203,409 +181,177 @@ class _AStarVisualizerScreenState extends State<AStarVisualizerScreen> {
 
   Color _getCellColor(int row, int col) {
     final node = _controller.grid[row][col];
-
-    // Check if in path (solution) - highest priority
-    if (_path.any((coord) => coord.row == row && coord.column == col)) {
-      return pathColor;
-    }
-
-    // Check if explored
-    if (_explored.any((coord) => coord.row == row && coord.column == col)) {
+    if (_path.any((c) => c.row == row && c.column == col)) return pathColor;
+    if (_explored.any((c) => c.row == row && c.column == col)) {
       return exploredColor;
     }
-
-    // Map node type to color
-    if (node.type == NodeType.wall) {
-      return const Color(0xFF1a3a3a);
-    } else if (node.type == NodeType.start) {
-      return Colors.amber.withOpacity(0.6);
-    } else if (node.type == NodeType.goal) {
-      return Colors.red.withOpacity(0.6);
-    }
-
-    return cardColor;
+    if (node.type == NodeType.wall) return AppTheme.cellWall;
+    if (node.type == NodeType.start) return AppTheme.cellStart;
+    if (node.type == NodeType.goal) return AppTheme.cellGoal;
+    return AppTheme.surfaceLow;
   }
 
   bool _isCurrentNode(int row, int col) {
     if (_explored.isEmpty) return false;
-    final lastExplored = _explored.last;
-    return lastExplored.row == row && lastExplored.column == col;
+    final last = _explored.last;
+    return last.row == row && last.column == col;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF08111B), Color(0xFF0B1D2C), Color(0xFF07131F)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.arrow_back),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'A* Visualizer',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            'Heuristic Pathfinding',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[400],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+      backgroundColor: AppTheme.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Header ──────────────────────────────────────────────────
+              const VisualizerHeader(
+                title: 'A* Search',
+                subtitle: 'PATHFINDING VISUALIZER',
+              ),
+              const SizedBox(height: 20),
+
+              // ── Stats ────────────────────────────────────────────────────
+              Row(
+                children: [
+                  Expanded(
+                    child: GlassStatCard(label: 'STEPS', value: _stepCount),
                   ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GlassStatCard(
+                        label: 'EXPLORED', value: _nodesExplored),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GlassStatCard(
+                        label: 'PATH LEN', value: _path.length),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // ── Status ───────────────────────────────────────────────────
+              Center(
+                child: StatusBanner(
+                  message: _statusMessage,
+                  isSolved: _isSolved,
+                  isSolving: _isSolving,
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // ── Legend ───────────────────────────────────────────────────
+              const GridLegend(
+                exploredColor: exploredColor,
+                pathColor: pathColor,
+              ),
+              const SizedBox(height: 14),
+
+              // ── AI Recommendation ────────────────────────────────────────
+              if ((_problem.grid.length * _problem.grid.first.length) > 50 &&
+                  _problem.obstacleDensity < 0.1)
+                AlgorithmRecommendationCard(
+                  problem: _problem,
+                  onUseRecommended: _solvePuzzle,
+                  accentColor: AppTheme.accent,
+                  cardColor: AppTheme.surface,
                 ),
 
-                // AI Recommendation Card
-                (_problem.grid.length * _problem.grid.first.length) > 50 && _problem.obstacleDensity < 0.1
-                    ? AlgorithmRecommendationCard(
-                        problem: _problem,
-                        onUseRecommended: _solvePuzzle,
-                        accentColor: accentColor,
-                        cardColor: cardColor,
-                      )
-                    : const SizedBox.shrink(),
-
-                // Statistics
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildAnimatedStatCard('STEPS', _stepCount),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildAnimatedStatCard(
-                          'EXPLORED',
-                          _nodesExplored,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildAnimatedStatCard(
-                          'PATH LENGTH',
-                          _path.length,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Status Message
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+              // ── Grid ─────────────────────────────────────────────────────
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                   child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: accentColor.withOpacity(0.3)),
-                    ),
-                    child: Text(
-                      _statusMessage,
-                      style: TextStyle(
-                        color: _isSolved ? Colors.green[300] : Colors.grey[300],
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Legend
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: accentColor.withOpacity(0.2),
-                        width: 1,
-                      ),
-                    ),
-                    child: Wrap(
-                      spacing: 16,
-                      runSpacing: 12,
-                      children: [
-                        _buildLegendItem(Colors.amber, 'Start'),
-                        _buildLegendItem(Colors.red, 'Goal'),
-                        _buildLegendItem(Colors.grey, 'Wall'),
-                        _buildLegendItem(exploredColor, 'Explored'),
-                        _buildLegendItem(pathColor, 'Path'),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Grid Visualization
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: accentColor.withOpacity(0.4),
-                        width: 2,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                    decoration: AppTheme.glassCardAccent(radius: 16),
                     padding: const EdgeInsets.all(8),
                     child: GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate:
+                          SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: _controller.columns,
                         childAspectRatio: 1,
-                        crossAxisSpacing: 1,
-                        mainAxisSpacing: 1,
+                        crossAxisSpacing: 1.5,
+                        mainAxisSpacing: 1.5,
                       ),
                       itemCount: _controller.rows * _controller.columns,
                       itemBuilder: (context, index) {
                         final row = index ~/ _controller.columns;
                         final col = index % _controller.columns;
                         final isCurrent = _isCurrentNode(row, col);
+                        final cellColor = _getCellColor(row, col);
 
                         return AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeOut,
                           decoration: BoxDecoration(
-                            color: _getCellColor(row, col),
-                            border: Border.all(
-                              color: Colors.grey[800]!.withOpacity(0.5),
-                              width: 0.5,
-                            ),
+                            color: cellColor,
+                            borderRadius: BorderRadius.circular(2),
                             boxShadow: isCurrent
                                 ? [
                                     BoxShadow(
-                                      color: exploredColor.withOpacity(0.8),
-                                      blurRadius: 8,
+                                      color: exploredColor.withValues(alpha: 0.9),
+                                      blurRadius: 10,
                                       spreadRadius: 2,
                                     ),
                                   ]
-                                : null,
+                                : _path.any(
+                                        (c) => c.row == row && c.column == col)
+                                    ? [
+                                        BoxShadow(
+                                          color: pathColor.withValues(alpha: 0.5),
+                                          blurRadius: 6,
+                                          spreadRadius: 1,
+                                        ),
+                                      ]
+                                    : null,
                           ),
                         );
                       },
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+              ),
+              const SizedBox(height: 16),
 
-                // Speed Control
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Speed: ${_executionSpeed.toStringAsFixed(1)}x',
-                        style: TextStyle(color: Colors.grey[400], fontSize: 12),
-                      ),
-                      const SizedBox(height: 8),
-                      Slider(
-                        value: _executionSpeed,
-                        min: 0.1,
-                        max: 5.0,
-                        onChanged: _isSolving
-                            ? null
-                            : (value) {
-                                setState(() {
-                                  _executionSpeed = value;
-                                });
-                              },
-                        activeColor: accentColor,
-                      ),
-                    ],
+              // ── Speed ───────────────────────────────────────────────────
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    decoration: AppTheme.glassCard(radius: 12),
+                    child: SpeedControl(
+                      speed: _executionSpeed,
+                      isSolving: _isSolving,
+                      onChanged: (v) => setState(() => _executionSpeed = v),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 16),
+              ),
+              const SizedBox(height: 14),
 
-                // Control Buttons
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    alignment: WrapAlignment.center,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: _isSolving ? null : _solvePuzzle,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: accentColor,
-                          foregroundColor: Colors.black,
-                        ),
-                        icon: const Icon(Icons.play_arrow),
-                        label: const Text('Solve'),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: _isSolving ? null : _autoSolve,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                        ),
-                        icon: const Icon(Icons.fast_forward),
-                        label: const Text('Auto'),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: _stepCount > 0 ? _pauseResume : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                        ),
-                        icon: Icon(_isSolving ? Icons.pause : Icons.play_arrow),
-                        label: Text(_isSolving ? 'Pause' : 'Resume'),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: _stepCount > 0 ? _stepOnce : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.cyan,
-                          foregroundColor: Colors.black,
-                        ),
-                        icon: const Icon(Icons.skip_next),
-                        label: const Text('Step'),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: _reset,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[700],
-                          foregroundColor: Colors.white,
-                        ),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Reset'),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: _clearWalls,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red[700],
-                          foregroundColor: Colors.white,
-                        ),
-                        icon: const Icon(Icons.delete_outline),
-                        label: const Text('Clear'),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
-            ),
+              // ── Controls ─────────────────────────────────────────────────
+              VisualizerControls(
+                isSolving: _isSolving,
+                isSolved: _isSolved,
+                stepCount: _stepCount,
+                onSolve: _solvePuzzle,
+                onPauseResume: _pauseResume,
+                onStep: _stepOnce,
+                onReset: _reset,
+                onClear: _clearWalls,
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildStatCard(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: accentColor.withOpacity(0.2)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[400],
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnimatedStatCard(String label, int value) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: accentColor.withOpacity(0.2)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[400],
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: 4),
-          AnimatedNumberDisplay(
-            value: value,
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.easeOutCubic,
-            textStyle: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLegendItem(Color color, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[300])),
-      ],
     );
   }
 }

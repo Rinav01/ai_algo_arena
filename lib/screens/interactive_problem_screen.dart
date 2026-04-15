@@ -97,7 +97,7 @@ class _InteractiveProblemScreenState extends State<InteractiveProblemScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: difficultyColor.withOpacity(0.15),
+                          color: difficultyColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: difficultyColor),
                         ),
@@ -118,7 +118,7 @@ class _InteractiveProblemScreenState extends State<InteractiveProblemScreen> {
                           color: const Color(0xFF0E2233),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.06),
+                            color: Colors.white.withValues(alpha: 0.06),
                           ),
                         ),
                         child: Column(
@@ -133,10 +133,10 @@ class _InteractiveProblemScreenState extends State<InteractiveProblemScreen> {
                               width: double.infinity,
                               height: 300,
                               decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.3),
+                                color: Colors.black.withValues(alpha: 0.3),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: Colors.white.withValues(alpha: 0.1),
                                 ),
                               ),
                               child: Center(

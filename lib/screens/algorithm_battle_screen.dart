@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../core/app_theme.dart';
 import '../core/grid_problem.dart';
 import '../core/problem_definition.dart';
 import '../core/search_algorithms.dart';
@@ -10,6 +12,7 @@ import '../services/algorithm_executor.dart';
 import '../services/battle_analyzer.dart';
 import '../state/grid_controller.dart';
 import '../widgets/battle_results_panel.dart';
+import '../widgets/visualizer_widgets.dart';
 
 class AlgorithmBattleScreen extends StatefulWidget {
   const AlgorithmBattleScreen({super.key});
@@ -206,197 +209,122 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF08111B), Color(0xFF0B1D2C), Color(0xFF07131F)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: SafeArea(
+      backgroundColor: AppTheme.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.arrow_back),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Algorithm Battle',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFA500),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        'LIVE DUEL',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              // Header
+              VisualizerHeader(
+                title: 'Algorithm Battle',
+                subtitle: 'HEAD-TO-HEAD VIZ',
+                onBackTap: () => Navigator.pop(context),
               ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildAlgoInfo(
-                              'BREADTH-FIRST SEARCH',
-                              _bfsStep,
-                              Colors.amber,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildAlgoInfo(
-                              'DEPTH-FIRST SEARCH',
-                              _dfsStep,
-                              Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      BattleResultsPanel(
-                        algorithmAMetrics: _bfsMetrics,
-                        algorithmBMetrics: _dfsMetrics,
-                        algorithmAName: 'BFS',
-                        algorithmBName: 'DFS',
-                        isLoading: _isRunning,
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: const Color(0xFFD4A574),
-                            width: 2,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        padding: const EdgeInsets.all(8),
-                        child: AnimatedBuilder(
-                          animation: _controller,
-                          builder: (context, _) {
-                            return _buildBattleGrid();
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0E2233),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.06),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            _buildStatItem(
-                              'BFS EXPLORED',
-                              '${_bfsStep?.explored.length ?? 0}',
-                            ),
-                            _buildStatItem(
-                              'DFS EXPLORED',
-                              '${_dfsStep?.explored.length ?? 0}',
-                            ),
-                            _buildStatItem(
-                              'STATUS',
-                              _isRunning ? 'Running' : 'Idle',
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
+              const SizedBox(height: 20),
+              
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildAlgoInfo(
+                      'BFS (P1)',
+                      _bfsStep,
+                      AppTheme.warning,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildAlgoInfo(
+                      'DFS (P2)',
+                      _dfsStep,
+                      AppTheme.error,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              BattleResultsPanel(
+                algorithmAMetrics: _bfsMetrics,
+                algorithmBMetrics: _dfsMetrics,
+                algorithmAName: 'BFS',
+                algorithmBName: 'DFS',
+                isLoading: _isRunning,
+              ),
+              const SizedBox(height: 16),
+              
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                  child: Container(
+                    decoration: AppTheme.glassCardAccent(radius: 16),
+                    padding: const EdgeInsets.all(8),
+                    child: AnimatedBuilder(
+                      animation: _controller,
+                      builder: (context, _) => _buildBattleGrid(),
+                    ),
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildControlButton(
-                          icon: Icons.replay,
-                          onTap: _randomizeMaze,
-                        ),
-                        const SizedBox(width: 16),
-                        SizedBox(
-                          width: 200,
-                          child: ElevatedButton(
-                            onPressed: _isRunning ? null : _runBattle,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFFA500),
-                              foregroundColor: Colors.black,
-                              disabledBackgroundColor: Colors.grey[600],
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+              const SizedBox(height: 16),
+              
+              Row(
+                children: [
+                  Expanded(
+                    child: GlassStatCard(label: 'BFS EXPLORED', value: _bfsStep?.explored.length ?? 0),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GlassStatCard(label: 'DFS EXPLORED', value: _dfsStep?.explored.length ?? 0),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GlassStatCard(label: 'STATUS', value: _isRunning ? 'RUNNING' : 'IDLE'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildControlButton(
+                    icon: Icons.replay_rounded,
+                    onTap: _randomizeMaze,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: _isRunning ? null : _runBattle,
+                      child: Container(
+                        height: 56,
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.ctaGradient,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.accent.withValues(alpha: 0.3),
+                              blurRadius: 16,
+                              spreadRadius: -4,
                             ),
-                            child: Text(
-                              _isRunning ? 'BATTLING...' : 'START BATTLE',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            _isRunning ? 'BATTLING...' : 'START BATTLE',
+                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: Colors.white,
+                              letterSpacing: 1.5,
+                              fontSize: 15,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        _buildControlButton(
-                          icon: Icons.skip_next,
-                          onTap: () {},
-                        ),
-                      ],
+                      ),
                     ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildModeButton('Maze Type', onTap: () {}),
-                        _buildModeButton(
-                          'Delay: 5ms',
-                          isActive: true,
-                          onTap: () {},
-                        ),
-                        _buildModeButton('Randomize', onTap: _randomizeMaze),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -413,34 +341,41 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.5), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            name,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: color,
-              letterSpacing: 1,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 8, height: 8,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                name,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: color,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           if (step != null)
             Text(
               'Frontier: [${step.explored.take(3).map((e) => '${e.row},${e.column}').join(', ')}...]',
-              style: const TextStyle(fontSize: 11),
+              style: Theme.of(context).textTheme.bodySmall,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             )
           else
             Text(
-              'Ready to battle',
-              style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+              'Awaiting start...',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
             ),
         ],
       ),
@@ -455,8 +390,8 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: _controller.columns,
         childAspectRatio: 1,
-        crossAxisSpacing: 1,
-        mainAxisSpacing: 1,
+        crossAxisSpacing: 1.5,
+        mainAxisSpacing: 1.5,
       ),
       itemCount: _controller.rows * _controller.columns,
       itemBuilder: (context, index) {
@@ -493,7 +428,7 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
         return Container(
           decoration: BoxDecoration(
             color: cellColor,
-            border: Border.all(color: Colors.grey[800]!, width: 0.5),
+            borderRadius: BorderRadius.circular(2),
           ),
         );
       },
@@ -506,38 +441,13 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
     bool isBfsExplored,
     bool isDfsExplored,
   ) {
-    if (node.type == NodeType.wall) return const Color(0xFF1A3A3A);
-    if (node.type == NodeType.start) return Colors.amber.withOpacity(0.5);
-    if (node.type == NodeType.goal) return Colors.red.withOpacity(0.5);
-    if (isPath) return Colors.green.withOpacity(0.6);
-    if (isBfsExplored) return Colors.amber.withOpacity(0.3);
-    if (isDfsExplored) return Colors.red.withOpacity(0.3);
-    return const Color(0xFF0E2233);
-  }
-
-  Widget _buildStatItem(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.grey[400],
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFFFFA500),
-          ),
-        ),
-      ],
-    );
+    if (node.type == NodeType.wall) return AppTheme.cellWall;
+    if (node.type == NodeType.start) return AppTheme.cellStart;
+    if (node.type == NodeType.goal) return AppTheme.cellGoal;
+    if (isPath) return AppTheme.success.withValues(alpha: 0.8);
+    if (isBfsExplored) return AppTheme.warning.withValues(alpha: 0.4);
+    if (isDfsExplored) return AppTheme.error.withValues(alpha: 0.4);
+    return AppTheme.surfaceLow;
   }
 
   Widget _buildControlButton({
@@ -547,43 +457,13 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(12),
+        width: 56, height: 56,
         decoration: BoxDecoration(
-          color: const Color(0xFF0E2233),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
+          color: AppTheme.surfaceHigh,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
         ),
-        child: Icon(icon, color: const Color(0xFFFFA500)),
-      ),
-    );
-  }
-
-  Widget _buildModeButton(
-    String label, {
-    bool isActive = false,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFFFFA500) : const Color(0xFF0E2233),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isActive
-                ? const Color(0xFFFFA500)
-                : Colors.white.withOpacity(0.06),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 11,
-            color: isActive ? Colors.black : Colors.white,
-          ),
-        ),
+        child: Icon(icon, color: AppTheme.accentLight, size: 28),
       ),
     );
   }

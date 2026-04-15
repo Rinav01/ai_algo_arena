@@ -59,7 +59,7 @@ class _AlgorithmTabsWidgetState extends State<AlgorithmTabsWidget> {
                     border: Border.all(
                       color: isSelected
                           ? const Color(0xFFFFA500)
-                          : Colors.white.withOpacity(0.1),
+                          : Colors.white.withValues(alpha: 0.1),
                     ),
                   ),
                   child: Row(

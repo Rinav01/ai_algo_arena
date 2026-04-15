@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
+import 'dart:ui';
+import '../core/app_theme.dart';
 import '../core/nqueens_problem.dart';
 import '../core/search_algorithms.dart';
 import '../services/algorithm_executor.dart';
 import '../core/problem_definition.dart';
+import '../widgets/visualizer_widgets.dart';
 
 class NQueensVisualizerScreen extends StatefulWidget {
-  const NQueensVisualizerScreen({Key? key}) : super(key: key);
+  const NQueensVisualizerScreen({super.key});
 
   @override
   State<NQueensVisualizerScreen> createState() =>
@@ -30,15 +33,7 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
   bool isSolved = false;
   String selectedAlgorithm = 'A*';
   int boardSize = 8;
-  double executionSpeed = 1.0;
-  QueensState? currentNode;
-
-  final Color backgroundColor = const Color(0xFF07131F);
-  final Color cardColor = const Color(0xFF0E2233);
-  final Color accentColor = const Color(0xFFFFA500);
-  final Color successColor = const Color(0xFF4CAF50);
-  final Color exploringColor = const Color(0xFF2196F3);
-  final Color conflictColor = const Color(0xFFFF5252);
+  double executionSpeed = 2.0;
 
   final List<String> algorithms = ['BFS', 'DFS', 'A*'];
 
@@ -76,7 +71,6 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
       currentPath = [problem.initialState];
       stepCount = 0;
       nodesExplored = 0;
-      currentNode = null;
       _animationController.forward();
     });
 
@@ -110,7 +104,6 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
             stepCount = step.stepCount;
             nodesExplored = step.explored.length;
             exploredStates = step.explored.map((s) => s.toString()).toSet();
-            currentNode = step.explored.isNotEmpty ? step.explored.last : null;
 
             if (step.path.isNotEmpty) {
               currentPath = step.path;
@@ -127,53 +120,36 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
         },
         onError: (error) {
           if (mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('Error: $error')));
-            setState(() {
-              isSolving = false;
-            });
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text('Error: $error')));
+            setState(() => isSolving = false);
           }
         },
         onDone: () {
           if (mounted) {
-            setState(() {
-              isSolving = false;
-            });
+            setState(() => isSolving = false);
           }
         },
       );
     } catch (e) {
       if (mounted) {
-        setState(() {
-          isSolving = false;
-        });
+        setState(() => isSolving = false);
       }
     }
-  }
-
-  Future<void> _autoSolve() async {
-    await _solvePuzzle();
   }
 
   void _pauseResume() {
     if (isSolving) {
       executor?.pause();
-      setState(() {
-        isSolving = false;
-      });
+      setState(() => isSolving = false);
     } else if (stepCount > 0) {
       executor?.resume();
-      setState(() {
-        isSolving = true;
-      });
+      setState(() => isSolving = true);
     }
   }
 
   void _reset() {
-    if (isSolving) {
-      executor?.stop();
-    }
+    if (isSolving) executor?.stop();
     _stepSubscription?.cancel();
     _stepSubscription = null;
     if (executor != null) {
@@ -188,7 +164,6 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
       isSolved = false;
       stepCount = 0;
       nodesExplored = 0;
-      currentNode = null;
     });
   }
 
@@ -220,7 +195,6 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
           stepCount = step.stepCount;
           nodesExplored = step.explored.length;
           exploredStates = step.explored.map((s) => s.toString()).toSet();
-          currentNode = step.explored.isNotEmpty ? step.explored.last : null;
 
           if (step.path.isNotEmpty) {
             currentPath = step.path;
@@ -249,8 +223,6 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
         newPlacement[row] = -1; // remove
       } else {
         newPlacement[row] = col; // place
-        
-        // Vibrate if the placement violates safe rules
         if (!problem.isSafe(QueensState(placement: newPlacement, n: boardSize), row, col)) {
           HapticFeedback.heavyImpact();
         }
@@ -270,40 +242,47 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
   void _showAISolveMenu() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: cardColor,
+      backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'AI Solver Panel',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+            return ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: Container(
+                  padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceVariant.withValues(alpha: 0.8),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40, height: 4,
+                          margin: const EdgeInsets.only(bottom: 20),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildAlgorithmSelectorModal(setModalState),
-                    const SizedBox(height: 16),
-                    _buildSpeedControlModal(setModalState),
-                    const SizedBox(height: 16),
-                    _buildStatisticsModal(),
-                    const SizedBox(height: 16),
-                    _buildControlButtonsModal(setModalState),
-                  ],
+                      Text(
+                        'AI Solver Config',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildAlgorithmSelectorModal(setModalState),
+                      const SizedBox(height: 20),
+                      _buildSpeedControlModal(setModalState),
+                      const SizedBox(height: 24),
+                      _buildControlButtonsModal(setModalState),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -318,32 +297,40 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Select Algorithm',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.white),
+          'ALGORITHM',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: algorithms.map((algo) {
               final isSelected = selectedAlgorithm == algo;
               return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text(algo),
-                  selected: isSelected,
-                  onSelected: (selected) {
+                padding: const EdgeInsets.only(right: 12),
+                child: GestureDetector(
+                  onTap: () {
                     if (!isSolving) {
-                      setState(() {
-                        selectedAlgorithm = algo;
-                      });
+                      setState(() => selectedAlgorithm = algo);
                       setModalState(() {});
                     }
                   },
-                  backgroundColor: Colors.grey[800],
-                  selectedColor: accentColor,
-                  labelStyle: TextStyle(
-                    color: isSelected ? Colors.black : Colors.white,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppTheme.accent.withValues(alpha: 0.15) : AppTheme.surfaceHigh,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isSelected ? AppTheme.accent : Colors.white.withValues(alpha: 0.05),
+                      ),
+                    ),
+                    child: Text(
+                      algo,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: isSelected ? AppTheme.accentLight : AppTheme.textMuted,
+                      ),
+                    ),
                   ),
                 ),
               );
@@ -358,100 +345,60 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Execution Speed: ${executionSpeed.toStringAsFixed(1)}x',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.white),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'EXECUTION SPEED',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
+            ),
+            Text(
+              '${executionSpeed.toStringAsFixed(1)}x',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.accentLight),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
-        Slider(
-          value: executionSpeed,
-          min: 0.1,
-          max: 5.0,
-          onChanged: isSolving
-              ? null
-              : (value) {
-                  setState(() {
-                    executionSpeed = value;
-                  });
-                  setModalState(() {});
-                },
-          activeColor: accentColor,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatisticsModal() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildStatCard('Steps', '$stepCount'),
-        _buildStatCard('Explored', '$nodesExplored'),
-        _buildStatCard(
-          'Status',
-          isSolved ? 'Solved!' : isSolving ? 'Solving...' : 'Idle',
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: AppTheme.accent,
+            inactiveTrackColor: AppTheme.surfaceHighest,
+            thumbColor: Colors.white,
+            overlayColor: AppTheme.accent.withValues(alpha: 0.2),
+          ),
+          child: Slider(
+            value: executionSpeed,
+            min: 0.1,
+            max: 5.0,
+            onChanged: isSolving
+                ? null
+                : (value) {
+                    setState(() => executionSpeed = value);
+                    setModalState(() {});
+                  },
+          ),
         ),
       ],
     );
   }
 
   Widget _buildControlButtonsModal(StateSetter setModalState) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      alignment: WrapAlignment.center,
+    return Row(
       children: [
-        ElevatedButton.icon(
-          onPressed: isSolving
-              ? null
-              : () {
-                  _solvePuzzle().then((_) => setModalState(() {}));
-                },
-          icon: const Icon(Icons.play_arrow),
-          label: const Text('Solve'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: accentColor,
-            foregroundColor: Colors.black,
-          ),
-        ),
-        ElevatedButton.icon(
-          onPressed: stepCount > 0
-              ? () {
-                  _pauseResume();
-                  setModalState(() {});
-                }
-              : null,
-          icon: Icon(isSolving ? Icons.pause : Icons.play_arrow),
-          label: Text(isSolving ? 'Pause' : 'Resume'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
-          ),
-        ),
-        ElevatedButton.icon(
-          onPressed: stepCount > 0
-              ? () {
-                  _stepOnce();
-                  setModalState(() {});
-                }
-              : null,
-          icon: const Icon(Icons.skip_next),
-          label: const Text('Step'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.cyan,
-            foregroundColor: Colors.black,
-          ),
-        ),
-        ElevatedButton.icon(
-          onPressed: () {
-            _reset();
-            setModalState(() {});
-          },
-          icon: const Icon(Icons.refresh),
-          label: const Text('Reset'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.grey[700],
-            foregroundColor: Colors.white,
+        Expanded(
+          child: ElevatedButton(
+            onPressed: isSolving
+                ? null
+                : () {
+                    _solvePuzzle().then((_) => setModalState(() {}));
+                  },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('AUTO SOLVE', style: TextStyle(letterSpacing: 1.5, fontWeight: FontWeight.bold)),
           ),
         ),
       ],
@@ -460,266 +407,171 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
 
   @override
   void dispose() {
-    if (isSolving) {
-      executor?.stop();
-    }
+    if (isSolving) executor?.stop();
     _stepSubscription?.cancel();
     executor?.dispose();
     _animationController.dispose();
     super.dispose();
   }
 
-  Color _getSquareColor(int row, int col) {
-    final hasQueen =
-        currentState.placement.length > row &&
-        currentState.placement[row] == col;
-
-    if (hasQueen) {
-      if (!problem.isSafe(currentState, row, col)) {
-        return Colors.red.withOpacity(0.8);
-      }
-      return successColor.withOpacity(0.8);
-    }
-
-    // Checkerboard pattern
-    if ((row + col) % 2 == 0) {
-      return Colors.white24;
-    }
-    return Colors.black26;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        backgroundColor: cardColor,
-        title: const Text('N-Queens Visualizer'),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Reset Board',
-            onPressed: isSolving ? null : _reset,
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
+      backgroundColor: AppTheme.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Notice for manual play
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: exploringColor.withOpacity(0.1),
-                  border: Border.all(color: exploringColor),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  'Tap on grid squares to place or remove queens manually, or use the AI Solver.',
-                  style: TextStyle(color: Colors.white, fontSize: 13),
-                  textAlign: TextAlign.center,
-                ),
+              VisualizerHeader(
+                title: 'N-Queens',
+                subtitle: 'CONSTRAINT VIZ',
+                onBackTap: () => Navigator.pop(context),
               ),
-              const SizedBox(height: 16),
-              // Board Size Selector
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Board Size: $boardSize',
-                      style: TextStyle(color: Colors.grey[400], fontSize: 12),
-                    ),
-                    const SizedBox(height: 8),
-                    Slider(
-                      value: boardSize.toDouble(),
-                      min: 4,
-                      max: 10,
-                      divisions: 6,
-                      onChanged: isSolving
-                          ? null
-                          : (value) {
-                              setState(() {
-                                boardSize = value.toInt();
-                                _initializeProblem();
-                              });
-                            },
-                      activeColor: accentColor,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              // Chessboard
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: accentColor.withOpacity(0.3)),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      'Current State',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.labelSmall?.copyWith(color: Colors.grey[400]),
+              Row(
+                children: [
+                  Expanded(child: GlassStatCard(label: 'STEPS', value: stepCount)),
+                  const SizedBox(width: 10),
+                  Expanded(child: GlassStatCard(label: 'EXPLORED', value: nodesExplored)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GlassStatCard(
+                      label: 'PLACED', 
+                      value: currentState.placement.where((p) => p != -1).length,
                     ),
-                    const SizedBox(height: 12),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: boardSize,
-                        childAspectRatio: 1,
-                        mainAxisSpacing: 1,
-                        crossAxisSpacing: 1,
-                      ),
-                      itemCount: boardSize * boardSize,
-                      itemBuilder: (context, index) {
-                        final row = index ~/ boardSize;
-                        final col = index % boardSize;
-
-                        return GestureDetector(
-                          onTap: () => _handleSquareTap(row, col),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            decoration: BoxDecoration(
-                              color: _getSquareColor(row, col),
-                              border: Border.all(
-                                color: Colors.grey[800]!.withOpacity(0.5),
-                                width: 0.5,
-                              ),
-                            ),
-                            child: Center(child: _buildSquareContent(row, col)),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Queens Placed: ${currentState.placement.where((p) => p != -1).length}/$boardSize',
-                      style: TextStyle(
-                        color: successColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-
-              if (isSolved)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: successColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: successColor, width: 2),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.check_circle, color: successColor),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Solution Found!',
-                            style: TextStyle(
-                              color: successColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Steps: $stepCount | Nodes Explored: $nodesExplored',
-                        style: TextStyle(color: Colors.grey[300], fontSize: 12),
-                      ),
-                    ],
-                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              Center(
+                child: StatusBanner(
+                  message: isSolved ? 'Solution Found!' : isSolving ? 'Searching...' : 'Ready',
+                  isSolved: isSolved,
+                  isSolving: isSolving,
                 ),
+              ),
+              const SizedBox(height: 20),
+
+              _buildPuzzleVisualization(),
+              const SizedBox(height: 24),
+
+              VisualizerControls(
+                isSolving: isSolving,
+                isSolved: isSolved,
+                stepCount: stepCount,
+                onSolve: _showAISolveMenu,
+                onPauseResume: _pauseResume,
+                onStep: _stepOnce,
+                onReset: _reset,
+                onClear: _reset,
+              ),
             ],
           ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAISolveMenu,
-        backgroundColor: accentColor,
-        icon: const Icon(Icons.smart_toy, color: Colors.black),
-        label: const Text(
-          'AI Solve',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
     );
   }
 
-  Widget _buildSquareContent(int row, int col) {
-    final hasQueen =
-        currentState.placement.length > row &&
-        currentState.placement[row] == col;
-
-    if (hasQueen) {
-      return Text(
-        '♕',
-        style: TextStyle(
-          fontSize: 32,
-          color: successColor,
-          shadows: [
-            Shadow(color: successColor.withOpacity(0.5), blurRadius: 8),
+  Widget _buildPuzzleVisualization() {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'BOARD SIZE: $boardSize',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
+            ),
+            Expanded(
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  activeTrackColor: AppTheme.accent,
+                  inactiveTrackColor: AppTheme.surfaceHighest,
+                  thumbColor: Colors.white,
+                  overlayColor: AppTheme.accent.withValues(alpha: 0.2),
+                ),
+                child: Slider(
+                  value: boardSize.toDouble(),
+                  min: 4,
+                  max: 10,
+                  divisions: 6,
+                  onChanged: isSolving
+                      ? null
+                      : (value) {
+                          setState(() {
+                            boardSize = value.toInt();
+                            _initializeProblem();
+                          });
+                        },
+                ),
+              ),
+            ),
           ],
         ),
-      );
-    }
+        const SizedBox(height: 16),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: AppTheme.glassCardAccent(radius: 16),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: boardSize,
+                  childAspectRatio: 1,
+                  mainAxisSpacing: 1,
+                  crossAxisSpacing: 1,
+                ),
+                itemCount: boardSize * boardSize,
+                itemBuilder: (context, index) {
+                  final row = index ~/ boardSize;
+                  final col = index % boardSize;
 
-    return const SizedBox.shrink();
-  }
+                  final hasQueen = currentState.placement.length > row && currentState.placement[row] == col;
+                  Color squareColor;
+                  
+                  if (hasQueen) {
+                    if (!problem.isSafe(currentState, row, col)) {
+                      squareColor = AppTheme.error.withValues(alpha: 0.8);
+                    } else {
+                      squareColor = AppTheme.success.withValues(alpha: 0.8);
+                    }
+                  } else {
+                    squareColor = ((row + col) % 2 == 0) ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.2);
+                  }
 
-  Widget _buildStatCard(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: accentColor.withOpacity(0.2)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[400],
+                  return GestureDetector(
+                    onTap: () => _handleSquareTap(row, col),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      decoration: BoxDecoration(
+                        color: squareColor,
+                        borderRadius: BorderRadius.circular(2),
+                        border: Border.all(
+                          color: AppTheme.surfaceHigh,
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Center(
+                        child: hasQueen 
+                          ? Text('♕', style: TextStyle(fontSize: 32, color: Colors.white, shadows: [Shadow(color: Colors.white.withValues(alpha: 0.5), blurRadius: 8)]))
+                          : null,
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

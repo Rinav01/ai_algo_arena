@@ -6,6 +6,8 @@ import '../core/grid_problem.dart';
 import '../core/search_algorithms.dart';
 import '../services/algorithm_executor.dart';
 import '../core/problem_definition.dart';
+import '../core/app_theme.dart';
+import '../widgets/visualizer_widgets.dart';
 
 class MazeEditorScreen extends StatefulWidget {
   const MazeEditorScreen({super.key});
@@ -33,16 +35,9 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF08111B), Color(0xFF0B1D2C), Color(0xFF07131F)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
+      backgroundColor: AppTheme.background,
+      body: SafeArea(
+        child: Column(
             children: [
               // Header
               Padding(
@@ -139,7 +134,6 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
             ],
           ),
         ),
-      ),
     );
   }
 
@@ -211,9 +205,9 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
       case NodeType.wall:
         return const Color(0xFF1a3a3a);
       case NodeType.start:
-        return Colors.amber.withOpacity(0.3);
+        return Colors.amber.withValues(alpha: 0.3);
       case NodeType.goal:
-        return Colors.red.withOpacity(0.3);
+        return Colors.red.withValues(alpha: 0.3);
       case NodeType.empty:
         return const Color(0xFF0E2233);
     }
@@ -284,7 +278,7 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
           border: Border.all(
             color: isSelected
                 ? const Color(0xFFFFA500)
-                : Colors.white.withOpacity(0.06),
+                : Colors.white.withValues(alpha: 0.06),
           ),
         ),
         child: Column(
@@ -764,21 +758,21 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
 
     // Check if in path (solution)
     if (path.any((coord) => coord.row == row && coord.column == col)) {
-      return pathColor.withOpacity(0.8);
+      return pathColor.withValues(alpha: 0.8);
     }
 
     // Check if explored
     if (explored.any((coord) => coord.row == row && coord.column == col)) {
-      return exploredColor.withOpacity(0.6);
+      return exploredColor.withValues(alpha: 0.6);
     }
 
     // Map node type to color
     if (node.type == NodeType.wall) {
       return const Color(0xFF1a3a3a);
     } else if (node.type == NodeType.start) {
-      return Colors.amber.withOpacity(0.6);
+      return Colors.amber.withValues(alpha: 0.6);
     } else if (node.type == NodeType.goal) {
-      return Colors.red.withOpacity(0.6);
+      return Colors.red.withValues(alpha: 0.6);
     }
 
     return cardColor;
@@ -818,7 +812,7 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
                 decoration: BoxDecoration(
                   color: cardColor,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: accentColor.withOpacity(0.3)),
+                  border: Border.all(color: accentColor.withValues(alpha: 0.3)),
                 ),
                 child: SingleChildScrollView(
                   child: GridView.builder(
@@ -844,7 +838,7 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
                           decoration: BoxDecoration(
                             color: _getCellColor(row, col),
                             border: Border.all(
-                              color: Colors.grey[800]!.withOpacity(0.5),
+                              color: Colors.grey[800]!.withValues(alpha: 0.5),
                               width: 0.5,
                             ),
                           ),
@@ -860,7 +854,7 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: exploredColor.withOpacity(0.1),
+                  color: exploredColor.withValues(alpha: 0.1),
                   border: Border.all(color: exploredColor),
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -876,7 +870,7 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: pathColor.withOpacity(0.15),
+                    color: pathColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: pathColor, width: 2),
                   ),
@@ -918,7 +912,7 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: accentColor.withOpacity(0.2)),
+        border: Border.all(color: accentColor.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [

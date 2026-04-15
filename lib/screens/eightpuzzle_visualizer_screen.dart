@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:ui';
+import '../core/app_theme.dart';
 import '../core/eightpuzzle_problem.dart';
 import '../core/search_algorithms.dart';
 import '../services/algorithm_executor.dart';
 import '../core/problem_definition.dart';
+import '../widgets/visualizer_widgets.dart';
 
 class EightPuzzleVisualizerScreen extends StatefulWidget {
-  const EightPuzzleVisualizerScreen({Key? key}) : super(key: key);
+  const EightPuzzleVisualizerScreen({super.key});
 
   @override
   State<EightPuzzleVisualizerScreen> createState() =>
@@ -20,12 +23,6 @@ class _EightPuzzleVisualizerScreenState
   AlgorithmExecutor<PuzzleState>? executor;
   StreamSubscription<AlgorithmStep<PuzzleState>>? _stepSubscription;
 
-  final Color backgroundColor = const Color(0xFF07131F);
-  final Color cardColor = const Color(0xFF0E2233);
-  final Color accentColor = const Color(0xFFFFA500);
-  final Color successColor = const Color(0xFF4CAF50);
-  final Color exploringColor = const Color(0xFF2196F3);
-
   List<PuzzleState> currentPath = [];
   Set<String> exploredStates = {};
   int stepCount = 0;
@@ -33,7 +30,7 @@ class _EightPuzzleVisualizerScreenState
   bool isSolving = false;
   bool isSolved = false;
   String selectedAlgorithm = 'A*';
-  double executionSpeed = 1.0;
+  double executionSpeed = 2.0;
   String _statusMessage = 'Ready to solve';
 
   final List<String> algorithms = ['BFS', 'DFS', 'A*', 'Dijkstra'];
@@ -58,7 +55,7 @@ class _EightPuzzleVisualizerScreenState
       executor = null;
     }
     // Create slightly scrambled puzzle for testing
-    final scrambled = EightPuzzleProblem.scramble(5);
+    final scrambled = EightPuzzleProblem.scramble(12);
     problem = EightPuzzleProblem(initialState: scrambled);
     currentState = problem.initialState;
     currentPath = [currentState];
@@ -81,10 +78,9 @@ class _EightPuzzleVisualizerScreenState
       currentPath = [problem.initialState];
       stepCount = 0;
       nodesExplored = 0;
-      _statusMessage = 'Starting ${selectedAlgorithm}...';
+      _statusMessage = 'Starting $selectedAlgorithm...';
     });
 
-    // Create appropriate algorithm with step delay
     late SearchAlgorithm<PuzzleState> algorithm;
     switch (selectedAlgorithm) {
       case 'BFS':
@@ -101,7 +97,6 @@ class _EightPuzzleVisualizerScreenState
         break;
     }
 
-    // create executor
     executor = AlgorithmExecutor<PuzzleState>(
       algorithm: algorithm,
       problem: problem,
@@ -139,9 +134,8 @@ class _EightPuzzleVisualizerScreenState
         },
         onError: (error) {
           if (mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('Error: $error')));
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text('Error: $error')));
             setState(() {
               isSolving = false;
               _statusMessage = 'Error: $error';
@@ -150,17 +144,14 @@ class _EightPuzzleVisualizerScreenState
         },
         onDone: () {
           if (mounted) {
-            setState(() {
-              isSolving = false;
-            });
+            setState(() => isSolving = false);
           }
         },
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
         setState(() {
           isSolving = false;
           _statusMessage = 'Error: $e';
@@ -170,19 +161,8 @@ class _EightPuzzleVisualizerScreenState
   }
 
   void _reset() {
-    if (isSolving) {
-      executor?.stop();
-    }
-    _stepSubscription?.cancel();
-    _stepSubscription = null;
-    if (executor != null) {
-      executor!.stop();
-      executor!.dispose();
-      executor = null;
-    }
-    setState(() {
-      _resetPuzzle();
-    });
+    if (isSolving) executor?.stop();
+    setState(() => _resetPuzzle());
   }
 
   void _pauseResume() {
@@ -205,7 +185,6 @@ class _EightPuzzleVisualizerScreenState
     if (isSolving) return;
 
     if (executor == null) {
-      // create executor with currently selected algorithm but don't auto-run
       late SearchAlgorithm<PuzzleState> algorithm;
       switch (selectedAlgorithm) {
         case 'BFS':
@@ -252,14 +231,6 @@ class _EightPuzzleVisualizerScreenState
     executor?.stepOnce();
   }
 
-  Future<void> _autoSolve() async {
-    // Run through entire solve without manual step control
-    if (isSolving) return;
-
-    _solvePuzzle();
-    // Continue automatically - the stream listener will handle updates
-  }
-
   void _handleTileTap(int index) {
     if (isSolving) return;
 
@@ -279,17 +250,14 @@ class _EightPuzzleVisualizerScreenState
         newTiles[emptyIndex] = newTiles[index];
         newTiles[index] = 0;
         currentState = PuzzleState(newTiles);
-        
-        // Update the problem for AI starting point
+
         problem = EightPuzzleProblem(initialState: currentState);
-        
-        // Reset tracking since this is a manual move
         stepCount = 0;
         nodesExplored = 0;
         currentPath = [currentState];
         exploredStates.clear();
         isSolved = problem.isGoal(currentState);
-        _statusMessage = isSolved ? 'Goal reached manually!' : 'Playing randomly';
+        _statusMessage = isSolved ? 'Goal reached manually!' : 'Playing manually';
       });
     }
   }
@@ -297,40 +265,47 @@ class _EightPuzzleVisualizerScreenState
   void _showAISolveMenu() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: cardColor,
+      backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'AI Solver Panel',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+            return ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: Container(
+                  padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceVariant.withValues(alpha: 0.8),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40, height: 4,
+                          margin: const EdgeInsets.only(bottom: 20),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildAlgorithmSelectorModal(setModalState),
-                    const SizedBox(height: 16),
-                    _buildSpeedControlModal(setModalState),
-                    const SizedBox(height: 16),
-                    _buildStatisticsModal(),
-                    const SizedBox(height: 16),
-                    _buildControlButtonsModal(setModalState),
-                  ],
+                      Text(
+                        'AI Solver Config',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 20),
+                      _buildAlgorithmSelectorModal(setModalState),
+                      const SizedBox(height: 20),
+                      _buildSpeedControlModal(setModalState),
+                      const SizedBox(height: 24),
+                      _buildControlButtonsModal(setModalState),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -345,32 +320,40 @@ class _EightPuzzleVisualizerScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Select Algorithm',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.white),
+          'ALGORITHM',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: algorithms.map((algo) {
               final isSelected = selectedAlgorithm == algo;
               return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text(algo),
-                  selected: isSelected,
-                  onSelected: (selected) {
+                padding: const EdgeInsets.only(right: 12),
+                child: GestureDetector(
+                  onTap: () {
                     if (!isSolving) {
-                      setState(() {
-                        selectedAlgorithm = algo;
-                      });
+                      setState(() => selectedAlgorithm = algo);
                       setModalState(() {});
                     }
                   },
-                  backgroundColor: Colors.grey[800],
-                  selectedColor: accentColor,
-                  labelStyle: TextStyle(
-                    color: isSelected ? Colors.black : Colors.white,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppTheme.accent.withValues(alpha: 0.15) : AppTheme.surfaceHigh,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isSelected ? AppTheme.accent : Colors.white.withValues(alpha: 0.05),
+                      ),
+                    ),
+                    child: Text(
+                      algo,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: isSelected ? AppTheme.accentLight : AppTheme.textMuted,
+                      ),
+                    ),
                   ),
                 ),
               );
@@ -385,100 +368,60 @@ class _EightPuzzleVisualizerScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Execution Speed: ${executionSpeed.toStringAsFixed(1)}x',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.white),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'EXECUTION SPEED',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
+            ),
+            Text(
+              '${executionSpeed.toStringAsFixed(1)}x',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.accentLight),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
-        Slider(
-          value: executionSpeed,
-          min: 0.1,
-          max: 5.0,
-          onChanged: isSolving
-              ? null
-              : (value) {
-                  setState(() {
-                    executionSpeed = value;
-                  });
-                  setModalState(() {});
-                },
-          activeColor: accentColor,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatisticsModal() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildStatCard('Steps', '$stepCount'),
-        _buildStatCard('Explored', '$nodesExplored'),
-        _buildStatCard(
-          'Status',
-          isSolved ? 'Solved!' : isSolving ? 'Solving...' : 'Idle',
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: AppTheme.accent,
+            inactiveTrackColor: AppTheme.surfaceHighest,
+            thumbColor: Colors.white,
+            overlayColor: AppTheme.accent.withValues(alpha: 0.2),
+          ),
+          child: Slider(
+            value: executionSpeed,
+            min: 0.1,
+            max: 5.0,
+            onChanged: isSolving
+                ? null
+                : (value) {
+                    setState(() => executionSpeed = value);
+                    setModalState(() {});
+                  },
+          ),
         ),
       ],
     );
   }
 
   Widget _buildControlButtonsModal(StateSetter setModalState) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      alignment: WrapAlignment.center,
+    return Row(
       children: [
-        ElevatedButton.icon(
-          onPressed: isSolving
-              ? null
-              : () {
-                  _solvePuzzle().then((_) => setModalState(() {}));
-                },
-          icon: const Icon(Icons.play_arrow),
-          label: const Text('Solve'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: accentColor,
-            foregroundColor: Colors.black,
-          ),
-        ),
-        ElevatedButton.icon(
-          onPressed: stepCount > 0
-              ? () {
-                  _pauseResume();
-                  setModalState(() {});
-                }
-              : null,
-          icon: Icon(isSolving ? Icons.pause : Icons.play_arrow),
-          label: Text(isSolving ? 'Pause' : 'Resume'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
-          ),
-        ),
-        ElevatedButton.icon(
-          onPressed: stepCount > 0
-              ? () {
-                  _step();
-                  setModalState(() {});
-                }
-              : null,
-          icon: const Icon(Icons.skip_next),
-          label: const Text('Step'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.cyan,
-            foregroundColor: Colors.black,
-          ),
-        ),
-        ElevatedButton.icon(
-          onPressed: () {
-            _resetPuzzle();
-            setModalState(() {});
-          },
-          icon: const Icon(Icons.refresh),
-          label: const Text('Reset'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.grey[700],
-            foregroundColor: Colors.white,
+        Expanded(
+          child: ElevatedButton(
+            onPressed: isSolving
+                ? null
+                : () {
+                    _solvePuzzle().then((_) => setModalState(() {}));
+                  },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('AUTO SOLVE', style: TextStyle(letterSpacing: 1.5, fontWeight: FontWeight.bold)),
           ),
         ),
       ],
@@ -495,218 +438,176 @@ class _EightPuzzleVisualizerScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        backgroundColor: cardColor,
-        title: const Text('8-Puzzle Visualizer'),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Reset Board',
-            onPressed: isSolving ? null : _reset,
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
+      backgroundColor: AppTheme.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Notice for manual play
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: exploringColor.withOpacity(0.1),
-                  border: Border.all(color: exploringColor),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  'Tap on tiles adjacent to the empty space to play manually, or use the AI Solver.',
-                  style: TextStyle(color: Colors.white, fontSize: 13),
-                  textAlign: TextAlign.center,
+              VisualizerHeader(
+                title: '8-Puzzle Solver',
+                subtitle: 'SLIDING TILE VIZ',
+                onBackTap: () => Navigator.pop(context),
+              ),
+              const SizedBox(height: 20),
+
+              Row(
+                children: [
+                  Expanded(child: GlassStatCard(label: 'STEPS', value: stepCount)),
+                  const SizedBox(width: 10),
+                  Expanded(child: GlassStatCard(label: 'EXPLORED', value: nodesExplored)),
+                  const SizedBox(width: 10),
+                  Expanded(child: GlassStatCard(label: 'PATH', value: currentPath.length)),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              Center(
+                child: StatusBanner(
+                  message: _statusMessage,
+                  isSolved: isSolved,
+                  isSolving: isSolving,
                 ),
               ),
-              const SizedBox(height: 16),
-              // Puzzle Visualization
+              const SizedBox(height: 20),
+
               _buildPuzzleVisualization(),
               const SizedBox(height: 24),
-              // Solution Path Info
-              if (isSolved) _buildSolutionInfo(),
+
+              VisualizerControls(
+                isSolving: isSolving,
+                isSolved: isSolved,
+                stepCount: stepCount,
+                onSolve: _showAISolveMenu,
+                onPauseResume: _pauseResume,
+                onStep: _step,
+                onReset: _reset,
+                onClear: _reset,
+              ),
             ],
           ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAISolveMenu,
-        backgroundColor: accentColor,
-        icon: const Icon(Icons.smart_toy, color: Colors.black),
-        label: const Text(
-          'AI Solve',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
     );
   }
 
   Widget _buildPuzzleVisualization() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Current State',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(color: Colors.white),
-          ),
-          const SizedBox(height: 12),
-          _buildPuzzleGrid(currentState),
-          const SizedBox(height: 16),
-          Text(
-            'Goal State',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(color: Colors.white),
-          ),
-          const SizedBox(height: 12),
-          _buildPuzzleGrid(problem.goalState),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPuzzleGrid(PuzzleState state) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 1,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-      ),
-      itemCount: 9,
-      itemBuilder: (context, index) {
-        final tile = state.tiles[index];
-        final isExplored = exploredStates.contains(state.toString());
-        final isPath = currentPath.contains(state);
-        final isEmpty = tile == 0;
-
-        return GestureDetector(
-          onTap: () => _handleTileTap(index),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            decoration: BoxDecoration(
-              color: isEmpty
-                  ? backgroundColor
-                  : isPath
-                  ? successColor
-                  : isExplored
-                  ? exploringColor
-                  : Colors.grey[800],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: isEmpty ? Colors.transparent : accentColor,
-                width: isEmpty ? 0 : 2,
-              ),
-            ),
-            child: isEmpty
-                ? const SizedBox()
-                : Center(
-                    child: Text(
-                      '$tile',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: isEmpty ? Colors.transparent : Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-          ),
-        );
-      },
-    );
-  }
-
-
-
-  Widget _buildStatCard(String label, String value) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            Text(
-              label,
-              style: Theme.of(
-                context,
-              ).textTheme.labelSmall?.copyWith(color: Colors.grey[400]),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: accentColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSolutionInfo() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardColor.withOpacity(0.7),
-        border: Border.all(color: successColor, width: 2),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 2,
+          child: Column(
             children: [
-              Icon(Icons.check_circle, color: successColor),
-              const SizedBox(width: 8),
               Text(
-                'Solution Found!',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: successColor,
-                  fontWeight: FontWeight.bold,
+                'Current State',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: AppTheme.glassCardAccent(radius: 16),
+                    child: _buildPuzzleGrid(currentState, isInteractive: true),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            'Path Length: ${currentPath.length} moves',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: Colors.grey[300]),
+        ),
+        const SizedBox(width: 24),
+        Expanded(
+          flex: 1,
+          child: Column(
+            children: [
+              Text(
+                'Goal',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: AppTheme.glassCard(radius: 12),
+                child: _buildPuzzleGrid(problem.goalState, isInteractive: false),
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Nodes Explored: $nodesExplored',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: Colors.grey[300]),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPuzzleGrid(PuzzleState state, {required bool isInteractive}) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            childAspectRatio: 1,
+            mainAxisSpacing: 6,
+            crossAxisSpacing: 6,
           ),
-        ],
-      ),
+          itemCount: 9,
+          itemBuilder: (context, index) {
+            final tile = state.tiles[index];
+            final isEmpty = tile == 0;
+
+            final isExplored = exploredStates.contains(state.toString());
+            final isPath = currentPath.contains(state);
+
+            final tileColor = isEmpty
+                ? Colors.transparent
+                : isPath
+                    ? AppTheme.cellPath
+                    : isExplored
+                        ? AppTheme.cellExplored
+                        : AppTheme.surfaceHigh;
+
+            final content = AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              decoration: BoxDecoration(
+                color: tileColor,
+                borderRadius: BorderRadius.circular(isInteractive ? 8 : 4),
+                border: Border.all(
+                  color: isEmpty
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : (isPath || isExplored)
+                          ? Colors.transparent
+                          : Colors.white.withValues(alpha: 0.1),
+                ),
+                boxShadow: (isPath && !isEmpty)
+                    ? [
+                        BoxShadow(color: AppTheme.cellPath.withValues(alpha: 0.5), blurRadius: 8),
+                      ]
+                    : [],
+              ),
+              child: isEmpty
+                  ? null
+                  : Center(
+                      child: Text(
+                        '$tile',
+                        style: isInteractive
+                            ? Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)
+                            : Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+            );
+
+            if (!isInteractive) return content;
+
+            return GestureDetector(
+              onTap: () => _handleTileTap(index),
+              child: content,
+            );
+          },
+        );
+      }
     );
   }
 }

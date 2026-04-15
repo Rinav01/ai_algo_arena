@@ -34,7 +34,7 @@ class GridPainter extends CustomPainter {
         if (node.type == NodeType.start || node.type == NodeType.goal) {
           final markerPaint = Paint()
             ..style = PaintingStyle.fill
-            ..color = Colors.white.withOpacity(0.92);
+            ..color = Colors.white.withValues(alpha: 0.92);
           canvas.drawCircle(rect.center, cellSize * 0.18, markerPaint);
         }
       }

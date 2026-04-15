@@ -177,7 +177,7 @@ class _VisualizerScreenState extends State<VisualizerScreen> {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
+                    color: Colors.white.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
@@ -208,7 +208,7 @@ class _VisualizerScreenState extends State<VisualizerScreen> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.18),
+                          color: Colors.black.withValues(alpha: 0.18),
                           blurRadius: 24,
                           offset: const Offset(0, 10),
                         ),

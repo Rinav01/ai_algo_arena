@@ -79,7 +79,7 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
           border: Border.all(color: const Color(0xFFFFA500), width: 2),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFFFA500).withOpacity(0.2),
+              color: const Color(0xFFFFA500).withValues(alpha: 0.2),
               blurRadius: 12,
               spreadRadius: 2,
             ),
@@ -94,15 +94,15 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.green.withOpacity(0.3),
-                    Colors.green.withOpacity(0.1),
+                    Colors.green.withValues(alpha: 0.3),
+                    Colors.green.withValues(alpha: 0.1),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Colors.green.withOpacity(0.5),
+                  color: Colors.green.withValues(alpha: 0.5),
                   width: 1,
                 ),
               ),
@@ -209,7 +209,7 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -250,9 +250,9 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.3),
+        color: Colors.black.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withOpacity(0.06), width: 1),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,13 +273,13 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: isWinnerA
-                          ? Colors.green.withOpacity(0.2)
-                          : Colors.grey.withOpacity(0.1),
+                          ? Colors.green.withValues(alpha: 0.2)
+                          : Colors.grey.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
                         color: isWinnerA
-                            ? Colors.green.withOpacity(0.5)
-                            : Colors.grey.withOpacity(0.2),
+                            ? Colors.green.withValues(alpha: 0.5)
+                            : Colors.grey.withValues(alpha: 0.2),
                       ),
                     ),
                     child: Column(
@@ -294,14 +294,17 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          valueA,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            color: isWinnerA
-                                ? Colors.green[300]
-                                : Colors.grey[300],
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            valueA,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: isWinnerA
+                                  ? Colors.green[300]
+                                  : Colors.grey[300],
+                            ),
                           ),
                         ),
                       ],
@@ -314,13 +317,13 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: !isWinnerA
-                          ? Colors.green.withOpacity(0.2)
-                          : Colors.grey.withOpacity(0.1),
+                          ? Colors.green.withValues(alpha: 0.2)
+                          : Colors.grey.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
                         color: !isWinnerA
-                            ? Colors.green.withOpacity(0.5)
-                            : Colors.grey.withOpacity(0.2),
+                            ? Colors.green.withValues(alpha: 0.5)
+                            : Colors.grey.withValues(alpha: 0.2),
                       ),
                     ),
                     child: Column(
@@ -335,14 +338,17 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          valueB,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            color: !isWinnerA
-                                ? Colors.green[300]
-                                : Colors.grey[300],
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            valueB,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: !isWinnerA
+                                  ? Colors.green[300]
+                                  : Colors.grey[300],
+                            ),
                           ),
                         ),
                       ],
