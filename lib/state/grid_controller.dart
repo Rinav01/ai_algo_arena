@@ -8,6 +8,8 @@ class GridController extends ChangeNotifier {
     int columns = 28,
   })  : _rows = rows,
         _columns = columns {
+    _start = (row: (rows / 2).floor(), column: (columns * 0.2).floor());
+    _goal = null; // Goal must be placed manually
     _buildGrid();
   }
 
@@ -15,15 +17,16 @@ class GridController extends ChangeNotifier {
   int _columns;
   late List<List<GridNode>> _grid;
   PaintTool _selectedTool = PaintTool.wall;
-  ({int row, int column}) _start = (row: 8, column: 5);
-  ({int row, int column}) _goal = (row: 8, column: 22);
+  ({int row, int column}) _start = (row: 0, column: 0);
+  ({int row, int column})? _goal;
 
   int get rows => _rows;
   int get columns => _columns;
   PaintTool get selectedTool => _selectedTool;
   List<List<GridNode>> get grid => _grid;
   ({int row, int column}) get start => _start;
-  ({int row, int column}) get goal => _goal;
+  ({int row, int column})? get goal => _goal;
+  bool get hasGoal => _goal != null;
 
   int get totalNodes => _rows * _columns;
   int get wallCount => _grid
@@ -104,6 +107,7 @@ class GridController extends ChangeNotifier {
   }
 
   void resetGrid() {
+    _goal = null;
     _buildGrid();
     notifyListeners();
   }
@@ -112,7 +116,7 @@ class GridController extends ChangeNotifier {
     if (row == _start.row && column == _start.column) {
       return NodeType.start;
     }
-    if (row == _goal.row && column == _goal.column) {
+    if (_goal != null && row == _goal!.row && column == _goal!.column) {
       return NodeType.goal;
     }
     return NodeType.empty;
@@ -138,7 +142,7 @@ class GridController extends ChangeNotifier {
     }
     if (isStart) {
       // Prevent moving start onto goal
-      if (row == _goal.row && column == _goal.column) {
+      if (_goal != null && row == _goal!.row && column == _goal!.column) {
         return;
       }
       if (row == _start.row && column == _start.column) {
@@ -155,18 +159,22 @@ class GridController extends ChangeNotifier {
       return;
     }
 
-    // Moving goal anchor
+    // Initialize or Moving goal anchor
     if (row == _start.row && column == _start.column) {
       return;
     }
-    if (row == _goal.row && column == _goal.column) {
+    
+    if (_goal != null && row == _goal!.row && column == _goal!.column) {
       return;
     }
 
     final previous = _goal;
     _goal = (row: row, column: column);
-    _grid[previous.row][previous.column] =
-        _grid[previous.row][previous.column].copyWith(type: NodeType.empty);
+    
+    if (previous != null) {
+      _grid[previous.row][previous.column] =
+          _grid[previous.row][previous.column].copyWith(type: NodeType.empty);
+    }
     _grid[row][column] = _grid[row][column].copyWith(type: NodeType.goal);
   }
 
@@ -214,10 +222,14 @@ class GridController extends ChangeNotifier {
     _columns = nextCols;
     
     final startData = data['start'] as Map<String, dynamic>;
-    final goalData = data['goal'] as Map<String, dynamic>;
-    
     _start = (row: startData['row'] as int, column: startData['column'] as int);
-    _goal = (row: goalData['row'] as int, column: goalData['column'] as int);
+    
+    if (data['goal'] != null) {
+      final goalData = data['goal'] as Map<String, dynamic>;
+      _goal = (row: goalData['row'] as int, column: goalData['column'] as int);
+    } else {
+      _goal = null;
+    }
     
     final List<dynamic> gridData = data['grid'] as List<dynamic>;
     _grid = List.generate(_rows, (r) {
@@ -235,6 +247,7 @@ class GridController extends ChangeNotifier {
     _columns = newGrid[0].length;
     
     // Deep copy the grid
+    _goal = null; // Reset and let loop find it
     _grid = List.generate(_rows, (r) {
       return List.generate(_columns, (c) {
         final node = newGrid[r][c];

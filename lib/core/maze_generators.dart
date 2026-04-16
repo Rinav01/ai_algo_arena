@@ -30,13 +30,15 @@ class MazeGenerator {
       _chooseOrientation(controller.columns - 2, controller.rows - 2)
     );
     
-    // Ensure start and goal are open
+    // Ensure start is open
     controller.setNodeType(controller.start.row, controller.start.column, NodeType.start);
-    controller.setNodeType(controller.goal.row, controller.goal.column, NodeType.goal);
-    
-    // Clear neighbors to ensure they are at least possible to reach initially
     _clearNeighbors(controller, controller.start.row, controller.start.column);
-    _clearNeighbors(controller, controller.goal.row, controller.goal.column);
+
+    // Ensure goal is open if it exists
+    if (controller.goal != null) {
+      controller.setNodeType(controller.goal!.row, controller.goal!.column, NodeType.goal);
+      _clearNeighbors(controller, controller.goal!.row, controller.goal!.column);
+    }
   }
 
   void _divide(GridController controller, int x, int y, int width, int height, bool isHorizontal) {
@@ -152,11 +154,15 @@ class MazeGenerator {
       }
     }
 
-    // 4. Cleanup: Ensure start/goal are open
+    // 4. Cleanup: Ensure start is open
     controller.setNodeType(controller.start.row, controller.start.column, NodeType.start);
-    controller.setNodeType(controller.goal.row, controller.goal.column, NodeType.goal);
     _clearNeighbors(controller, controller.start.row, controller.start.column);
-    _clearNeighbors(controller, controller.goal.row, controller.goal.column);
+
+    // Ensure goal is open if it exists
+    if (controller.goal != null) {
+      controller.setNodeType(controller.goal!.row, controller.goal!.column, NodeType.goal);
+      _clearNeighbors(controller, controller.goal!.row, controller.goal!.column);
+    }
   }
 
   void _addPrimsFrontier(GridController controller, Point<int> p, List<Point<int>> frontier, Set<Point<int>> inMaze) {

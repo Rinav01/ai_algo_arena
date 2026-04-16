@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:ai_algo_app/core/maze_generators.dart';
+import 'package:ai_algo_app/widgets/grid_visualizer_canvas.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:ai_algo_app/core/problem_definition.dart';
 import 'package:flutter/material.dart';
@@ -37,9 +38,8 @@ class _PathfindingVisualizerScreenState
   late final GridController _controller;
   AlgorithmExecutor<GridCoordinate>? _executor;
   StreamSubscription<AlgorithmStep<GridCoordinate>>? _stepSubscription;
-  late GridProblem _problem;
+  GridProblem? _problem;
   late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
 
   List<GridCoordinate> _path = [];
   bool _isSolving = false;
@@ -61,15 +61,12 @@ class _PathfindingVisualizerScreenState
   @override
   void initState() {
     super.initState();
-    _controller = GridController(rows: 12, columns: 15);
+    _controller = GridController(rows: 15, columns: 25);
     _initializeProblem();
     
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
-    );
-    _pulseAnimation = Tween<double>(begin: 4, end: 14).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
   }
 
@@ -89,6 +86,12 @@ class _PathfindingVisualizerScreenState
   }
 
   void _initializeProblem() {
+    final goal = _controller.goal;
+    if (goal == null) {
+      _problem = null;
+      return;
+    }
+    
     _problem = GridProblem(
       grid: _controller.grid,
       start: GridCoordinate(
@@ -96,14 +99,25 @@ class _PathfindingVisualizerScreenState
         column: _controller.start.column,
       ),
       goal: GridCoordinate(
-        row: _controller.goal.row,
-        column: _controller.goal.column,
+        row: goal.row,
+        column: goal.column,
       ),
     );
   }
 
   Future<void> _solvePuzzle({bool isLiveUpdate = false}) async {
     if (_isSolving && !isLiveUpdate) return;
+    
+    if (_controller.goal == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please place a Goal node first!'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+      return;
+    }
+
     _initializeProblem();
 
     setState(() {
@@ -138,9 +152,13 @@ class _PathfindingVisualizerScreenState
         algo = AStarAlgorithm<GridCoordinate>();
     }
 
+    // Dispose previous executor and cancel its subscription
+    await _executor?.dispose();
+    await _stepSubscription?.cancel();
+
     _executor = AlgorithmExecutor<GridCoordinate>(
       algorithm: algo,
-      problem: _problem,
+      problem: _problem!,
       stepDelayMs: isLiveUpdate ? 0 : _stepDelay.inMilliseconds,
     );
 
@@ -150,6 +168,7 @@ class _PathfindingVisualizerScreenState
       _stepSubscription = _executor!.stepStream.listen(
         (step) {
           if (!mounted) return;
+          // UI updates only for metrics; Canvas handles grid painting via addListener in initState/CustomPaint
           setState(() {
             _path = _executor!.currentPath;
             _stepCount = step.stepCount;
@@ -256,8 +275,8 @@ class _PathfindingVisualizerScreenState
       grid: _controller.grid,
       start: GridCoordinate(
           row: _controller.start.row, column: _controller.start.column),
-      goal: GridCoordinate(
-          row: _controller.goal.row, column: _controller.goal.column),
+      goal: _controller.goal != null ? GridCoordinate(
+          row: _controller.goal!.row, column: _controller.goal!.column) : null,
     );
     Clipboard.setData(ClipboardData(text: json));
     ScaffoldMessenger.of(context).showSnackBar(
@@ -302,58 +321,40 @@ class _PathfindingVisualizerScreenState
     );
   }
 
-  Color _getCellColor(int row, int col) {
+  void _handlePointerDown(int row, int col) {
+    if (_isSolving && !_isSolved) return; 
+
+    // Check for anchor dragging
     final node = _controller.grid[row][col];
-    final state = GridCoordinate(row: row, column: col);
-    
-    // Use O(1) lookups from executor if available
-    final isPath = _executor?.currentPath.contains(state) ?? _path.contains(state);
-    final isExplored = _executor?.exploredSet.contains(state) ?? false;
-    
-    if (isPath) return pathColor;
-    if (isExplored) return exploredColor;
-    
-    if (node.type == NodeType.wall) return AppTheme.cellWall;
-    if (node.type == NodeType.weight) return AppTheme.cellWeight;
-    if (node.type == NodeType.start) return AppTheme.cellStart;
-    if (node.type == NodeType.goal) return AppTheme.cellGoal;
-    return AppTheme.surfaceLow;
+    if (node.type == NodeType.start) {
+      setState(() => _isDraggingStart = true);
+    } else if (node.type == NodeType.goal) {
+      setState(() => _isDraggingGoal = true);
+    } else {
+      _controller.handleCellInteraction(row, col);
+    }
   }
 
-  void _handleGridGesture(Offset localPosition, Size size) {
-    if (_isSolving && !_isSolved) return; // Prevent painting while solving
+  void _handlePointerUpdate(int row, int col) {
+    if (_isSolving && !_isSolved) return;
 
-    final rowWidth = size.width / _controller.columns;
-    final colHeight = size.height / _controller.rows;
-
-    final col = (localPosition.dx / rowWidth).floor();
-    final row = (localPosition.dy / colHeight).floor();
-
-    if (row >= 0 && row < _controller.rows && col >= 0 && col < _controller.columns) {
-      // Check for anchor dragging first
-      if (!_isDraggingStart && !_isDraggingGoal) {
-        final node = _controller.grid[row][col];
-        if (node.type == NodeType.start) {
-          setState(() => _isDraggingStart = true);
-          return;
-        } else if (node.type == NodeType.goal) {
-          setState(() => _isDraggingGoal = true);
-          return;
-        }
-      }
-
-      if (_isDraggingStart) {
-        _controller.moveAnchor(isStart: true, row: row, column: col);
-        _triggerImmediateReSolve();
-      } else if (_isDraggingGoal) {
-        _controller.moveAnchor(isStart: false, row: row, column: col);
-        _triggerImmediateReSolve();
-      } else {
-        // Normal painting
-        _controller.handleCellInteraction(row, col);
-        if (_isSolved) _triggerImmediateReSolve();
-      }
+    if (_isDraggingStart) {
+      _controller.moveAnchor(isStart: true, row: row, column: col);
+      _triggerImmediateReSolve();
+    } else if (_isDraggingGoal) {
+      _controller.moveAnchor(isStart: false, row: row, column: col);
+      _triggerImmediateReSolve();
+    } else {
+      _controller.handleCellInteraction(row, col);
+      if (_isSolved) _triggerImmediateReSolve();
     }
+  }
+
+  void _handlePointerUp() {
+    setState(() {
+      _isDraggingStart = false;
+      _isDraggingGoal = false;
+    });
   }
 
   void _triggerImmediateReSolve() {
@@ -362,15 +363,15 @@ class _PathfindingVisualizerScreenState
     _reSolveTimer?.cancel();
     _reSolveTimer = Timer(const Duration(milliseconds: 50), () {
       if (!mounted) return;
+      
+      final oldHash = _problem.hashCode;
+      _initializeProblem(); 
+      if (_problem == null || _problem!.hashCode == oldHash) return;
+
       _solvePuzzle(isLiveUpdate: true);
     });
   }
 
-  bool _isCurrentNode(int row, int col) {
-    final currentState = _executor?.lastStep?.currentState;
-    if (currentState == null) return false;
-    return currentState.row == row && currentState.column == col;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -488,10 +489,11 @@ class _PathfindingVisualizerScreenState
               const SizedBox(height: 16),
 
               // ── AI Recommendation ────────────────────────────────────────
-              AlgorithmRecommendationCard(
-                problem: _problem,
-                onUseRecommended: _solvePuzzle,
-              ),
+              if (_problem != null)
+                AlgorithmRecommendationCard(
+                  problem: _problem!,
+                  onUseRecommended: _solvePuzzle,
+                ),
               const SizedBox(height: 16),
 
               // ── Grid ─────────────────────────────────────────────────────
@@ -502,72 +504,14 @@ class _PathfindingVisualizerScreenState
                   child: Container(
                     decoration: AppTheme.glassCardAccent(radius: 16),
                     padding: EdgeInsets.all(8.r),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        return GestureDetector(
-                          onPanStart: (details) => _handleGridGesture(
-                            details.localPosition,
-                            Size(constraints.maxWidth, constraints.maxHeight),
-                          ),
-                          onPanUpdate: (details) => _handleGridGesture(
-                            details.localPosition,
-                            Size(constraints.maxWidth, constraints.maxHeight),
-                          ),
-                          onPanEnd: (_) => setState(() {
-                            _isDraggingStart = false;
-                            _isDraggingGoal = false;
-                          }),
-                          child: AnimatedBuilder(
-                            animation: _pulseAnimation,
-                            builder: (context, child) => GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate:
-                                  SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: _controller.columns,
-                                childAspectRatio: 1,
-                                crossAxisSpacing: 1.5,
-                                mainAxisSpacing: 1.5,
-                              ),
-                              itemCount: _controller.rows * _controller.columns,
-                              itemBuilder: (context, index) {
-                                final row = index ~/ _controller.columns;
-                                final col = index % _controller.columns;
-                                final isCurrent = _isCurrentNode(row, col);
-                                final cellColor = _getCellColor(row, col);
-
-                                return AnimatedContainer(
-                                  duration: const Duration(milliseconds: 250),
-                                  curve: Curves.easeOut,
-                                  decoration: BoxDecoration(
-                                    color: cellColor,
-                                    borderRadius: BorderRadius.circular(2.r),
-                                    boxShadow: isCurrent
-                                        ? [
-                                            BoxShadow(
-                                              color: exploredColor.withValues(alpha: 0.9),
-                                              blurRadius: _pulseAnimation.value,
-                                              spreadRadius: _pulseAnimation.value / 4,
-                                            ),
-                                          ]
-                                        : _path.any((c) =>
-                                                c.row == row && c.column == col)
-                                            ? [
-                                                BoxShadow(
-                                                  color:
-                                                      pathColor.withValues(alpha: 0.5),
-                                                  blurRadius: 6,
-                                                  spreadRadius: 1,
-                                                ),
-                                              ]
-                                            : null,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        );
-                      },
+                    height: 320.h, // Fixed height for visualizer grid
+                    child: GridVisualizerCanvas(
+                      controller: _controller,
+                      executor: _executor,
+                      isInteractive: true,
+                      onPointerDown: _handlePointerDown,
+                      onPointerUpdate: _handlePointerUpdate,
+                      onPointerUp: _handlePointerUp,
                     ),
                   ),
                 ),
@@ -619,10 +563,10 @@ class _PathfindingVisualizerScreenState
                           row: _controller.start.row,
                           column: _controller.start.column,
                         ),
-                        goal: GridCoordinate(
-                          row: _controller.goal.row,
-                          column: _controller.goal.column,
-                        ),
+                        goal: _controller.goal != null ? GridCoordinate(
+                          row: _controller.goal!.row,
+                          column: _controller.goal!.column,
+                        ) : GridCoordinate(row: -1, column: -1), // Should ideally handle null in BattleScreen
                       ),
                     ),
                   );

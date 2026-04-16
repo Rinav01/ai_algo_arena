@@ -3,9 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'core/app_theme.dart';
-
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
 import 'screens/home_screen.dart';
 import 'screens/pathfinding_visualizer_screen.dart';
 import 'screens/algorithm_battle_screen.dart';

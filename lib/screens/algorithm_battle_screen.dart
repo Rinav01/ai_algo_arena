@@ -13,6 +13,7 @@ import '../services/algorithm_executor.dart';
 import '../services/battle_analyzer.dart';
 import '../state/grid_controller.dart';
 import '../widgets/battle_results_panel.dart';
+import '../widgets/grid_visualizer_canvas.dart';
 import '../widgets/visualizer_widgets.dart';
 
 class AlgorithmBattleScreen extends StatefulWidget {
@@ -59,7 +60,7 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
           column: widget.start!.column,
         );
       }
-      if (widget.goal != null) {
+      if (widget.goal != null && widget.goal!.row != -1) {
         _controller.moveAnchor(
           isStart: false,
           row: widget.goal!.row,
@@ -94,6 +95,18 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
     await _executorA?.dispose();
     await _executorB?.dispose();
 
+    final goal = _controller.goal;
+    if (goal == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot start battle without a goal node!'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+      setState(() => _isRunning = false);
+      return;
+    }
+
     final problem = GridProblem(
       grid: _controller.grid,
       start: GridCoordinate(
@@ -101,8 +114,8 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
         column: _controller.start.column,
       ),
       goal: GridCoordinate(
-        row: _controller.goal.row,
-        column: _controller.goal.column,
+        row: goal.row,
+        column: goal.column,
       ),
     );
 
@@ -129,7 +142,8 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
         (step) {
           lastStepA = step;
           if (!mounted) return;
-          setState(() => _stepA = step);
+          // Local state update not needed here as Canvas listens to executor
+          if (_stepA == null) setState(() => _stepA = step);
         },
         onDone: () {
           stopwatchA.stop();
@@ -159,7 +173,8 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
         (step) {
           lastStepB = step;
           if (!mounted) return;
-          setState(() => _stepB = step);
+          // Local state update not needed here as Canvas listens to executor
+          if (_stepB == null) setState(() => _stepB = step);
         },
         onDone: () {
           stopwatchB.stop();
@@ -492,74 +507,12 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
                         : color.withValues(alpha: 0.2),
                   ),
                   padding: EdgeInsets.all(8.r),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: _controller.columns,
-                      childAspectRatio: 1,
-                      crossAxisSpacing: 1.5,
-                      mainAxisSpacing: 1.5,
-                    ),
-                    itemCount: _controller.rows * _controller.columns,
-                    itemBuilder: (_, index) {
-                      final row = index ~/ _controller.columns;
-                      final column = index % _controller.columns;
-                      final node = _controller.grid[row][column];
-                      final state = GridCoordinate(row: row, column: column);
-
-                      bool isExplored =
-                          executor?.exploredSet.contains(state) ?? false;
-                      bool isPath =
-                          executor?.currentPath.contains(state) ?? false;
-                      bool isCurrent = step?.currentState == state;
-
-                      final cellColor = _getCellColorForAlgo(
-                        node,
-                        isPath,
-                        isExplored,
-                        color,
-                      );
-
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeOut,
-                        decoration: BoxDecoration(
-                          color: cellColor,
-                          borderRadius: BorderRadius.circular(1.5.r),
-                          boxShadow: isCurrent
-                              ? [
-                                  BoxShadow(
-                                    color: color.withValues(alpha: 0.8),
-                                    blurRadius: 8,
-                                    spreadRadius: 2,
-                                  ),
-                                ]
-                              : (isPath
-                                    ? [
-                                        BoxShadow(
-                                          color: AppTheme.cyan.withValues(
-                                            alpha: 0.4,
-                                          ),
-                                          blurRadius: 4,
-                                        ),
-                                      ]
-                                    : null),
-                        ),
-                        child: isCurrent
-                            ? Center(
-                                child: Container(
-                                  width: 4.w,
-                                  height: 4.h,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              )
-                            : null,
-                      );
-                    },
+                  height: 240.h, // Fixed height for battle grids to prevent layout shifts
+                  child: GridVisualizerCanvas(
+                    controller: _controller,
+                    executor: executor,
+                    accentColor: color,
+                    isInteractive: !_isRunning,
                   ),
                 ),
               ),
@@ -568,20 +521,6 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
         ),
       ],
     );
-  }
-
-  Color _getCellColorForAlgo(
-    GridNode node,
-    bool isPath,
-    bool isExplored,
-    Color algoColor,
-  ) {
-    if (node.type == NodeType.wall) return AppTheme.cellWall;
-    if (node.type == NodeType.start) return AppTheme.cellStart;
-    if (node.type == NodeType.goal) return AppTheme.cellGoal;
-    if (isPath) return AppTheme.cyan;
-    if (isExplored) return algoColor.withValues(alpha: 0.4);
-    return AppTheme.surfaceLow;
   }
 
   Widget _buildControlButton({

@@ -8,7 +8,7 @@ class MapPersistence {
   static String exportMap({
     required List<List<GridNode>> grid,
     required GridCoordinate start,
-    required GridCoordinate goal,
+    GridCoordinate? goal,
   }) {
     final List<List<Map<String, dynamic>>> gridData = grid.map((row) {
       return row.map((node) => node.toJson()).toList();
@@ -18,7 +18,7 @@ class MapPersistence {
       'rows': grid.length,
       'columns': grid.first.length,
       'start': {'row': start.row, 'column': start.column},
-      'goal': {'row': goal.row, 'column': goal.column},
+      'goal': goal != null ? {'row': goal.row, 'column': goal.column} : null,
       'grid': gridData,
     };
 

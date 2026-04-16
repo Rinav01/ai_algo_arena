@@ -10,6 +10,8 @@ import '../core/app_theme.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../core/maze_generators.dart';
 
+import '../widgets/grid_visualizer_canvas.dart';
+
 class MazeEditorScreen extends StatefulWidget {
   const MazeEditorScreen({super.key});
 
@@ -155,66 +157,15 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
   }
 
   Widget _buildGrid() {
-    final grid = _controller.grid;
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: _controller.columns,
-        childAspectRatio: 1,
-        crossAxisSpacing: 2,
-        mainAxisSpacing: 2,
+    return Container(
+      constraints: BoxConstraints(maxWidth: 350.w, maxHeight: 350.h),
+      child: GridVisualizerCanvas(
+        controller: _controller,
+        isInteractive: true,
       ),
-      itemCount: _controller.rows * _controller.columns,
-      itemBuilder: (context, index) {
-        final row = index ~/ _controller.columns;
-        final column = index % _controller.columns;
-        final node = grid[row][column];
-
-        return GestureDetector(
-          onTap: () => _controller.handleCellInteraction(row, column),
-          child: Container(
-            decoration: BoxDecoration(
-              color: _getCellColor(node),
-              border: Border.all(color: Colors.grey[800]!, width: 1),
-            ),
-            child: _buildCellContent(node),
-          ),
-        );
-      },
     );
   }
 
-  Widget _buildCellContent(GridNode node) {
-    switch (node.type) {
-      case NodeType.start:
-        return const Icon(Icons.play_arrow, color: Colors.amber, size: 24);
-      case NodeType.goal:
-        return const Icon(Icons.flag, color: Colors.red, size: 24);
-      case NodeType.wall:
-        return Container(color: const Color(0xFF1a3a3a));
-      case NodeType.weight:
-        return const Icon(Icons.fitness_center, color: Colors.brown, size: 20);
-      case NodeType.empty:
-        return const SizedBox.shrink();
-    }
-  }
-
-  Color _getCellColor(GridNode node) {
-    switch (node.type) {
-      case NodeType.wall:
-        return const Color(0xFF1a3a3a);
-      case NodeType.start:
-        return Colors.amber.withValues(alpha: 0.3);
-      case NodeType.goal:
-        return Colors.red.withValues(alpha: 0.3);
-      case NodeType.weight:
-        return Colors.brown.withValues(alpha: 0.3);
-      case NodeType.empty:
-        return const Color(0xFF0E2233);
-    }
-  }
 
   Widget _buildToolbar(BuildContext context) {
     return Column(
@@ -618,6 +569,9 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
                     const SizedBox(height: 16),
                     _buildStatisticsModal(),
                     const SizedBox(height: 16),
+                    const SizedBox(height: 20),
+                    _buildSolverGrid(),
+                    const SizedBox(height: 16),
                     _buildControlButtonsModal(setModalState),
                   ],
                 ),
@@ -626,6 +580,20 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildSolverGrid() {
+    return Container(
+      constraints: BoxConstraints(maxWidth: 320.w, maxHeight: 320.h),
+      child: GridVisualizerCanvas(
+        controller: GridController(
+          rows: widget.problem.grid.length,
+          columns: widget.problem.grid[0].length,
+        )..loadFromGrid(widget.problem.grid),
+        executor: _executor,
+        isInteractive: false,
+      ),
     );
   }
 

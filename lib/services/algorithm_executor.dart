@@ -1,7 +1,17 @@
 import 'dart:async';
 import 'dart:isolate';
+import 'package:flutter/foundation.dart';
 
 import '../core/problem_definition.dart';
+
+/// Response message from the isolate
+class _SolveResponse<State> {
+  final List<AlgorithmStep<State>> history;
+  final Set<State> finalExplored;
+  final List<State> finalPath;
+
+  _SolveResponse(this.history, this.finalExplored, this.finalPath);
+}
 
 /// Request message sent to the isolate
 class _SolveRequest<State> {
@@ -12,14 +22,16 @@ class _SolveRequest<State> {
 }
 
 /// The actual entry point for the isolate
-List<AlgorithmStep<State>> _solveInIsolate<State>(_SolveRequest<State> request) {
-  // Compute synchronously and return the full history
-  return request.algorithm.solve(request.problem).toList();
+_SolveResponse<State> _solveInIsolate<State>(_SolveRequest<State> request) {
+  final history = request.algorithm.solve(request.problem).toList();
+  final finalExplored = history.expand((s) => s.newlyExplored).toSet();
+  final finalPath = history.isEmpty ? <State>[] : history.last.path;
+  return _SolveResponse<State>(history, finalExplored, finalPath);
 }
 
 /// Controls execution of algorithm steps and manages playback via timer.
-/// Now optimized to accumulate incremental steps into a full state.
-class AlgorithmExecutor<State> {
+/// Now optimized to accumulate incremental steps into a full state and use caching.
+class AlgorithmExecutor<State> with ChangeNotifier {
   final SearchAlgorithm<State> algorithm;
   final Problem<State> problem;
   
@@ -39,7 +51,12 @@ class AlgorithmExecutor<State> {
 
   // Cumulative state tracked during playback for UI performance
   final Set<State> _exploredSet = {};
+  final Set<State> _pathSet = {};
   List<State> _currentPath = [];
+
+  // Result caching: Stores (History, Final Explored Set, Final Path)
+  static final Map<String, (List<AlgorithmStep<dynamic>>, Set<dynamic>, List<dynamic>)> _resultCache = {};
+  static const int _maxCacheSize = 50;
 
   /// Stream of algorithm steps played back over time
   Stream<AlgorithmStep<State>> get stepStream => _stepController.stream;
@@ -50,7 +67,10 @@ class AlgorithmExecutor<State> {
   /// Get cumulative explored set
   Set<State> get exploredSet => _exploredSet;
   
-  /// Get current path
+  /// Get current path as a set for O(1) lookup
+  Set<State> get pathSet => _pathSet;
+
+  /// Get current path as a list for ordered traversal if needed
   List<State> get currentPath => _currentPath;
 
   /// Current execution state
@@ -59,6 +79,9 @@ class AlgorithmExecutor<State> {
   bool get isComputing => _isComputing;
   bool get isRunning => _fullHistory != null && !_isPaused && !_isStopped && _currentIndex < _fullHistory!.length;
   AlgorithmStep<State>? get lastStep => _lastStep;
+
+  /// Generate a cache key for the current problem and algorithm
+  String get _cacheKey => '${algorithm.runtimeType}_${problem.hashCode}';
 
   AlgorithmExecutor({
     required this.algorithm,
@@ -78,14 +101,44 @@ class AlgorithmExecutor<State> {
     _currentPath = [];
     
     try {
-      // 1. Offload the heavy synchronous search calculation to a background isolate
-      _fullHistory = await Isolate.run(
-        () => _solveInIsolate(
-          _SolveRequest<State>(algorithm, problem)
-        )
-      );
+      final cacheKey = _cacheKey;
+      if (_resultCache.containsKey(cacheKey)) {
+        final cached = _resultCache[cacheKey]!;
+        _fullHistory = cached.$1.cast<AlgorithmStep<State>>();
+        // If instant playback is requested, we can use the cached sets directly
+        if (_stepDelay.inMilliseconds == 0) {
+          _exploredSet.addAll(cached.$2.cast<State>());
+          _currentPath = cached.$3.cast<State>();
+          _pathSet.addAll(_currentPath);
+        }
+      } else {
+        // 1. Offload the search and the heavy set processing to a background isolate
+        final response = await Isolate.run(
+          () => _solveInIsolate(
+            _SolveRequest<State>(algorithm, problem)
+          )
+        );
+        
+        _fullHistory = response.history;
+        final finalExplored = response.finalExplored;
+        final finalPath = response.finalPath;
+        
+        // Cache management: LRU-ish eviction
+        if (_resultCache.length >= _maxCacheSize) {
+          _resultCache.remove(_resultCache.keys.first);
+        }
+        
+        _resultCache[cacheKey] = (_fullHistory!, finalExplored, finalPath);
+        
+        if (_stepDelay.inMilliseconds == 0) {
+          _exploredSet.addAll(finalExplored);
+          _currentPath = finalPath;
+          _pathSet.addAll(_currentPath);
+        }
+      }
       
       _isComputing = false;
+      notifyListeners();
       
       // 2. Start timeline playback
       if (!_isPaused && !_isStopped) {
@@ -95,6 +148,7 @@ class AlgorithmExecutor<State> {
       _isComputing = false;
       _stepController.addError(e);
       _isStopped = true;
+      notifyListeners();
     }
   }
 
@@ -103,14 +157,11 @@ class AlgorithmExecutor<State> {
     
     if (_stepDelay.inMilliseconds == 0) {
       if (_fullHistory != null && _fullHistory!.isNotEmpty) {
-        // Jump to end - accumulate everything
-        for (var step in _fullHistory!) {
-          _exploredSet.addAll(step.newlyExplored);
-          _currentPath = step.path;
-        }
+        // Explored and Path already handled in start() for efficiency
         _currentIndex = _fullHistory!.length - 1;
         _lastStep = _fullHistory![_currentIndex];
         _stepController.add(_lastStep!);
+        notifyListeners();
       }
       _finishPlayback();
       return;
@@ -147,10 +198,13 @@ class AlgorithmExecutor<State> {
         _lastStep = _fullHistory![_currentIndex];
         _exploredSet.addAll(_lastStep!.newlyExplored);
         _currentPath = _lastStep!.path;
+        _pathSet.clear();
+        _pathSet.addAll(_currentPath);
         
         // Notify UI on the last step of the batch
         if (i == stepsPerTick - 1 || _currentIndex == _fullHistory!.length - 1) {
           _stepController.add(_lastStep!);
+          notifyListeners();
         }
         
         _currentIndex++;
@@ -190,8 +244,11 @@ class AlgorithmExecutor<State> {
       _lastStep = _fullHistory![_currentIndex];
       _exploredSet.addAll(_lastStep!.newlyExplored);
       _currentPath = _lastStep!.path;
+      _pathSet.clear();
+      _pathSet.addAll(_currentPath);
       _stepController.add(_lastStep!);
       _currentIndex++;
+      notifyListeners();
     }
   }
 
@@ -204,13 +261,14 @@ class AlgorithmExecutor<State> {
     }
   }
 
-  /// Cleanup
+  @override
   Future<void> dispose() async {
     try {
       await stop();
     } catch (e) {
       // Already stopped or closed
     }
+    super.dispose();
   }
 }
 

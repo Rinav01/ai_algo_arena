@@ -39,7 +39,7 @@ class PuzzleState {
   }
 
   @override
-  int get hashCode => tiles.hashCode;
+  int get hashCode => Object.hashAll(tiles);
 
   @override
   String toString() => 'PuzzleState(${tiles.join("")})';
@@ -70,6 +70,16 @@ class EightPuzzleProblem extends Problem<PuzzleState> {
 
   @override
   PuzzleState get goalState => EightPuzzleProblem.defaultGoalState;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is EightPuzzleProblem &&
+          runtimeType == other.runtimeType &&
+          _initialState == other._initialState;
+
+  @override
+  int get hashCode => _initialState.hashCode;
 
   @override
   bool isGoal(PuzzleState state) => state == goalState;

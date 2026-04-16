@@ -13,6 +13,20 @@ class GridNode {
   final NodeType type;
   final double weight;
 
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is GridNode &&
+          runtimeType == other.runtimeType &&
+          row == other.row &&
+          column == other.column &&
+          type == other.type &&
+          weight == other.weight;
+
+  @override
+  int get hashCode =>
+      row.hashCode ^ column.hashCode ^ type.hashCode ^ weight.hashCode;
+
   bool get isWalkable => type != NodeType.wall;
 
   GridNode copyWith({

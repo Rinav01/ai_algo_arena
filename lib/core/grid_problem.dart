@@ -28,13 +28,45 @@ class GridProblem extends Problem<GridCoordinate> {
   final List<List<GridNode>> grid;
   final GridCoordinate _start;
   final GridCoordinate _goal;
+  int? _cachedHashCode;
 
   GridProblem({
-    required this.grid,
+    required List<List<GridNode>> grid,
     required GridCoordinate start,
     required GridCoordinate goal,
-  }) : _start = start,
+  }) : grid = grid.map((row) => List<GridNode>.from(row)).toList(),
+       _start = start,
        _goal = goal;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is GridProblem &&
+          runtimeType == other.runtimeType &&
+          _start == other._start &&
+          _goal == other._goal &&
+          _isGridEqual(grid, other.grid);
+
+  @override
+  int get hashCode {
+    _cachedHashCode ??= Object.hash(
+      _start,
+      _goal,
+      Object.hashAll(grid.expand((row) => row)),
+    );
+    return _cachedHashCode!;
+  }
+
+  bool _isGridEqual(List<List<GridNode>> a, List<List<GridNode>> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i].length != b[i].length) return false;
+      for (int j = 0; j < a[i].length; j++) {
+        if (a[i][j] != b[i][j]) return false;
+      }
+    }
+    return true;
+  }
 
   @override
   GridCoordinate get initialState => _start;
