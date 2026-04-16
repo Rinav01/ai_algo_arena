@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class AlgorithmInfoSheet extends StatelessWidget {
   final String algorithmName;
@@ -31,7 +32,7 @@ class AlgorithmInfoSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(24.r),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -80,10 +81,10 @@ class AlgorithmInfoSheet extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(12.r),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(8.r),
           ),
           child: Text(content, style: TextStyle(color: Colors.grey[300])),
         ),
@@ -102,12 +103,12 @@ class AlgorithmInfoSheet extends StatelessWidget {
         const SizedBox(height: 8),
         ...complexities.map((complexity) {
           return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: 8.h),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
               decoration: BoxDecoration(
                 color: Colors.blue.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(6.r),
                 border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
               ),
               child: Text(
@@ -120,7 +121,7 @@ class AlgorithmInfoSheet extends StatelessWidget {
               ),
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }
@@ -136,14 +137,14 @@ class AlgorithmInfoSheet extends StatelessWidget {
         const SizedBox(height: 8),
         ...items.map((item) {
           return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.only(bottom: 8.h),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 6,
-                  height: 6,
-                  margin: const EdgeInsets.only(top: 6),
+                  width: 6.w,
+                  height: 6.h,
+                  margin: EdgeInsets.only(top: 6.h),
                   decoration: BoxDecoration(
                     color: color,
                     shape: BoxShape.circle,
@@ -159,7 +160,7 @@ class AlgorithmInfoSheet extends StatelessWidget {
               ],
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }

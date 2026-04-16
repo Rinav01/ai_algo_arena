@@ -1,8 +1,8 @@
 import 'dart:ui';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../widgets/bottom_nav_bar.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 // ─── Home Screen ─────────────────────────────────────────────────────────────
 class HomeScreen extends StatefulWidget {
@@ -70,9 +70,9 @@ class _HomeScreenState extends State<HomeScreen>
               top: -30, right: -40,
               child: AnimatedBuilder(
                 animation: _pulse,
-                builder: (_, __) => Container(
-                  width: 220,
-                  height: 220,
+                builder: (_, _) => Container(
+                  width: 220.w,
+                  height: 220.h,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
@@ -92,10 +92,10 @@ class _HomeScreenState extends State<HomeScreen>
                 children: [
                   // Tag line
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                     decoration: BoxDecoration(
                       color: AppTheme.accentContainer.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(6.r),
                       border: Border.all(color: AppTheme.accent.withValues(alpha: 0.4)),
                     ),
                     child: Text(
@@ -110,14 +110,14 @@ class _HomeScreenState extends State<HomeScreen>
                   Text(
                     'AI Algorithm\nArena',
                     style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          height: 1.1,
+                          height: 1.1.h,
                         ),
                   ),
                   const SizedBox(height: 10),
                   // Animated subtitle
                   AnimatedBuilder(
                     animation: _pulse,
-                    builder: (_, __) => Text(
+                    builder: (_, _) => Text(
                       'Visualize · Learn · Compete',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: AppTheme.accentLight
@@ -159,19 +159,18 @@ class _HomeScreenState extends State<HomeScreen>
             children: List.generate(_categories.length, (i) {
               final isActive = i == _selectedCategory;
               return Padding(
-                padding: const EdgeInsets.only(right: 10),
+                padding: EdgeInsets.only(right: 10.w),
                 child: GestureDetector(
                   onTap: () => setState(() => _selectedCategory = i),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 250),
                     curve: Curves.easeOut,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 18, vertical: 9),
+                    padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 9.h),
                     decoration: BoxDecoration(
                       color: isActive
                           ? AppTheme.accentContainer
                           : AppTheme.surfaceHighest,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(8.r),
                       border: Border.all(
                         color: isActive
                             ? AppTheme.accent
@@ -209,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildAlgorithmGrid() {
     final algorithms = _algorithmsByCategory[_selectedCategory] ?? [];
     return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
       sliver: SliverGrid(
         delegate: SliverChildBuilderDelegate(
           (ctx, i) => _AlgoCard(algo: algorithms[i]),
@@ -290,6 +289,9 @@ const _algorithmsByCategory = <int, List<_AlgoInfo>>{
     _AlgoInfo(name: 'Dijkstra', subtitle: 'Weighted Shortest Path',
         difficulty: 'HARD', icon: Icons.hub_rounded,
         color: AppTheme.warning, route: '/dijkstra'),
+    _AlgoInfo(name: 'Greedy BFS', subtitle: 'Speed-First Search',
+        difficulty: 'MEDIUM', icon: Icons.bolt_rounded,
+        color: AppTheme.accentLight, route: '/greedy'),
   ],
   1: [ // Puzzle
     _AlgoInfo(name: '8-Puzzle', subtitle: 'Sliding Tile Solver',
@@ -331,13 +333,13 @@ class _AlgoCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => Navigator.pushNamed(context, algo.route),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.r),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
             decoration: BoxDecoration(
               color: AppTheme.surfaceVariant.withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(16.r),
               border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
               boxShadow: [
                 BoxShadow(
@@ -352,19 +354,19 @@ class _AlgoCard extends StatelessWidget {
                 Positioned(
                   right: -10, bottom: -10,
                   child: Icon(algo.icon,
-                      size: 80,
+                      size: 80.sp,
                       color: algo.color.withValues(alpha: 0.07)),
                 ),
                 // Left accent bar
                 Positioned(
                   left: 0, top: 0, bottom: 0,
                   child: Container(
-                    width: 3,
+                    width: 3.w,
                     decoration: BoxDecoration(
                       color: algo.color,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(16),
-                        bottomLeft: Radius.circular(16),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(16.r),
+                        bottomLeft: Radius.circular(16.r),
                       ),
                     ),
                   ),
@@ -378,10 +380,10 @@ class _AlgoCard extends StatelessWidget {
                     children: [
                       // Icon badge
                       Container(
-                        width: 42, height: 42,
+                        width: 42.w, height: 42.h,
                         decoration: BoxDecoration(
                           color: algo.color.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(10.r),
                           border: Border.all(
                               color: algo.color.withValues(alpha: 0.30)),
                         ),
@@ -391,11 +393,10 @@ class _AlgoCard extends StatelessWidget {
                       const Spacer(),
                       // Difficulty badge
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 3),
+                        padding: EdgeInsets.symmetric(horizontal: 7.w, vertical: 3.h),
                         decoration: BoxDecoration(
                           color: diffColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(4.r),
                           border: Border.all(
                               color: diffColor.withValues(alpha: 0.35)),
                         ),
@@ -436,7 +437,7 @@ class _AlgoCard extends StatelessWidget {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(16.r),
                       onTap: () =>
                           Navigator.pushNamed(context, algo.route),
                       splashColor:
@@ -469,10 +470,10 @@ class _QuickStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 7.h),
       decoration: BoxDecoration(
         color: AppTheme.surfaceHigh,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(8.r),
         border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
       ),
       child: Column(
@@ -501,14 +502,14 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(children: [
-      Icon(icon, size: 16, color: AppTheme.accent),
+      Icon(icon, size: 16.sp, color: AppTheme.accent),
       const SizedBox(width: 8),
       Text(label,
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 color: AppTheme.accentLight, letterSpacing: 2)),
       const SizedBox(width: 8),
       Expanded(
-          child: Container(height: 1,
+          child: Container(height: 1.h,
               color: Colors.white.withValues(alpha: 0.06))),
     ]);
   }
@@ -530,23 +531,23 @@ class _ArenaStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(14.r),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(16.r),
           decoration: BoxDecoration(
             color: AppTheme.surfaceVariant.withValues(alpha: 0.55),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(14.r),
             border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
           ),
           child: Row(
             children: [
               Container(
-                width: 38, height: 38,
+                width: 38.w, height: 38.h,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: BorderRadius.circular(9.r),
                   border: Border.all(color: color.withValues(alpha: 0.3)),
                 ),
                 child: Icon(icon, color: color, size: 18),
@@ -587,14 +588,14 @@ class _BattlePromoBanner extends StatelessWidget {
       onTap: () => Navigator.pushNamed(context, '/battle'),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20.r),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [AppTheme.accentContainer, Color(0xFF1E0B4A)],
           ),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16.r),
           border: Border.all(color: AppTheme.accent.withValues(alpha: 0.4)),
           boxShadow: [
             BoxShadow(
@@ -606,10 +607,10 @@ class _BattlePromoBanner extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 48, height: 48,
+              width: 48.w, height: 48.h,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(12.r),
               ),
               child: const Icon(Icons.sports_kabaddi_rounded,
                   color: Colors.white, size: 24),
@@ -654,7 +655,7 @@ class _NodeGraphPainterWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: pulse,
-      builder: (_, __) => CustomPaint(
+      builder: (context, child) => CustomPaint(
         painter: _NodeGraphPainter(opacity: pulse.value * 0.06),
         size: const Size(double.infinity, 240),
       ),

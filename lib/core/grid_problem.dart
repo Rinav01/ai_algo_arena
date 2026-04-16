@@ -48,14 +48,12 @@ class GridProblem extends Problem<GridCoordinate> {
   @override
   List<GridCoordinate> getNeighbors(GridCoordinate state) {
     final neighbors = <GridCoordinate>[];
-    final rows = grid.length;
-    final cols = grid[0].length;
 
     // 4-directional movement: up, right, down, left
     const directions = [
       (-1, 0), // up
-      (0, 1), // right
-      (1, 0), // down
+      (0, 1),  // right
+      (1, 0),  // down
       (0, -1), // left
     ];
 
@@ -74,13 +72,10 @@ class GridProblem extends Problem<GridCoordinate> {
 
   @override
   bool isValid(GridCoordinate state) {
-    final rows = grid.length;
-    final cols = grid[0].length;
-
     if (state.row < 0 ||
-        state.row >= rows ||
+        state.row >= grid.length ||
         state.column < 0 ||
-        state.column >= cols) {
+        state.column >= grid[0].length) {
       return false;
     }
 
@@ -92,6 +87,11 @@ class GridProblem extends Problem<GridCoordinate> {
     // Manhattan distance heuristic
     return ((_goal.row - state.row).abs() + (_goal.column - state.column).abs())
         .toDouble();
+  }
+
+  @override
+  double moveCost(GridCoordinate from, GridCoordinate to) {
+    return grid[to.row][to.column].weight;
   }
 
   @override

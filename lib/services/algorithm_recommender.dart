@@ -172,7 +172,6 @@ class AlgorithmRecommender {
     GridProblem problem,
     RecommendedAlgorithm algorithm,
   ) {
-    final total = problem.rows * problem.cols;
     final obstacleDensity = problem.obstacleDensity;
 
     switch (algorithm) {

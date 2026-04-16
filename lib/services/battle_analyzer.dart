@@ -1,3 +1,5 @@
+import 'dart:math';
+
 /// Metrics for a single algorithm run
 class AlgorithmMetrics {
   final String algorithmName;
@@ -47,8 +49,6 @@ class AlgorithmMetrics {
 
     return (exploredScore * 0.4) + (pathScore * 0.6);
   }
-
-  double max(num a, num b) => a > b ? a.toDouble() : b.toDouble();
 }
 
 /// Comparison between two algorithm runs
@@ -149,32 +149,28 @@ $analysis
   String _generateAnalysis() {
     final reasons = <String>[];
 
+    final nodeDiff = (algorithm2.exploredStates.length - algorithm1.exploredStates.length).abs();
+    final nodePercent = (nodeDiff / (max(algorithm1.exploredStates.length, algorithm2.exploredStates.length) + 1) * 100);
+    
     reasons.add(
-      '✓ ${winner.algorithmName} explored ${(algorithm2.exploredStates.length - algorithm1.exploredStates.length).abs()} fewer nodes',
+      '✓ ${winner.algorithmName} explored $nodeDiff fewer nodes (${nodePercent.toStringAsFixed(1)}% reduction)',
     );
 
     if (algorithm1.foundPath && algorithm2.foundPath) {
       if (algorithm1.path.length == algorithm2.path.length) {
-        reasons.add('✓ Both found equally optimal paths');
-      } else if (algorithm1.path.length < algorithm2.path.length) {
-        reasons.add(
-          '✓ ${algorithm1.algorithmName} found ${algorithm1.path.length} vs ${algorithm2.path.length} node path',
-        );
+        reasons.add('✓ Both found the optimal path length (${algorithm1.path.length})');
       } else {
+        final lengthDiff = (algorithm1.path.length - algorithm2.path.length).abs();
         reasons.add(
-          '✓ ${algorithm2.algorithmName} found ${algorithm2.path.length} vs ${algorithm1.path.length} node path',
+          '✓ ${winner.algorithmName} found a path with $lengthDiff fewer nodes',
         );
       }
     }
 
-    if (algorithm1.speedPerNode < algorithm2.speedPerNode) {
-      reasons.add(
-        '⚡ ${algorithm1.algorithmName} was ${(algorithm2.speedPerNode / algorithm1.speedPerNode).toStringAsFixed(1)}x faster per node',
-      );
-    } else {
-      reasons.add(
-        '⚡ ${algorithm2.algorithmName} was ${(algorithm1.speedPerNode / algorithm2.speedPerNode).toStringAsFixed(1)}x faster per node',
-      );
+    if (winner.algorithmName.contains('A*') || winner.algorithmName.contains('Greedy')) {
+      reasons.add('🎯 Heuristic guided search avoided unnecessary exploration');
+    } else if (winner.algorithmName.contains('Dijkstra')) {
+      reasons.add('⚖️ Cost-awareness ensured the global minimum path');
     }
 
     return '''

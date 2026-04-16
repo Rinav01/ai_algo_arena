@@ -7,6 +7,7 @@ import '../core/search_algorithms.dart';
 import '../services/algorithm_executor.dart';
 import '../core/problem_definition.dart';
 import '../widgets/visualizer_widgets.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class EightPuzzleVisualizerScreen extends StatefulWidget {
   const EightPuzzleVisualizerScreen({super.key});
@@ -84,22 +85,23 @@ class _EightPuzzleVisualizerScreenState
     late SearchAlgorithm<PuzzleState> algorithm;
     switch (selectedAlgorithm) {
       case 'BFS':
-        algorithm = BFSAlgorithm<PuzzleState>(stepDelay: _stepDelay);
+        algorithm = BFSAlgorithm<PuzzleState>();
         break;
       case 'DFS':
-        algorithm = DFSAlgorithm<PuzzleState>(stepDelay: _stepDelay);
+        algorithm = DFSAlgorithm<PuzzleState>();
         break;
       case 'A*':
-        algorithm = AStarAlgorithm<PuzzleState>(stepDelay: _stepDelay);
+        algorithm = AStarAlgorithm<PuzzleState>();
         break;
       case 'Dijkstra':
-        algorithm = DijkstraAlgorithm<PuzzleState>(stepDelay: _stepDelay);
+        algorithm = DijkstraAlgorithm<PuzzleState>();
         break;
     }
 
     executor = AlgorithmExecutor<PuzzleState>(
       algorithm: algorithm,
       problem: problem,
+      stepDelayMs: _stepDelay.inMilliseconds,
     );
 
     try {
@@ -112,14 +114,14 @@ class _EightPuzzleVisualizerScreenState
 
           setState(() {
             stepCount = step.stepCount;
-            nodesExplored = step.explored.length;
-            exploredStates = step.explored.map((s) => s.toString()).toSet();
+            nodesExplored = executor!.exploredSet.length;
+            exploredStates = executor!.exploredSet.map((s) => s.toString()).toSet();
 
             if (step.path.isNotEmpty) {
               currentPath = step.path;
               currentState = step.path.last;
-            } else if (step.explored.isNotEmpty) {
-              currentState = step.explored.last;
+            } else if (step.newlyExplored.isNotEmpty) {
+              currentState = step.newlyExplored.last;
             }
 
             _statusMessage = step.message ?? _statusMessage;
@@ -188,36 +190,37 @@ class _EightPuzzleVisualizerScreenState
       late SearchAlgorithm<PuzzleState> algorithm;
       switch (selectedAlgorithm) {
         case 'BFS':
-          algorithm = BFSAlgorithm<PuzzleState>(stepDelay: _stepDelay);
+          algorithm = BFSAlgorithm<PuzzleState>();
           break;
         case 'DFS':
-          algorithm = DFSAlgorithm<PuzzleState>(stepDelay: _stepDelay);
+          algorithm = DFSAlgorithm<PuzzleState>();
           break;
         case 'A*':
-          algorithm = AStarAlgorithm<PuzzleState>(stepDelay: _stepDelay);
+          algorithm = AStarAlgorithm<PuzzleState>();
           break;
         case 'Dijkstra':
-          algorithm = DijkstraAlgorithm<PuzzleState>(stepDelay: _stepDelay);
+          algorithm = DijkstraAlgorithm<PuzzleState>();
           break;
       }
       executor = AlgorithmExecutor<PuzzleState>(
         algorithm: algorithm,
         problem: problem,
-      );
+      stepDelayMs: _stepDelay.inMilliseconds,
+    );
       executor!.start();
       _stepSubscription?.cancel();
       _stepSubscription = executor!.stepStream.listen((step) {
         if (!mounted) return;
         setState(() {
           stepCount = step.stepCount;
-          nodesExplored = step.explored.length;
-          exploredStates = step.explored.map((s) => s.toString()).toSet();
+          nodesExplored = executor!.exploredSet.length;
+          exploredStates = executor!.exploredSet.map((s) => s.toString()).toSet();
 
           if (step.path.isNotEmpty) {
             currentPath = step.path;
             currentState = step.path.last;
-          } else if (step.explored.isNotEmpty) {
-            currentState = step.explored.last;
+          } else if (step.newlyExplored.isNotEmpty) {
+            currentState = step.newlyExplored.last;
           }
 
           if (step.isGoalReached) {
@@ -277,7 +280,7 @@ class _EightPuzzleVisualizerScreenState
                   padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
                   decoration: BoxDecoration(
                     color: AppTheme.surfaceVariant.withValues(alpha: 0.8),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
                     border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
                   ),
                   child: Column(
@@ -286,11 +289,11 @@ class _EightPuzzleVisualizerScreenState
                     children: [
                       Center(
                         child: Container(
-                          width: 40, height: 4,
-                          margin: const EdgeInsets.only(bottom: 20),
+                          width: 40.w, height: 4.h,
+                          margin: EdgeInsets.only(bottom: 20.h),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(2),
+                            borderRadius: BorderRadius.circular(2.r),
                           ),
                         ),
                       ),
@@ -330,7 +333,7 @@ class _EightPuzzleVisualizerScreenState
             children: algorithms.map((algo) {
               final isSelected = selectedAlgorithm == algo;
               return Padding(
-                padding: const EdgeInsets.only(right: 12),
+                padding: EdgeInsets.only(right: 12.w),
                 child: GestureDetector(
                   onTap: () {
                     if (!isSolving) {
@@ -340,10 +343,10 @@ class _EightPuzzleVisualizerScreenState
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
                     decoration: BoxDecoration(
                       color: isSelected ? AppTheme.accent.withValues(alpha: 0.15) : AppTheme.surfaceHigh,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(8.r),
                       border: Border.all(
                         color: isSelected ? AppTheme.accent : Colors.white.withValues(alpha: 0.05),
                       ),
@@ -418,8 +421,8 @@ class _EightPuzzleVisualizerScreenState
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accent,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: EdgeInsets.symmetric(vertical: 16.h),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
             ),
             child: const Text('AUTO SOLVE', style: TextStyle(letterSpacing: 1.5, fontWeight: FontWeight.bold)),
           ),
@@ -506,11 +509,11 @@ class _EightPuzzleVisualizerScreenState
               ),
               const SizedBox(height: 12),
               ClipRRect(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(16.r),
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(12.r),
                     decoration: AppTheme.glassCardAccent(radius: 16),
                     child: _buildPuzzleGrid(currentState, isInteractive: true),
                   ),
@@ -530,7 +533,7 @@ class _EightPuzzleVisualizerScreenState
               ),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: EdgeInsets.all(8.r),
                 decoration: AppTheme.glassCard(radius: 12),
                 child: _buildPuzzleGrid(problem.goalState, isInteractive: false),
               ),

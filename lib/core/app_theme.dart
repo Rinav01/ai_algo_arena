@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// ─── "Neural Arena" Design System (Generated via Google Stitch) ─────────────
 /// Creative North Star: "The Neural Nexus" — a high-performance HUD where
@@ -55,6 +56,8 @@ abstract class AppTheme {
   static const Color cellExplored       = Color(0xFF571BC1); // violet — visited
   static const Color cellPath           = Color(0xFF00DBE9); // cyan — path
   static const Color cellFrontier       = Color(0xFF8B5CF6); // lavender — queue
+  static const Color cellWeight         = Color(0xFF166534); // deep green — heavy terrain (forest)
+  static const Color cellWeightBorder   = Color(0xFF14532D); 
 
   // ── Glassmorphism helpers ──────────────────────────────────────────────────
 
@@ -127,15 +130,15 @@ abstract class AppTheme {
         side: BorderSide(color: (color ?? accent).withValues(alpha: 0.7)),
         backgroundColor: surfaceVariant.withValues(alpha: 0.20),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(10.r),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
       );
 
   /// Gradient CTA button wrapper — use inside a Stack/Container
   static BoxDecoration get primaryButtonDecoration => BoxDecoration(
         gradient: ctaGradient,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r),
       );
 
   static ButtonStyle primaryButton() => ElevatedButton.styleFrom(
@@ -143,9 +146,9 @@ abstract class AppTheme {
         foregroundColor: const Color(0xFF23005C),
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(12.r),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 14.h),
       );
 
   // ── Flutter ThemeData ──────────────────────────────────────────────────────
@@ -175,17 +178,17 @@ abstract class AppTheme {
       ),
       // ── Typography: Space Grotesk for headings, Manrope for body ───────────
       fontFamily: 'Manrope',
-      textTheme: const TextTheme(
+      textTheme: TextTheme(
         // Display / Hero titles  →  Space Grotesk
         displayLarge: TextStyle(
-          fontSize: 34,
+          fontSize: 34.sp,
           fontWeight: FontWeight.w800,
           color: textColor,
           letterSpacing: -0.6,
           fontFamily: 'SpaceGrotesk',
         ),
         displayMedium: TextStyle(
-          fontSize: 28,
+          fontSize: 28.sp,
           fontWeight: FontWeight.w700,
           color: textColor,
           letterSpacing: -0.4,
@@ -193,75 +196,75 @@ abstract class AppTheme {
         ),
         // Section headings  →  Space Grotesk
         headlineLarge: TextStyle(
-          fontSize: 24,
+          fontSize: 24.sp,
           fontWeight: FontWeight.w700,
           color: textColor,
           fontFamily: 'SpaceGrotesk',
         ),
         headlineMedium: TextStyle(
-          fontSize: 20,
+          fontSize: 20.sp,
           fontWeight: FontWeight.w600,
           color: textColor,
           fontFamily: 'SpaceGrotesk',
         ),
         headlineSmall: TextStyle(
-          fontSize: 17,
+          fontSize: 17.sp,
           fontWeight: FontWeight.w600,
           color: textColor,
           fontFamily: 'SpaceGrotesk',
         ),
         // UI titles  →  Manrope
         titleLarge: TextStyle(
-          fontSize: 16,
+          fontSize: 16.sp,
           fontWeight: FontWeight.w700,
           color: textColor,
         ),
         titleMedium: TextStyle(
-          fontSize: 14,
+          fontSize: 14.sp,
           fontWeight: FontWeight.w600,
           color: textColor,
         ),
         titleSmall: TextStyle(
-          fontSize: 13,
+          fontSize: 13.sp,
           fontWeight: FontWeight.w500,
           color: textColor,
         ),
         // Body  →  Manrope
         bodyLarge: TextStyle(
-          fontSize: 15,
+          fontSize: 15.sp,
           fontWeight: FontWeight.w400,
           color: textColor,
-          height: 1.6,
+          height: 1.6.h,
         ),
         bodyMedium: TextStyle(
-          fontSize: 14,
+          fontSize: 14.sp,
           fontWeight: FontWeight.w400,
           color: textColor,
-          height: 1.5,
+          height: 1.5.h,
         ),
         bodySmall: TextStyle(
-          fontSize: 12,
+          fontSize: 12.sp,
           fontWeight: FontWeight.w400,
           color: Color(0xFFC7C6CD),
-          height: 1.4,
+          height: 1.4.h,
         ),
         // Labels — uppercase caps tags, status indicators
         labelLarge: TextStyle(
-          fontSize: 12,
+          fontSize: 12.sp,
           fontWeight: FontWeight.w700,
           color: textColor,
           letterSpacing: 1.0,
           fontFamily: 'SpaceGrotesk',
         ),
         labelMedium: TextStyle(
-          fontSize: 11,
+          fontSize: 11.sp,
           fontWeight: FontWeight.w600,
           color: accentLight,
           letterSpacing: 1.0,
           fontFamily: 'SpaceGrotesk',
         ),
         labelSmall: TextStyle(
-          fontSize: 10,
+          fontSize: 10.sp,
           fontWeight: FontWeight.w600,
           color: Color(0xFF909097),
           letterSpacing: 1.2,
@@ -277,13 +280,13 @@ abstract class AppTheme {
       ),
       iconTheme: const IconThemeData(color: onBackground),
       dividerColor: Colors.white.withValues(alpha: 0.06),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: background,
         foregroundColor: onBackground,
         elevation: 0,
         scrolledUnderElevation: 0,
         titleTextStyle: TextStyle(
-          fontSize: 18,
+          fontSize: 18.sp,
           fontWeight: FontWeight.w700,
           color: onBackground,
           fontFamily: 'SpaceGrotesk',
@@ -302,11 +305,11 @@ abstract class AppTheme {
           foregroundColor: const Color(0xFF23005C),
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(12.r),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          textStyle: const TextStyle(
-            fontSize: 14,
+          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 14.h),
+          textStyle: TextStyle(
+            fontSize: 14.sp,
             fontWeight: FontWeight.w700,
             fontFamily: 'SpaceGrotesk',
             letterSpacing: 0.5,
@@ -318,30 +321,30 @@ abstract class AppTheme {
           foregroundColor: accentLight,
           side: BorderSide(color: accent.withValues(alpha: 0.5)),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(10.r),
           ),
           backgroundColor: surfaceVariant.withValues(alpha: 0.20),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
         ),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: surfaceHighest,
         selectedColor: accent.withValues(alpha: 0.25),
-        labelStyle: const TextStyle(
-          fontSize: 12,
+        labelStyle: TextStyle(
+          fontSize: 12.sp,
           color: onBackground,
           fontFamily: 'SpaceGrotesk',
           fontWeight: FontWeight.w600,
         ),
         side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
       ),
       cardTheme: CardThemeData(
         color: surfaceHigh,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16.r),
           side: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
         ),
         margin: EdgeInsets.zero,
@@ -352,7 +355,7 @@ abstract class AppTheme {
           color: onBackground,
           fontFamily: 'Manrope',
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
         behavior: SnackBarBehavior.floating,
       ),
     );

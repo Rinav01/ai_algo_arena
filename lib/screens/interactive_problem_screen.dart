@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class InteractiveProblemScreen extends StatefulWidget {
   final String problemTitle;
@@ -43,7 +44,7 @@ class _InteractiveProblemScreenState extends State<InteractiveProblemScreen> {
             children: [
               // Header
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16.r),
                 child: Row(
                   children: [
                     IconButton(
@@ -58,14 +59,14 @@ class _InteractiveProblemScreenState extends State<InteractiveProblemScreen> {
                           children: [
                             Icon(
                               widget.problemIcon,
-                              size: 28,
+                              size: 28.sp,
                               color: const Color(0xFFFFA500),
                             ),
                             const SizedBox(width: 8),
                             Text(
                               widget.problemTitle,
-                              style: const TextStyle(
-                                fontSize: 22,
+                              style: TextStyle(
+                                fontSize: 22.sp,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -76,7 +77,7 @@ class _InteractiveProblemScreenState extends State<InteractiveProblemScreen> {
                           widget.problemDescription,
                           style: TextStyle(
                             color: Colors.grey[400],
-                            fontSize: 12,
+                            fontSize: 12.sp,
                           ),
                         ),
                       ],
@@ -86,7 +87,7 @@ class _InteractiveProblemScreenState extends State<InteractiveProblemScreen> {
               ),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16.r),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -98,13 +99,13 @@ class _InteractiveProblemScreenState extends State<InteractiveProblemScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: difficultyColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(8.r),
                           border: Border.all(color: difficultyColor),
                         ),
                         child: Text(
                           'Difficulty: ${widget.difficulty}',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 12.sp,
                             fontWeight: FontWeight.bold,
                             color: difficultyColor,
                           ),
@@ -113,10 +114,10 @@ class _InteractiveProblemScreenState extends State<InteractiveProblemScreen> {
                       const SizedBox(height: 24),
                       // Content Area
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.all(16.r),
                         decoration: BoxDecoration(
                           color: const Color(0xFF0E2233),
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(16.r),
                           border: Border.all(
                             color: Colors.white.withValues(alpha: 0.06),
                           ),
@@ -131,10 +132,10 @@ class _InteractiveProblemScreenState extends State<InteractiveProblemScreen> {
                             const SizedBox(height: 16),
                             Container(
                               width: double.infinity,
-                              height: 300,
+                              height: 300.h,
                               decoration: BoxDecoration(
                                 color: Colors.black.withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(12.r),
                                 border: Border.all(
                                   color: Colors.white.withValues(alpha: 0.1),
                                 ),
@@ -191,16 +192,16 @@ class _InteractiveProblemScreenState extends State<InteractiveProblemScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFFFA500),
                             foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding: EdgeInsets.symmetric(vertical: 16.h),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(12.r),
                             ),
                           ),
-                          child: const Text(
+                          child: Text(
                             'Launch Problem',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                              fontSize: 16.sp,
                             ),
                           ),
                         ),
@@ -218,13 +219,13 @@ class _InteractiveProblemScreenState extends State<InteractiveProblemScreen> {
 
   Widget _buildInstructionItem(String number, String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: 12.h),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 32.w,
+            height: 32.h,
             decoration: BoxDecoration(
               color: const Color(0xFFFFA500),
               shape: BoxShape.circle,
@@ -242,7 +243,7 @@ class _InteractiveProblemScreenState extends State<InteractiveProblemScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(top: 6),
+              padding: EdgeInsets.only(top: 6.h),
               child: Text(text, style: const TextStyle(fontSize: 14)),
             ),
           ),

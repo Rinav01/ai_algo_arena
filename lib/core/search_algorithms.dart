@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:collection';
 import 'package:collection/collection.dart';
 
@@ -6,9 +5,8 @@ import '../core/problem_definition.dart';
 
 /// Generic BFS algorithm that works with any Problem
 class BFSAlgorithm<State> extends SearchAlgorithm<State> {
-  final Duration stepDelay;
 
-  BFSAlgorithm({this.stepDelay = const Duration(milliseconds: 5)});
+  BFSAlgorithm();
 
   @override
   String get name => 'Breadth-First Search';
@@ -17,7 +15,7 @@ class BFSAlgorithm<State> extends SearchAlgorithm<State> {
   String get category => 'Uninformed Search';
 
   @override
-  Stream<AlgorithmStep<State>> solve(Problem<State> problem) async* {
+  Iterable<AlgorithmStep<State>> solve(Problem<State> problem) sync* {
     final visited = <State>{};
     final queue = Queue<State>();
     final parent = <State, State>{};
@@ -30,20 +28,6 @@ class BFSAlgorithm<State> extends SearchAlgorithm<State> {
     int stepCount = 0;
 
     while (queue.isNotEmpty) {
-      // Emit current state
-      yield AlgorithmStep<State>(
-        explored: explored.toList(),
-        path: [],
-        stepCount: stepCount,
-        message: 'Exploring ${problem.stateToString(queue.first)}',
-        isGoalReached: false,
-      );
-
-      // Add delay for visualization
-      if (stepDelay.inMilliseconds > 0) {
-        await Future.delayed(stepDelay);
-      }
-
       final current = queue.removeFirst();
       explored.add(current);
       stepCount++;
@@ -52,7 +36,8 @@ class BFSAlgorithm<State> extends SearchAlgorithm<State> {
       if (problem.isGoal(current)) {
         final path = _reconstructPath(parent, current, startState);
         yield AlgorithmStep<State>(
-          explored: explored,
+          newlyExplored: [current],
+          currentState: current,
           path: path,
           stepCount: stepCount,
           message: 'Goal found!',
@@ -60,6 +45,16 @@ class BFSAlgorithm<State> extends SearchAlgorithm<State> {
         );
         return;
       }
+
+      // Emit current state
+      yield AlgorithmStep<State>(
+        newlyExplored: [current],
+        currentState: current,
+        path: [],
+        stepCount: stepCount,
+        message: 'Exploring ${problem.stateToString(current)}',
+        isGoalReached: false,
+      );
 
       // Explore neighbors
       final neighbors = problem.getNeighbors(current);
@@ -74,7 +69,7 @@ class BFSAlgorithm<State> extends SearchAlgorithm<State> {
 
     // No path found
     yield AlgorithmStep<State>(
-      explored: explored,
+      newlyExplored: [],
       path: [],
       stepCount: stepCount,
       message: 'No path found',
@@ -91,7 +86,7 @@ class BFSAlgorithm<State> extends SearchAlgorithm<State> {
     var current = goal;
 
     while (current != start && parent.containsKey(current)) {
-      current = parent[current]!;
+      current = parent[current] as State;
       path.add(current);
     }
 
@@ -101,9 +96,8 @@ class BFSAlgorithm<State> extends SearchAlgorithm<State> {
 
 /// Generic DFS algorithm that works with any Problem
 class DFSAlgorithm<State> extends SearchAlgorithm<State> {
-  final Duration stepDelay;
 
-  DFSAlgorithm({this.stepDelay = const Duration(milliseconds: 5)});
+  DFSAlgorithm();
 
   @override
   String get name => 'Depth-First Search';
@@ -112,13 +106,12 @@ class DFSAlgorithm<State> extends SearchAlgorithm<State> {
   String get category => 'Uninformed Search';
 
   @override
-  Stream<AlgorithmStep<State>> solve(Problem<State> problem) async* {
+  Iterable<AlgorithmStep<State>> solve(Problem<State> problem) sync* {
     final visited = <State>{};
     final stack = <State>[problem.initialState];
     final parent = <State, State>{};
     final explored = <State>[];
 
-    visited.add(problem.initialState);
     int stepCount = 0;
 
     while (stack.isNotEmpty) {
@@ -126,30 +119,16 @@ class DFSAlgorithm<State> extends SearchAlgorithm<State> {
 
       if (visited.contains(current)) continue;
 
+      visited.add(current);
       explored.add(current);
       stepCount++;
-
-      // Emit current state
-      yield AlgorithmStep<State>(
-        explored: explored.toList(),
-        path: [],
-        stepCount: stepCount,
-        message: 'Exploring ${problem.stateToString(current)}',
-        isGoalReached: false,
-      );
-
-      // Add delay for visualization
-      if (stepDelay.inMilliseconds > 0) {
-        await Future.delayed(stepDelay);
-      }
-
-      visited.add(current);
 
       // Check if goal is reached
       if (problem.isGoal(current)) {
         final path = _reconstructPath(parent, current, problem.initialState);
         yield AlgorithmStep<State>(
-          explored: explored,
+          newlyExplored: [current],
+          currentState: current,
           path: path,
           stepCount: stepCount,
           message: 'Goal found!',
@@ -157,6 +136,16 @@ class DFSAlgorithm<State> extends SearchAlgorithm<State> {
         );
         return;
       }
+
+      // Emit current state
+      yield AlgorithmStep<State>(
+        newlyExplored: [current],
+        currentState: current,
+        path: [],
+        stepCount: stepCount,
+        message: 'Exploring ${problem.stateToString(current)}',
+        isGoalReached: false,
+      );
 
       // Explore neighbors
       final neighbors = problem.getNeighbors(current);
@@ -170,7 +159,7 @@ class DFSAlgorithm<State> extends SearchAlgorithm<State> {
 
     // No path found
     yield AlgorithmStep<State>(
-      explored: explored,
+      newlyExplored: [],
       path: [],
       stepCount: stepCount,
       message: 'No path found',
@@ -187,7 +176,7 @@ class DFSAlgorithm<State> extends SearchAlgorithm<State> {
     var current = goal;
 
     while (current != start && parent.containsKey(current)) {
-      current = parent[current]!;
+      current = parent[current] as State;
       path.add(current);
     }
 
@@ -197,9 +186,8 @@ class DFSAlgorithm<State> extends SearchAlgorithm<State> {
 
 /// Generic A* algorithm that works with any Problem
 class AStarAlgorithm<State> extends SearchAlgorithm<State> {
-  final Duration stepDelay;
 
-  AStarAlgorithm({this.stepDelay = const Duration(milliseconds: 5)});
+  AStarAlgorithm();
 
   @override
   String get name => 'A* Search';
@@ -208,7 +196,7 @@ class AStarAlgorithm<State> extends SearchAlgorithm<State> {
   String get category => 'Informed Search';
 
   @override
-  Stream<AlgorithmStep<State>> solve(Problem<State> problem) async* {
+  Iterable<AlgorithmStep<State>> solve(Problem<State> problem) sync* {
     final visited = <State>{};
     final gScore = <State, double>{};
     final fScore = <State, double>{};
@@ -236,21 +224,6 @@ class AStarAlgorithm<State> extends SearchAlgorithm<State> {
 
       if (visited.contains(current)) continue;
 
-      // Emit current state
-      yield AlgorithmStep<State>(
-        explored: explored.toList(),
-        path: [],
-        stepCount: stepCount,
-        message:
-            'Evaluating ${problem.stateToString(current)} (f=${(fScore[current] ?? 0).toStringAsFixed(1)})',
-        isGoalReached: false,
-      );
-
-      // Add delay for visualization
-      if (stepDelay.inMilliseconds > 0) {
-        await Future.delayed(stepDelay);
-      }
-
       visited.add(current);
       explored.add(current);
       stepCount++;
@@ -258,7 +231,8 @@ class AStarAlgorithm<State> extends SearchAlgorithm<State> {
       if (problem.isGoal(current)) {
         final path = _reconstructPath(parent, current, startState);
         yield AlgorithmStep<State>(
-          explored: explored,
+          newlyExplored: [current],
+          currentState: current,
           path: path,
           stepCount: stepCount,
           message:
@@ -267,6 +241,17 @@ class AStarAlgorithm<State> extends SearchAlgorithm<State> {
         );
         return;
       }
+
+      // Emit current state
+      yield AlgorithmStep<State>(
+        newlyExplored: [current],
+        currentState: current,
+        path: [],
+        stepCount: stepCount,
+        message:
+            'Evaluating ${problem.stateToString(current)} (f=${(fScore[current] ?? 0).toStringAsFixed(1)})',
+        isGoalReached: false,
+      );
 
       // Check all neighbors
       final neighbors = problem.getNeighbors(current);
@@ -295,7 +280,7 @@ class AStarAlgorithm<State> extends SearchAlgorithm<State> {
 
     // No path found
     yield AlgorithmStep<State>(
-      explored: explored,
+      newlyExplored: [],
       path: [],
       stepCount: stepCount,
       message: 'No path found',
@@ -312,7 +297,7 @@ class AStarAlgorithm<State> extends SearchAlgorithm<State> {
     var current = goal;
 
     while (current != start && parent.containsKey(current)) {
-      current = parent[current]!;
+      current = parent[current] as State;
       path.add(current);
     }
 
@@ -322,9 +307,8 @@ class AStarAlgorithm<State> extends SearchAlgorithm<State> {
 
 /// Dijkstra's algorithm - weighted version of BFS
 class DijkstraAlgorithm<State> extends SearchAlgorithm<State> {
-  final Duration stepDelay;
 
-  DijkstraAlgorithm({this.stepDelay = const Duration(milliseconds: 5)});
+  DijkstraAlgorithm();
 
   @override
   String get name => 'Dijkstra\'s Algorithm';
@@ -333,7 +317,7 @@ class DijkstraAlgorithm<State> extends SearchAlgorithm<State> {
   String get category => 'Weighted Search';
 
   @override
-  Stream<AlgorithmStep<State>> solve(Problem<State> problem) async* {
+  Iterable<AlgorithmStep<State>> solve(Problem<State> problem) sync* {
     final distances = <State, double>{};
     final visited = <State>{};
     final parent = <State, State>{};
@@ -361,21 +345,6 @@ class DijkstraAlgorithm<State> extends SearchAlgorithm<State> {
 
       final minDistance = distances[current] ?? double.infinity;
 
-      // Emit current state
-      yield AlgorithmStep<State>(
-        explored: explored.toList(),
-        path: [],
-        stepCount: stepCount,
-        message:
-            'Visiting ${problem.stateToString(current)} (distance=${minDistance.toStringAsFixed(1)})',
-        isGoalReached: false,
-      );
-
-      // Add delay for visualization
-      if (stepDelay.inMilliseconds > 0) {
-        await Future.delayed(stepDelay);
-      }
-
       visited.add(current);
       explored.add(current);
       stepCount++;
@@ -383,7 +352,8 @@ class DijkstraAlgorithm<State> extends SearchAlgorithm<State> {
       if (problem.isGoal(current)) {
         final path = _reconstructPath(parent, current, startState);
         yield AlgorithmStep<State>(
-          explored: explored,
+          newlyExplored: [current],
+          currentState: current,
           path: path,
           stepCount: stepCount,
           message:
@@ -392,6 +362,17 @@ class DijkstraAlgorithm<State> extends SearchAlgorithm<State> {
         );
         return;
       }
+
+      // Emit current state
+      yield AlgorithmStep<State>(
+        newlyExplored: [current],
+        currentState: current,
+        path: [],
+        stepCount: stepCount,
+        message:
+            'Visiting ${problem.stateToString(current)} (distance=${minDistance.toStringAsFixed(1)})',
+        isGoalReached: false,
+      );
 
       final neighbors = problem.getNeighbors(current);
       for (final neighbor in neighbors) {
@@ -416,28 +397,125 @@ class DijkstraAlgorithm<State> extends SearchAlgorithm<State> {
     }
 
     // No path found
+    // No path found
     yield AlgorithmStep<State>(
-      explored: explored,
+      newlyExplored: [],
       path: [],
       stepCount: stepCount,
       message: 'No path found',
       isGoalReached: false,
     );
   }
+  }
 
-  List<State> _reconstructPath(
-    Map<State, State> parent,
-    State goal,
-    State start,
-  ) {
-    final path = <State>[goal];
-    var current = goal;
+List<State> _reconstructPath<State>(
+  Map<State, State> parent,
+  State goal,
+  State start,
+) {
+  final path = <State>[goal];
+  var current = goal;
 
-    while (current != start && parent.containsKey(current)) {
-      current = parent[current]!;
-      path.add(current);
+  while (current != start && parent.containsKey(current)) {
+    current = parent[current] as State;
+    path.add(current);
+  }
+
+  return path.reversed.toList();
+}
+
+class StateNode<State> {
+  final State state;
+  final double f;
+  final double g;
+
+  StateNode({
+    required this.state,
+    required this.f,
+    required this.g,
+  });
+}
+
+/// Greedy Best-First Search (GBFS)
+/// Prioritizes speed by only considering heuristic estimates, 
+/// though it doesn't guarantee the shortest path.
+class GreedyBestFirstAlgorithm<State> extends SearchAlgorithm<State> {
+  @override
+  String get name => 'Greedy Best-First Search';
+
+  @override
+  String get category => 'Informed Search';
+
+  @override
+  Iterable<AlgorithmStep<State>> solve(Problem<State> problem) sync* {
+    final startState = problem.initialState;
+    final parent = <State, State>{};
+    final visited = <State>{};
+    final List<State> explored = [];
+    int stepCount = 0;
+
+    final openSet = PriorityQueue<StateNode<State>>(
+      (a, b) => a.f.compareTo(b.f),
+    );
+
+    openSet.add(StateNode<State>(
+      state: startState,
+      f: problem.heuristic(startState),
+      g: 0,
+    ));
+
+    while (openSet.isNotEmpty) {
+      final StateNode<State> currentNode = openSet.removeFirst();
+      final current = currentNode.state;
+
+      if (visited.contains(current)) continue;
+
+      visited.add(current);
+      explored.add(current);
+      stepCount++;
+
+      if (problem.isGoal(current)) {
+        final path = _reconstructPath(parent, current, startState);
+        yield AlgorithmStep<State>(
+          newlyExplored: [current],
+          currentState: current,
+          path: path,
+          stepCount: stepCount,
+          message: 'Goal found using Greedy BFS!',
+          isGoalReached: true,
+        );
+        return;
+      }
+
+      // Emit current state
+      yield AlgorithmStep<State>(
+        newlyExplored: [current],
+        currentState: current,
+        path: [],
+        stepCount: stepCount,
+        message: 'Greedy evaluating ${problem.stateToString(current)} (h=${currentNode.f.toStringAsFixed(1)})',
+        isGoalReached: false,
+      );
+
+      for (final neighbor in problem.getNeighbors(current)) {
+        if (!visited.contains(neighbor)) {
+          parent[neighbor] = current;
+          openSet.add(StateNode<State>(
+            state: neighbor,
+            f: problem.heuristic(neighbor),
+            g: 0, // Ignored in GBFS
+          ));
+        }
+      }
     }
 
-    return path.reversed.toList();
+    yield AlgorithmStep<State>(
+      newlyExplored: [],
+      path: [],
+      stepCount: stepCount,
+      message: 'No path found.',
+      isGoalReached: false,
+    );
+    
   }
 }

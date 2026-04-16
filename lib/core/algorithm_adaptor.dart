@@ -1,5 +1,4 @@
 import '../core/grid_problem.dart';
-import '../core/problem_definition.dart';
 import '../core/search_algorithms.dart';
 import '../models/grid_node.dart';
 
@@ -22,28 +21,28 @@ class AlgorithmAdaptor {
   static BFSAlgorithm<GridCoordinate> createBFS({
     Duration stepDelay = const Duration(milliseconds: 5),
   }) {
-    return BFSAlgorithm(stepDelay: stepDelay);
+    return BFSAlgorithm();
   }
 
   /// Create DFS algorithm instance
   static DFSAlgorithm<GridCoordinate> createDFS({
     Duration stepDelay = const Duration(milliseconds: 5),
   }) {
-    return DFSAlgorithm(stepDelay: stepDelay);
+    return DFSAlgorithm();
   }
 
   /// Create A* algorithm instance
   static AStarAlgorithm<GridCoordinate> createAStar({
     Duration stepDelay = const Duration(milliseconds: 5),
   }) {
-    return AStarAlgorithm(stepDelay: stepDelay);
+    return AStarAlgorithm();
   }
 
   /// Create Dijkstra algorithm instance
   static DijkstraAlgorithm<GridCoordinate> createDijkstra({
     Duration stepDelay = const Duration(milliseconds: 5),
   }) {
-    return DijkstraAlgorithm(stepDelay: stepDelay);
+    return DijkstraAlgorithm();
   }
 
   /// Convert GridCoordinate back to old tuple format (for legacy code)

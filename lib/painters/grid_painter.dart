@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/grid_node.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class GridPainter extends CustomPainter {
   GridPainter({required this.grid, required this.cellSize});
@@ -27,7 +28,7 @@ class GridPainter extends CustomPainter {
 
         cellPaint.color = _fillColor(node.type);
         canvas.drawRRect(
-          RRect.fromRectAndRadius(rect.deflate(0.8), const Radius.circular(4)),
+          RRect.fromRectAndRadius(rect.deflate(0.8), Radius.circular(4.r)),
           cellPaint,
         );
 
@@ -36,6 +37,12 @@ class GridPainter extends CustomPainter {
             ..style = PaintingStyle.fill
             ..color = Colors.white.withValues(alpha: 0.92);
           canvas.drawCircle(rect.center, cellSize * 0.18, markerPaint);
+        } else if (node.type == NodeType.weight) {
+          // Subtle indicator for weight (Terrain style)
+          final dotPaint = Paint()
+            ..style = PaintingStyle.fill
+            ..color = Colors.white.withValues(alpha: 0.15);
+          canvas.drawCircle(rect.center, cellSize * 0.1, dotPaint);
         }
       }
     }
@@ -54,9 +61,10 @@ class GridPainter extends CustomPainter {
   Color _fillColor(NodeType type) {
     return switch (type) {
       NodeType.empty => const Color(0xFF0A1A28),
-      NodeType.wall => const Color(0xFFEF4444),
-      NodeType.start => const Color(0xFF14B8A6),
-      NodeType.goal => const Color(0xFFF59E0B),
+      NodeType.wall => const Color(0xFF1E2A3A),
+      NodeType.start => const Color(0xFF10B981),
+      NodeType.goal => const Color(0xFFEF4444),
+      NodeType.weight => const Color(0xFF166534),
     };
   }
 

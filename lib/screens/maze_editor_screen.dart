@@ -7,7 +7,8 @@ import '../core/search_algorithms.dart';
 import '../services/algorithm_executor.dart';
 import '../core/problem_definition.dart';
 import '../core/app_theme.dart';
-import '../widgets/visualizer_widgets.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../core/maze_generators.dart';
 
 class MazeEditorScreen extends StatefulWidget {
   const MazeEditorScreen({super.key});
@@ -18,7 +19,6 @@ class MazeEditorScreen extends StatefulWidget {
 
 class _MazeEditorScreenState extends State<MazeEditorScreen> {
   late final GridController _controller;
-  String _selectedConstraint = 'None';
 
   @override
   void initState() {
@@ -41,7 +41,7 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
             children: [
               // Header
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16.r),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -55,17 +55,17 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Arena Architect',
                               style: TextStyle(
-                                fontSize: 20,
+                                fontSize: 20.sp,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
                               'Editor Mode',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 12.sp,
                                 color: Colors.grey[400],
                               ),
                             ),
@@ -87,7 +87,7 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
               ),
               // Tabs
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
                 child: Row(
                   children: [
                     _buildTab('Grid Editor', true),
@@ -102,7 +102,7 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
               // Grid Editor
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16.r),
                   child: AnimatedBuilder(
                     animation: _controller,
                     builder: (context, _) {
@@ -115,9 +115,9 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
                               decoration: BoxDecoration(
                                 border: Border.all(
                                   color: const Color(0xFFD4A574),
-                                  width: 2,
+                                  width: 2.w,
                                 ),
-                                borderRadius: BorderRadius.circular(16),
+                                borderRadius: BorderRadius.circular(16.r),
                               ),
                               child: _buildGrid(),
                             ),
@@ -149,13 +149,12 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
         ),
         const SizedBox(height: 8),
         if (isActive)
-          Container(height: 3, width: 80, color: const Color(0xFFFFA500)),
+          Container(height: 3.h, width: 80.w, color: const Color(0xFFFFA500)),
       ],
     );
   }
 
   Widget _buildGrid() {
-    final cellSize = 45.0;
     final grid = _controller.grid;
 
     return GridView.builder(
@@ -195,6 +194,8 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
         return const Icon(Icons.flag, color: Colors.red, size: 24);
       case NodeType.wall:
         return Container(color: const Color(0xFF1a3a3a));
+      case NodeType.weight:
+        return const Icon(Icons.fitness_center, color: Colors.brown, size: 20);
       case NodeType.empty:
         return const SizedBox.shrink();
     }
@@ -208,6 +209,8 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
         return Colors.amber.withValues(alpha: 0.3);
       case NodeType.goal:
         return Colors.red.withValues(alpha: 0.3);
+      case NodeType.weight:
+        return Colors.brown.withValues(alpha: 0.3);
       case NodeType.empty:
         return const Color(0xFF0E2233);
     }
@@ -247,6 +250,16 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
               isSelected: _controller.selectedTool == PaintTool.erase,
               onTap: () => _controller.setTool(PaintTool.erase),
             ),
+            // Random Maze generation button
+            ElevatedButton.icon(
+              onPressed: _generateRandomMaze,
+              icon: const Icon(Icons.shuffle),
+              label: const Text('Random Maze'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6A5ACD),
+                foregroundColor: Colors.white,
+              ),
+            ),
             ElevatedButton.icon(
               onPressed: _solveMaze,
               icon: const Icon(Icons.play_arrow),
@@ -271,10 +284,10 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFFFA500) : const Color(0xFF0E2233),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
             color: isSelected
                 ? const Color(0xFFFFA500)
@@ -288,7 +301,7 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 12.sp,
                 fontWeight: FontWeight.bold,
                 color: isSelected ? Colors.black : Colors.white,
               ),
@@ -306,6 +319,13 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
         backgroundColor: Color(0xFFFFA500),
       ),
     );
+  }
+
+  // Generate a random maze using recursive division algorithm
+  void _generateRandomMaze() {
+    final generator = MazeGenerator();
+    generator.generateRecursiveDivision(_controller);
+    setState(() {});
   }
 
   Future<void> _solveMaze() async {
@@ -409,23 +429,24 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
       SearchAlgorithm<GridCoordinate> algo;
       switch (_selectedAlgorithm) {
         case 'BFS':
-          algo = BFSAlgorithm<GridCoordinate>(stepDelay: _stepDelay);
+          algo = BFSAlgorithm<GridCoordinate>();
           break;
         case 'DFS':
-          algo = DFSAlgorithm<GridCoordinate>(stepDelay: _stepDelay);
+          algo = DFSAlgorithm<GridCoordinate>();
           break;
         case 'Dijkstra':
-          algo = DijkstraAlgorithm<GridCoordinate>(stepDelay: _stepDelay);
+          algo = DijkstraAlgorithm<GridCoordinate>();
           break;
         case 'A*':
         default:
-          algo = AStarAlgorithm<GridCoordinate>(stepDelay: _stepDelay);
+          algo = AStarAlgorithm<GridCoordinate>();
       }
 
       _executor = AlgorithmExecutor<GridCoordinate>(
         algorithm: algo,
         problem: widget.problem,
-      );
+      stepDelayMs: _stepDelay.inMilliseconds,
+    );
     }
 
     setState(() {
@@ -443,7 +464,7 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
           if (!mounted) return;
 
           setState(() {
-            explored = step.explored;
+            explored = _executor!.exploredSet.toList();
             path = step.path;
             stepCount = step.stepCount;
 
@@ -488,13 +509,11 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
   }
 
   Future<void> _stepOnce() async {
-    if (_executor == null) {
-      // create executor but don't auto-run
-      _executor = AlgorithmExecutor<GridCoordinate>(
-        algorithm: AStarAlgorithm<GridCoordinate>(stepDelay: _stepDelay),
+    _executor ??= AlgorithmExecutor<GridCoordinate>(
+        algorithm: AStarAlgorithm<GridCoordinate>(),
         problem: widget.problem,
-      );
-    }
+      stepDelayMs: _stepDelay.inMilliseconds,
+    );
 
     try {
       await _executor!.start();
@@ -569,8 +588,8 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
       context: context,
       backgroundColor: cardColor,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
       ),
       builder: (context) {
         return StatefulBuilder(
@@ -580,7 +599,7 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
                 bottom: MediaQuery.of(context).viewInsets.bottom,
               ),
               child: Container(
-                padding: const EdgeInsets.all(16.0),
+                padding: EdgeInsets.all(16.0.r),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -625,7 +644,7 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
             children: algorithms.map((algo) {
               final isSelected = _selectedAlgorithm == algo;
               return Padding(
-                padding: const EdgeInsets.only(right: 8),
+                padding: EdgeInsets.only(right: 8.w),
                 child: FilterChip(
                   label: Text(algo),
                   selected: isSelected,
@@ -802,16 +821,16 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(16.0.r),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Grid Visualization
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16.r),
                 decoration: BoxDecoration(
                   color: cardColor,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(8.r),
                   border: Border.all(color: accentColor.withValues(alpha: 0.3)),
                 ),
                 child: SingleChildScrollView(
@@ -839,7 +858,7 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
                             color: _getCellColor(row, col),
                             border: Border.all(
                               color: Colors.grey[800]!.withValues(alpha: 0.5),
-                              width: 0.5,
+                              width: 0.5.w,
                             ),
                           ),
                         ),
@@ -852,11 +871,11 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
 
               // Notice for manual play
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(12.r),
                 decoration: BoxDecoration(
                   color: exploredColor.withValues(alpha: 0.1),
                   border: Border.all(color: exploredColor),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(8.r),
                 ),
                 child: const Text(
                   'Tap on grid cells to draw a path manually, or use the AI Solver.',
@@ -868,10 +887,10 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
 
               if (isSolved)
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16.r),
                   decoration: BoxDecoration(
                     color: pathColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(8.r),
                     border: Border.all(color: pathColor, width: 2),
                   ),
                   child: Row(
@@ -908,10 +927,10 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
 
   Widget _buildStatCard(String label, String value) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: EdgeInsets.all(8.r),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(8.r),
         border: Border.all(color: accentColor.withValues(alpha: 0.2)),
       ),
       child: Column(
@@ -919,7 +938,7 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
           Text(
             label,
             style: TextStyle(
-              fontSize: 9,
+              fontSize: 9.sp,
               fontWeight: FontWeight.bold,
               color: Colors.grey[400],
             ),
@@ -927,8 +946,8 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
           const SizedBox(height: 2),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 14,
+            style: TextStyle(
+              fontSize: 14.sp,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),

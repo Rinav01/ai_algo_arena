@@ -8,6 +8,7 @@ import '../core/search_algorithms.dart';
 import '../services/algorithm_executor.dart';
 import '../core/problem_definition.dart';
 import '../widgets/visualizer_widgets.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class NQueensVisualizerScreen extends StatefulWidget {
   const NQueensVisualizerScreen({super.key});
@@ -77,19 +78,20 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
     late SearchAlgorithm<QueensState> algorithm;
     switch (selectedAlgorithm) {
       case 'BFS':
-        algorithm = BFSAlgorithm<QueensState>(stepDelay: _stepDelay);
+        algorithm = BFSAlgorithm<QueensState>();
         break;
       case 'DFS':
-        algorithm = DFSAlgorithm<QueensState>(stepDelay: _stepDelay);
+        algorithm = DFSAlgorithm<QueensState>();
         break;
       case 'A*':
-        algorithm = AStarAlgorithm<QueensState>(stepDelay: _stepDelay);
+        algorithm = AStarAlgorithm<QueensState>();
         break;
     }
 
     executor = AlgorithmExecutor<QueensState>(
       algorithm: algorithm,
       problem: problem,
+      stepDelayMs: _stepDelay.inMilliseconds,
     );
 
     try {
@@ -102,14 +104,14 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
 
           setState(() {
             stepCount = step.stepCount;
-            nodesExplored = step.explored.length;
-            exploredStates = step.explored.map((s) => s.toString()).toSet();
+            nodesExplored = executor!.exploredSet.length;
+            exploredStates = executor!.exploredSet.map((s) => s.toString()).toSet();
 
             if (step.path.isNotEmpty) {
               currentPath = step.path;
               currentState = step.path.last;
-            } else if (step.explored.isNotEmpty) {
-              currentState = step.explored.last;
+            } else if (step.newlyExplored.isNotEmpty) {
+              currentState = step.newlyExplored.last;
             }
 
             if (step.isGoalReached) {
@@ -174,33 +176,34 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
       late SearchAlgorithm<QueensState> algorithm;
       switch (selectedAlgorithm) {
         case 'BFS':
-          algorithm = BFSAlgorithm<QueensState>(stepDelay: _stepDelay);
+          algorithm = BFSAlgorithm<QueensState>();
           break;
         case 'DFS':
-          algorithm = DFSAlgorithm<QueensState>(stepDelay: _stepDelay);
+          algorithm = DFSAlgorithm<QueensState>();
           break;
         case 'A*':
-          algorithm = AStarAlgorithm<QueensState>(stepDelay: _stepDelay);
+          algorithm = AStarAlgorithm<QueensState>();
           break;
       }
 
       executor = AlgorithmExecutor<QueensState>(
         algorithm: algorithm,
         problem: problem,
-      );
+      stepDelayMs: _stepDelay.inMilliseconds,
+    );
       executor!.start();
       _stepSubscription = executor!.stepStream.listen((step) {
         if (!mounted) return;
         setState(() {
           stepCount = step.stepCount;
-          nodesExplored = step.explored.length;
-          exploredStates = step.explored.map((s) => s.toString()).toSet();
+          nodesExplored = executor!.exploredSet.length;
+          exploredStates = executor!.exploredSet.map((s) => s.toString()).toSet();
 
           if (step.path.isNotEmpty) {
             currentPath = step.path;
             currentState = step.path.last;
-          } else if (step.explored.isNotEmpty) {
-            currentState = step.explored.last;
+          } else if (step.newlyExplored.isNotEmpty) {
+            currentState = step.newlyExplored.last;
           }
 
           if (step.isGoalReached) {
@@ -254,7 +257,7 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
                   padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
                   decoration: BoxDecoration(
                     color: AppTheme.surfaceVariant.withValues(alpha: 0.8),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
                     border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
                   ),
                   child: Column(
@@ -263,11 +266,11 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
                     children: [
                       Center(
                         child: Container(
-                          width: 40, height: 4,
-                          margin: const EdgeInsets.only(bottom: 20),
+                          width: 40.w, height: 4.h,
+                          margin: EdgeInsets.only(bottom: 20.h),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(2),
+                            borderRadius: BorderRadius.circular(2.r),
                           ),
                         ),
                       ),
@@ -307,7 +310,7 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
             children: algorithms.map((algo) {
               final isSelected = selectedAlgorithm == algo;
               return Padding(
-                padding: const EdgeInsets.only(right: 12),
+                padding: EdgeInsets.only(right: 12.w),
                 child: GestureDetector(
                   onTap: () {
                     if (!isSolving) {
@@ -317,10 +320,10 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
                     decoration: BoxDecoration(
                       color: isSelected ? AppTheme.accent.withValues(alpha: 0.15) : AppTheme.surfaceHigh,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(8.r),
                       border: Border.all(
                         color: isSelected ? AppTheme.accent : Colors.white.withValues(alpha: 0.05),
                       ),
@@ -395,8 +398,8 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accent,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: EdgeInsets.symmetric(vertical: 16.h),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
             ),
             child: const Text('AUTO SOLVE', style: TextStyle(letterSpacing: 1.5, fontWeight: FontWeight.bold)),
           ),
@@ -514,11 +517,11 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
         ),
         const SizedBox(height: 16),
         ClipRRect(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16.r),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(12.r),
               decoration: AppTheme.glassCardAccent(radius: 16),
               child: GridView.builder(
                 shrinkWrap: true,
@@ -553,15 +556,15 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
                       duration: const Duration(milliseconds: 300),
                       decoration: BoxDecoration(
                         color: squareColor,
-                        borderRadius: BorderRadius.circular(2),
+                        borderRadius: BorderRadius.circular(2.r),
                         border: Border.all(
                           color: AppTheme.surfaceHigh,
-                          width: 0.5,
+                          width: 0.5.w,
                         ),
                       ),
                       child: Center(
                         child: hasQueen 
-                          ? Text('♕', style: TextStyle(fontSize: 32, color: Colors.white, shadows: [Shadow(color: Colors.white.withValues(alpha: 0.5), blurRadius: 8)]))
+                          ? Text('♕', style: TextStyle(fontSize: 32.sp, color: Colors.white, shadows: [Shadow(color: Colors.white.withValues(alpha: 0.5), blurRadius: 8)]))
                           : null,
                       ),
                     ),

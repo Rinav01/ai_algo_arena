@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/grid_node.dart';
 import '../state/grid_controller.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class ControlPanel extends StatelessWidget {
   const ControlPanel({super.key, required this.controller});
@@ -12,7 +13,7 @@ class ControlPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20.r),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -100,6 +101,7 @@ class ControlPanel extends StatelessWidget {
       PaintTool.erase => 'Erase',
       PaintTool.start => 'Move Start',
       PaintTool.goal => 'Move Goal',
+      PaintTool.weight => 'Paint Terrain',
     };
   }
 }
@@ -149,21 +151,21 @@ class _LegendChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.r),
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 12,
-            height: 12,
+            width: 12.w,
+            height: 12.h,
             decoration: BoxDecoration(
               color: color,
-              borderRadius: BorderRadius.circular(99),
+              borderRadius: BorderRadius.circular(99.r),
             ),
           ),
           const SizedBox(width: 8),

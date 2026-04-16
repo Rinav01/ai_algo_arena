@@ -4,6 +4,7 @@ import '../painters/grid_painter.dart';
 import '../state/grid_controller.dart';
 import '../widgets/control_panel.dart';
 import '../widgets/stat_card.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class VisualizerScreen extends StatefulWidget {
   const VisualizerScreen({super.key});
@@ -51,7 +52,7 @@ class _VisualizerScreenState extends State<VisualizerScreen> {
                   final isWide = constraints.maxWidth >= 1080;
 
                   return SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.all(20.r),
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
                         minHeight: constraints.maxHeight - 40,
@@ -157,7 +158,7 @@ class _VisualizerScreenState extends State<VisualizerScreen> {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: EdgeInsets.all(18.r),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -178,7 +179,7 @@ class _VisualizerScreenState extends State<VisualizerScreen> {
                   ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(999.r),
                   ),
                   child: Text(
                     'Tap or drag to paint',
@@ -205,7 +206,7 @@ class _VisualizerScreenState extends State<VisualizerScreen> {
                     width: maxWidth,
                     height: gridHeight,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(20.r),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.18),

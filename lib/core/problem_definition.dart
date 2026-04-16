@@ -1,6 +1,10 @@
 // Generic algorithm step that works with any state type
 class AlgorithmStep<State> {
-  final List<State> explored;
+  /// The states added to the explored set in this specific step
+  final List<State> newlyExplored;
+  /// The current state being evaluated
+  final State? currentState;
+  /// The best path found so far
   final List<State> path;
   final int stepCount;
   final String? message;
@@ -8,7 +12,8 @@ class AlgorithmStep<State> {
   final bool isGoalReached;
 
   AlgorithmStep({
-    required this.explored,
+    required this.newlyExplored,
+    this.currentState,
     required this.path,
     required this.stepCount,
     this.message,
@@ -17,7 +22,8 @@ class AlgorithmStep<State> {
   }) : timestamp = timestamp ?? DateTime.now();
 
   AlgorithmStep<State> copyWith({
-    List<State>? explored,
+    List<State>? newlyExplored,
+    State? currentState,
     List<State>? path,
     int? stepCount,
     String? message,
@@ -25,7 +31,8 @@ class AlgorithmStep<State> {
     bool? isGoalReached,
   }) {
     return AlgorithmStep<State>(
-      explored: explored ?? this.explored,
+      newlyExplored: newlyExplored ?? this.newlyExplored,
+      currentState: currentState ?? this.currentState,
       path: path ?? this.path,
       stepCount: stepCount ?? this.stepCount,
       message: message ?? this.message,
@@ -85,8 +92,8 @@ abstract class Problem<State> {
 
 // Abstract search algorithm - works with any problem
 abstract class SearchAlgorithm<State> {
-  /// Solve the problem and emit steps as they happen
-  Stream<AlgorithmStep<State>> solve(Problem<State> problem);
+  /// Solve the problem synchronously and emit steps as Iterable
+  Iterable<AlgorithmStep<State>> solve(Problem<State> problem);
 
   /// Name of the algorithm
   String get name;

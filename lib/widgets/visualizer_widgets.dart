@@ -2,6 +2,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../widgets/animated_number_display.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:fl_chart/fl_chart.dart';
+import '../models/grid_node.dart';
 
 /// Reusable glassmorphism stat card used in visualizers.
 class GlassStatCard extends StatelessWidget {
@@ -17,25 +20,25 @@ class GlassStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(12.r),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(12.r),
             border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
           child: Row(
             children: [
               // Left accent bar — separate child so borderRadius still works
               Container(
-                width: 3,
-                decoration: const BoxDecoration(
+                width: 3.w,
+                decoration: BoxDecoration(
                   color: AppTheme.accent,
                   borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    bottomLeft: Radius.circular(12),
+                    topLeft: Radius.circular(12.r),
+                    bottomLeft: Radius.circular(12.r),
                   ),
                 ),
               ),
@@ -57,16 +60,16 @@ class GlassStatCard extends StatelessWidget {
                         value: value as int,
                         duration: const Duration(milliseconds: 600),
                         curve: Curves.easeOutCubic,
-                        textStyle: const TextStyle(
-                          fontSize: 22,
+                        textStyle: TextStyle(
+                          fontSize: 22.sp,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.onBackground,
                           fontFamily: 'Inter',
                         ),
                       ) : Text(
                         value.toString(),
-                        style: const TextStyle(
-                          fontSize: 18,
+                        style: TextStyle(
+                          fontSize: 18.sp,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.onBackground,
                           fontFamily: 'Inter',
@@ -107,14 +110,14 @@ class StatusBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(30),
+      borderRadius: BorderRadius.circular(30.r),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(30.r),
             border: Border.all(
               color: isSolved
                   ? AppTheme.success.withValues(alpha: 0.45)
@@ -127,8 +130,8 @@ class StatusBanner extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 8,
-                height: 8,
+                width: 8.w,
+                height: 8.h,
                 decoration: BoxDecoration(
                   color: _dotColor,
                   shape: BoxShape.circle,
@@ -177,11 +180,11 @@ class GridLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(12.r),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
           decoration: AppTheme.glassCard(radius: 12),
           child: Wrap(
             spacing: 16,
@@ -191,6 +194,7 @@ class GridLegend extends StatelessWidget {
               _LegendDot(color: AppTheme.cellStart, label: 'Start'),
               _LegendDot(color: AppTheme.cellGoal, label: 'Goal'),
               _LegendDot(color: AppTheme.cellWall.withValues(alpha: 1), label: 'Wall'),
+              _LegendDot(color: AppTheme.cellWeight, label: 'Weight'),
               _LegendDot(color: exploredColor, label: 'Explored'),
               _LegendDot(color: pathColor, label: 'Path'),
             ],
@@ -212,11 +216,11 @@ class _LegendDot extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 10,
-          height: 10,
+          width: 10.w,
+          height: 10.h,
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(3),
+            borderRadius: BorderRadius.circular(3.r),
           ),
         ),
         const SizedBox(width: 6),
@@ -246,12 +250,12 @@ class VisualizerHeader extends StatelessWidget {
         GestureDetector(
           onTap: onBackTap ?? () => Navigator.pop(context),
           child: Container(
-            width: 36,
-            height: 36,
+            width: 36.w,
+            height: 36.h,
             decoration: AppTheme.glassCard(radius: 10),
-            child: const Icon(
+            child: Icon(
               Icons.arrow_back_ios_new_rounded,
-              size: 16,
+              size: 16.sp,
               color: AppTheme.onBackground,
             ),
           ),
@@ -275,12 +279,12 @@ class VisualizerHeader extends StatelessWidget {
           ),
         ),
         Container(
-          width: 36,
-          height: 36,
+          width: 36.w,
+          height: 36.h,
           decoration: AppTheme.glassCard(radius: 10),
-          child: const Icon(
+          child: Icon(
             Icons.settings_rounded,
-            size: 16,
+            size: 16.sp,
             color: AppTheme.textSecondary,
           ),
         ),
@@ -338,6 +342,7 @@ class VisualizerControls extends StatelessWidget {
     required this.onStep,
     required this.onReset,
     required this.onClear,
+    this.onVersus,
   });
 
   final bool isSolving;
@@ -348,11 +353,24 @@ class VisualizerControls extends StatelessWidget {
   final VoidCallback onStep;
   final VoidCallback onReset;
   final VoidCallback onClear;
+  final VoidCallback? onVersus;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // Premium "Versus" CTA - only show if callback is provided
+        if (onVersus != null) ...[
+          _CtaButton(
+            icon: Icons.compare_arrows_rounded,
+            label: 'BATTLE ARENA — COMPARE ALGORITHMS',
+            enabled: true,
+            primary: true,
+            accentColor: AppTheme.warning,
+            onTap: onVersus!,
+          ),
+          const SizedBox(height: 12),
+        ],
         // Row 1: primary actions
         Row(
           children: [
@@ -434,25 +452,27 @@ class _CtaButton extends StatelessWidget {
     required this.enabled,
     required this.primary,
     required this.onTap,
+    this.accentColor,
   });
   final IconData icon;
   final String label;
   final bool enabled;
   final bool primary;
   final VoidCallback onTap;
+  final Color? accentColor;
 
   @override
   Widget build(BuildContext context) {
     return ElevatedButton.icon(
       onPressed: enabled ? onTap : null,
       style: ElevatedButton.styleFrom(
-        backgroundColor: primary ? AppTheme.accent : AppTheme.surfaceHigh,
+        backgroundColor: primary ? (accentColor ?? AppTheme.accent) : AppTheme.surfaceHigh,
         foregroundColor: Colors.white,
         disabledBackgroundColor: AppTheme.surfaceHighest.withValues(alpha: 0.5),
         disabledForegroundColor: AppTheme.textSecondary,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        padding: const EdgeInsets.symmetric(vertical: 13),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+        padding: EdgeInsets.symmetric(vertical: 13.h),
         side: primary
             ? null
             : BorderSide(color: Colors.white.withValues(alpha: 0.12)),
@@ -460,8 +480,8 @@ class _CtaButton extends StatelessWidget {
       icon: Icon(icon, size: 18),
       label: Text(
         label,
-        style: const TextStyle(
-          fontSize: 13,
+        style: TextStyle(
+          fontSize: 13.sp,
           fontWeight: FontWeight.w700,
           fontFamily: 'Inter',
         ),
@@ -497,18 +517,278 @@ class _GhostBtn extends StatelessWidget {
               : AppTheme.outline.withValues(alpha: 0.4),
         ),
         backgroundColor: Colors.white.withValues(alpha: 0.03),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        padding: const EdgeInsets.symmetric(vertical: 13),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+        padding: EdgeInsets.symmetric(vertical: 13.h),
         disabledForegroundColor: AppTheme.textSecondary.withValues(alpha: 0.4),
       ),
       icon: Icon(icon, size: 16),
       label: Text(
         label,
-        style: const TextStyle(
-          fontSize: 13,
+        style: TextStyle(
+          fontSize: 13.sp,
           fontWeight: FontWeight.w600,
           fontFamily: 'Inter',
         ),
+      ),
+    );
+  }
+}
+class ToolSelector extends StatelessWidget {
+  const ToolSelector({
+    super.key,
+    required this.selectedTool,
+    required this.onToolSelected,
+    this.isSolving = false,
+  });
+
+  final dynamic selectedTool; // PaintTool but using dynamic to avoid import circularity if needed
+  final Function(dynamic) onToolSelected;
+  final bool isSolving;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _ToolBtn(
+            icon: Icons.square_rounded,
+            label: 'Wall',
+            isSelected: selectedTool == PaintTool.wall,
+            onTap: () => onToolSelected(PaintTool.wall),
+            color: AppTheme.cellWall,
+          ),
+          const SizedBox(width: 8),
+          _ToolBtn(
+            icon: Icons.landscape_rounded,
+            label: 'Weight',
+            isSelected: selectedTool == PaintTool.weight,
+            onTap: () => onToolSelected(PaintTool.weight),
+            color: AppTheme.cellWeight,
+          ),
+          const SizedBox(width: 8),
+          _ToolBtn(
+            icon: Icons.cleaning_services_rounded,
+            label: 'Erase',
+            isSelected: selectedTool == PaintTool.erase,
+            onTap: () => onToolSelected(PaintTool.erase),
+            color: AppTheme.textMuted,
+          ),
+          const SizedBox(width: 8),
+          _ToolBtn(
+            icon: Icons.play_circle_fill_rounded,
+            label: 'Start',
+            isSelected: selectedTool == PaintTool.start,
+            onTap: () => onToolSelected(PaintTool.start),
+            color: AppTheme.cellStart,
+          ),
+          const SizedBox(width: 8),
+          _ToolBtn(
+            icon: Icons.stars_rounded,
+            label: 'Goal',
+            isSelected: selectedTool == PaintTool.goal,
+            onTap: () => onToolSelected(PaintTool.goal),
+            color: AppTheme.cellGoal,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToolBtn extends StatelessWidget {
+  const _ToolBtn({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(10.r),
+          border: Border.all(
+            color: isSelected ? color.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.08),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 14.sp, color: isSelected ? color : AppTheme.textSecondary),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.sp,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? Colors.white : AppTheme.textSecondary,
+                fontFamily: 'SpaceGrotesk',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ToolButton extends StatelessWidget {
+  const ToolButton({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    required this.color,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 10.h),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10.r),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16.sp, color: color),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                fontFamily: 'SpaceGrotesk',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class PerformanceChart extends StatelessWidget {
+  const PerformanceChart({
+    super.key,
+    required this.dataPoints,
+    required this.accentColor,
+  });
+
+  final List<FlSpot> dataPoints;
+  final Color accentColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 200.h,
+      padding: EdgeInsets.fromLTRB(16.r, 16.r, 24.r, 8.r),
+      decoration: AppTheme.glassCard(radius: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'COMPUTATIONAL TREND',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppTheme.accentLight,
+                      letterSpacing: 1.5,
+                    ),
+              ),
+              Icon(Icons.query_stats_rounded, color: accentColor, size: 16.sp),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    strokeWidth: 1,
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 30,
+                      getTitlesWidget: (val, meta) => Text(
+                        val.toInt().toString(),
+                        style: TextStyle(color: AppTheme.textMuted, fontSize: 10.sp),
+                      ),
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (val, meta) => Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          val.toInt().toString(),
+                          style: TextStyle(color: AppTheme.textMuted, fontSize: 10.sp),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: dataPoints,
+                    isCurved: true,
+                    color: accentColor,
+                    barWidth: 3,
+                    isStrokeCapRound: true,
+                    dotData: FlDotData(show: dataPoints.length < 10),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          accentColor.withValues(alpha: 0.2),
+                          accentColor.withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

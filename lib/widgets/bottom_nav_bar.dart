@@ -1,6 +1,8 @@
+import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// Glassmorphism bottom navigation bar — Neural Arena design.
 class ArenaBottomNavBar extends StatelessWidget {
@@ -20,7 +22,10 @@ class ArenaBottomNavBar extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
         child: Container(
-          height: 70 + MediaQuery.of(context).padding.bottom,
+          constraints: BoxConstraints(
+            minHeight: 64.h,
+            maxHeight: 120.h,
+          ),
           decoration: BoxDecoration(
             color: AppTheme.surfaceVariant.withValues(alpha: 0.85),
             border: Border(
@@ -74,12 +79,12 @@ class _NavItem extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
         decoration: BoxDecoration(
           color: isActive
               ? AppTheme.accent.withValues(alpha: 0.15)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
             color: isActive
                 ? AppTheme.accent.withValues(alpha: 0.35)
@@ -88,19 +93,28 @@ class _NavItem extends StatelessWidget {
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
-              size: 22,
+              size: math.min(22.sp, 32.0),
               color: isActive ? AppTheme.accent : AppTheme.textMuted,
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: isActive ? AppTheme.accentLight : AppTheme.textMuted,
-                    letterSpacing: 0.5,
-                  ),
+            SizedBox(height: math.min(4.h, 6.0)),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: isActive ? AppTheme.accentLight : AppTheme.textMuted,
+                        fontSize: math.min(10.sp, 14.0),
+                        letterSpacing: 0.5,
+                      ),
+                ),
+              ),
             ),
           ],
         ),

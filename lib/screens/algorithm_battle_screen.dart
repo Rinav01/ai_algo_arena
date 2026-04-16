@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../core/app_theme.dart';
 import '../core/grid_problem.dart';
@@ -15,34 +16,68 @@ import '../widgets/battle_results_panel.dart';
 import '../widgets/visualizer_widgets.dart';
 
 class AlgorithmBattleScreen extends StatefulWidget {
-  const AlgorithmBattleScreen({super.key});
+  final List<List<GridNode>>? initialGrid;
+  final GridCoordinate? start;
+  final GridCoordinate? goal;
+
+  const AlgorithmBattleScreen({
+    super.key,
+    this.initialGrid,
+    this.start,
+    this.goal,
+  });
 
   @override
   State<AlgorithmBattleScreen> createState() => _AlgorithmBattleScreenState();
 }
 
 class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
-  late final GridController _controller;
-  AlgorithmExecutor<GridCoordinate>? _bfsExecutor;
-  AlgorithmExecutor<GridCoordinate>? _dfsExecutor;
-  AlgorithmStep<GridCoordinate>? _bfsStep;
-  AlgorithmStep<GridCoordinate>? _dfsStep;
-  AlgorithmMetrics? _bfsMetrics;
-  AlgorithmMetrics? _dfsMetrics;
+  String _algoAId = 'BFS';
+  String _algoBId = 'A*';
+  AlgorithmExecutor<GridCoordinate>? _executorA;
+  AlgorithmExecutor<GridCoordinate>? _executorB;
+  AlgorithmStep<GridCoordinate>? _stepA;
+  AlgorithmStep<GridCoordinate>? _stepB;
+  AlgorithmMetrics? _metricsA;
+  AlgorithmMetrics? _metricsB;
   bool _isRunning = false;
+  late final GridController _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = GridController(rows: 8, columns: 20);
+    _controller = GridController(
+      rows: widget.initialGrid?.length ?? 12,
+      columns: widget.initialGrid?[0].length ?? 15,
+    );
+    if (widget.initialGrid != null) {
+      _controller.loadFromGrid(widget.initialGrid!);
+      if (widget.start != null) {
+        _controller.moveAnchor(
+          isStart: true,
+          row: widget.start!.row,
+          column: widget.start!.column,
+        );
+      }
+      if (widget.goal != null) {
+        _controller.moveAnchor(
+          isStart: false,
+          row: widget.goal!.row,
+          column: widget.goal!.column,
+        );
+      }
+    }
   }
 
-  @override
-  void dispose() {
-    _bfsExecutor?.dispose();
-    _dfsExecutor?.dispose();
-    _controller.dispose();
-    super.dispose();
+  SearchAlgorithm<GridCoordinate> _getAlgorithm(String id) {
+    return switch (id) {
+      'BFS' => BFSAlgorithm<GridCoordinate>(),
+      'DFS' => DFSAlgorithm<GridCoordinate>(),
+      'Dijkstra' => DijkstraAlgorithm<GridCoordinate>(),
+      'Greedy' => GreedyBestFirstAlgorithm<GridCoordinate>(),
+      'A*' => AStarAlgorithm<GridCoordinate>(),
+      _ => AStarAlgorithm<GridCoordinate>(),
+    };
   }
 
   Future<void> _runBattle() async {
@@ -50,14 +85,14 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
 
     setState(() {
       _isRunning = true;
-      _bfsStep = null;
-      _dfsStep = null;
-      _bfsMetrics = null;
-      _dfsMetrics = null;
+      _stepA = null;
+      _stepB = null;
+      _metricsA = null;
+      _metricsB = null;
     });
 
-    await _bfsExecutor?.dispose();
-    await _dfsExecutor?.dispose();
+    await _executorA?.dispose();
+    await _executorB?.dispose();
 
     final problem = GridProblem(
       grid: _controller.grid,
@@ -71,122 +106,90 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
       ),
     );
 
-    _bfsExecutor = AlgorithmExecutor<GridCoordinate>(
-      algorithm: BFSAlgorithm<GridCoordinate>(),
+    _executorA = AlgorithmExecutor<GridCoordinate>(
+      algorithm: _getAlgorithm(_algoAId),
       problem: problem,
+      stepDelayMs: _stepDelay.inMilliseconds,
     );
-    _dfsExecutor = AlgorithmExecutor<GridCoordinate>(
-      algorithm: DFSAlgorithm<GridCoordinate>(),
+    _executorB = AlgorithmExecutor<GridCoordinate>(
+      algorithm: _getAlgorithm(_algoBId),
       problem: problem,
+      stepDelayMs: _stepDelay.inMilliseconds,
     );
+
+    final completerA = Completer<void>();
+    final completerB = Completer<void>();
+    final stopwatchA = Stopwatch()..start();
+    final stopwatchB = Stopwatch()..start();
+    AlgorithmStep<GridCoordinate>? lastStepA;
+    AlgorithmStep<GridCoordinate>? lastStepB;
 
     try {
-      final bfsDone = _runTrackedExecutor(
-        executor: _bfsExecutor!,
-        algorithmName: 'Breadth-First Search',
-        onStep: (step) {
+      _executorA!.stepStream.listen(
+        (step) {
+          lastStepA = step;
           if (!mounted) return;
-          setState(() {
-            _bfsStep = step;
-          });
+          setState(() => _stepA = step);
         },
-        onFinished: (step, executionTime) {
-          if (!mounted) return;
-          setState(() {
-            _bfsStep = step;
-            _bfsMetrics = AlgorithmMetrics(
-              algorithmName: 'Breadth-First Search',
-              exploredStates: step.explored,
-              path: step.path,
-              totalSteps: step.stepCount,
-              executionTime: executionTime,
-              pathCost: step.path.length.toDouble(),
-              foundPath: step.path.isNotEmpty,
-            );
-          });
+        onDone: () {
+          stopwatchA.stop();
+          final finalStep = lastStepA;
+          if (mounted && finalStep != null) {
+            setState(() {
+              _stepA = finalStep;
+              _metricsA = AlgorithmMetrics(
+                algorithmName: _algoAId,
+                exploredStates: _executorA!.exploredSet.toList(),
+                path: _executorA!.currentPath,
+                totalSteps: finalStep.stepCount,
+                executionTime: stopwatchA.elapsed,
+                pathCost: _executorA!.currentPath.length.toDouble(),
+                foundPath: finalStep.isGoalReached,
+              );
+            });
+          }
+          if (!completerA.isCompleted) completerA.complete();
         },
-      );
-      final dfsDone = _runTrackedExecutor(
-        executor: _dfsExecutor!,
-        algorithmName: 'Depth-First Search',
-        onStep: (step) {
-          if (!mounted) return;
-          setState(() {
-            _dfsStep = step;
-          });
-        },
-        onFinished: (step, executionTime) {
-          if (!mounted) return;
-          setState(() {
-            _dfsStep = step;
-            _dfsMetrics = AlgorithmMetrics(
-              algorithmName: 'Depth-First Search',
-              exploredStates: step.explored,
-              path: step.path,
-              totalSteps: step.stepCount,
-              executionTime: executionTime,
-              pathCost: step.path.length.toDouble(),
-              foundPath: step.path.isNotEmpty,
-            );
-          });
+        onError: (_) {
+          if (!completerA.isCompleted) completerA.complete();
         },
       );
 
-      await Future.wait([bfsDone, dfsDone]);
+      _executorB!.stepStream.listen(
+        (step) {
+          lastStepB = step;
+          if (!mounted) return;
+          setState(() => _stepB = step);
+        },
+        onDone: () {
+          stopwatchB.stop();
+          final finalStep = lastStepB;
+          if (mounted && finalStep != null) {
+            setState(() {
+              _stepB = finalStep;
+              _metricsB = AlgorithmMetrics(
+                algorithmName: _algoBId,
+                exploredStates: _executorB!.exploredSet.toList(),
+                path: _executorB!.currentPath,
+                totalSteps: finalStep.stepCount,
+                executionTime: stopwatchB.elapsed,
+                pathCost: _executorB!.currentPath.length.toDouble(),
+                foundPath: finalStep.isGoalReached,
+              );
+            });
+          }
+          if (!completerB.isCompleted) completerB.complete();
+        },
+        onError: (_) {
+          if (!completerB.isCompleted) completerB.complete();
+        },
+      );
+
+      await Future.wait([_executorA!.start(), _executorB!.start()]);
+      await Future.wait([completerA.future, completerB.future]);
     } finally {
-      if (mounted) {
-        setState(() {
-          _isRunning = false;
-        });
-      }
+      if (mounted) setState(() => _isRunning = false);
     }
-  }
-
-  Future<void> _runTrackedExecutor({
-    required AlgorithmExecutor<GridCoordinate> executor,
-    required String algorithmName,
-    required void Function(AlgorithmStep<GridCoordinate> step) onStep,
-    required void Function(
-      AlgorithmStep<GridCoordinate> step,
-      Duration executionTime,
-    )
-    onFinished,
-  }) async {
-    final completer = Completer<void>();
-    final stopwatch = Stopwatch()..start();
-    AlgorithmStep<GridCoordinate>? latestStep;
-
-    await executor.start();
-
-    executor.stepStream.listen(
-      (step) {
-        latestStep = step;
-        onStep(step);
-      },
-      onDone: () {
-        stopwatch.stop();
-        final finalStep =
-            latestStep ??
-            AlgorithmStep<GridCoordinate>(
-              explored: const [],
-              path: const [],
-              stepCount: 0,
-              message: '$algorithmName did not emit steps.',
-            );
-        onFinished(finalStep, stopwatch.elapsed);
-        if (!completer.isCompleted) {
-          completer.complete();
-        }
-      },
-      onError: (_) {
-        stopwatch.stop();
-        if (!completer.isCompleted) {
-          completer.complete();
-        }
-      },
-    );
-
-    return completer.future;
   }
 
   void _randomizeMaze() {
@@ -199,15 +202,33 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
     }
 
     setState(() {
-      _bfsStep = null;
-      _dfsStep = null;
-      _bfsMetrics = null;
-      _dfsMetrics = null;
+      _stepA = null;
+      _stepB = null;
+      _metricsA = null;
+      _metricsB = null;
     });
   }
 
   @override
+  void dispose() {
+    _executorA?.dispose();
+    _executorB?.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  // Default step delay for executors
+  Duration get _stepDelay => const Duration(milliseconds: 5);
+
+  @override
   Widget build(BuildContext context) {
+    bool? isAWinner;
+    if (_metricsA != null && _metricsB != null) {
+      isAWinner =
+          BattleResult(algorithm1: _metricsA!, algorithm2: _metricsB!).winner ==
+          _metricsA;
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
@@ -219,74 +240,74 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
               // Header
               VisualizerHeader(
                 title: 'Algorithm Battle',
-                subtitle: 'HEAD-TO-HEAD VIZ',
+                subtitle: 'SHOWPIECE ARENA',
                 onBackTap: () => Navigator.pop(context),
               ),
               const SizedBox(height: 20),
-              
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildAlgoInfo(
-                      'BFS (P1)',
-                      _bfsStep,
-                      AppTheme.warning,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildAlgoInfo(
-                      'DFS (P2)',
-                      _dfsStep,
-                      AppTheme.error,
-                    ),
-                  ),
-                ],
-              ),
+
+              // Algorithm Selectors
+              _buildSelectors(),
               const SizedBox(height: 16),
-              
+
               BattleResultsPanel(
-                algorithmAMetrics: _bfsMetrics,
-                algorithmBMetrics: _dfsMetrics,
-                algorithmAName: 'BFS',
-                algorithmBName: 'DFS',
+                algorithmAMetrics: _metricsA,
+                algorithmBMetrics: _metricsB,
+                algorithmAName: _algoAId,
+                algorithmBName: _algoBId,
                 isLoading: _isRunning,
               ),
               const SizedBox(height: 16),
-              
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                  child: Container(
-                    decoration: AppTheme.glassCardAccent(radius: 16),
-                    padding: const EdgeInsets.all(8),
-                    child: AnimatedBuilder(
-                      animation: _controller,
-                      builder: (context, _) => _buildBattleGrid(),
+
+              AnimatedBuilder(
+                animation: _controller,
+                builder: (context, _) => Column(
+                  children: [
+                    _buildIndividualGrid(
+                      label: 'PLAYER 1: $_algoAId',
+                      step: _stepA,
+                      executor: _executorA,
+                      color: AppTheme.accent,
+                      isWinner: isAWinner == true,
                     ),
-                  ),
+                    const SizedBox(height: 24),
+                    _buildIndividualGrid(
+                      label: 'PLAYER 2: $_algoBId',
+                      step: _stepB,
+                      executor: _executorB,
+                      color: AppTheme.error,
+                      isWinner: isAWinner == false,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              
+              const SizedBox(height: 24),
+
               Row(
                 children: [
                   Expanded(
-                    child: GlassStatCard(label: 'BFS EXPLORED', value: _bfsStep?.explored.length ?? 0),
+                    child: GlassStatCard(
+                      label: '$_algoAId EXPLORED',
+                      value: _executorA?.exploredSet.length ?? 0,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: GlassStatCard(label: 'DFS EXPLORED', value: _dfsStep?.explored.length ?? 0),
+                    child: GlassStatCard(
+                      label: '$_algoBId EXPLORED',
+                      value: _executorB?.exploredSet.length ?? 0,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: GlassStatCard(label: 'STATUS', value: _isRunning ? 'RUNNING' : 'IDLE'),
+                    child: GlassStatCard(
+                      label: 'STATUS',
+                      value: _isRunning ? 'BATTLING' : 'READY',
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
-              
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -299,10 +320,10 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
                     child: GestureDetector(
                       onTap: _isRunning ? null : _runBattle,
                       child: Container(
-                        height: 56,
+                        height: 56.h,
                         decoration: BoxDecoration(
                           gradient: AppTheme.ctaGradient,
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(16.r),
                           boxShadow: [
                             BoxShadow(
                               color: AppTheme.accent.withValues(alpha: 0.3),
@@ -313,12 +334,14 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            _isRunning ? 'BATTLING...' : 'START BATTLE',
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: Colors.white,
-                              letterSpacing: 1.5,
-                              fontSize: 15,
-                            ),
+                            _isRunning ? 'COMPUTING...' : 'START BATTLE',
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  letterSpacing: 2,
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.w900,
+                                ),
                           ),
                         ),
                       ),
@@ -333,120 +356,231 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
     );
   }
 
-  Widget _buildAlgoInfo(
-    String name,
-    AlgorithmStep<GridCoordinate>? step,
-    Color color,
-  ) {
+  Widget _buildSelectors() {
+    return Row(
+      children: [
+        Expanded(child: _buildAlgoSelector(true)),
+        const SizedBox(width: 12),
+        const Text(
+          'VS',
+          style: TextStyle(
+            color: AppTheme.textMuted,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: _buildAlgoSelector(false)),
+      ],
+    );
+  }
+
+  Widget _buildAlgoSelector(bool isPlayerA) {
+    final current = isPlayerA ? _algoAId : _algoBId;
+    final color = isPlayerA ? AppTheme.accent : AppTheme.error;
+
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.symmetric(horizontal: 12.w),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: current,
+          dropdownColor: AppTheme.surfaceHigh,
+          icon: Icon(Icons.keyboard_arrow_down, color: color, size: 18.r),
+          isExpanded: true,
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.bold,
+            fontSize: 13.sp,
+          ),
+          items: ['BFS', 'DFS', 'Dijkstra', 'Greedy', 'A*'].map((id) {
+            return DropdownMenuItem(value: id, child: Text(id));
+          }).toList(),
+          onChanged: _isRunning
+              ? null
+              : (val) {
+                  if (val != null) {
+                    setState(() {
+                      if (isPlayerA) {
+                        _algoAId = val;
+                      } else {
+                        _algoBId = val;
+                      }
+                      _stepA = null;
+                      _stepB = null;
+                      _metricsA = null;
+                      _metricsB = null;
+                    });
+                  }
+                },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIndividualGrid({
+    required String label,
+    required AlgorithmStep<GridCoordinate>? step,
+    required AlgorithmExecutor<GridCoordinate>? executor,
+    required Color color,
+    bool isWinner = false,
+  }) {
+    final bool isLoser = !isWinner && _metricsA != null && _metricsB != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(left: 4.w, bottom: 8.h),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                width: 8, height: 8,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: color),
-              ),
-              const SizedBox(width: 6),
               Text(
-                name,
+                label,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: color,
-                  letterSpacing: 1,
+                  color: isWinner ? color : color.withValues(alpha: 0.7),
+                  letterSpacing: 2,
+                  fontWeight: isWinner ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
+              if (isWinner)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(4.r),
+                  ),
+                  child: Text(
+                    'WINNER',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
             ],
           ),
-          const SizedBox(height: 8),
-          if (step != null)
-            Text(
-              'Frontier: [${step.explored.take(3).map((e) => '${e.row},${e.column}').join(', ')}...]',
-              style: Theme.of(context).textTheme.bodySmall,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            )
-          else
-            Text(
-              'Awaiting start...',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
+        ),
+        Opacity(
+          opacity: isLoser ? 0.4 : 1.0,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16.r),
+              boxShadow: isWinner
+                  ? [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.3),
+                        blurRadius: 30,
+                        spreadRadius: 6,
+                      ),
+                    ]
+                  : null,
             ),
-        ],
-      ),
-    );
-  }
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16.r),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                child: Container(
+                  decoration: AppTheme.glassCard(
+                    radius: 16,
+                    borderColor: isWinner
+                        ? color.withValues(alpha: 0.8)
+                        : color.withValues(alpha: 0.2),
+                  ),
+                  padding: EdgeInsets.all(8.r),
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: _controller.columns,
+                      childAspectRatio: 1,
+                      crossAxisSpacing: 1.5,
+                      mainAxisSpacing: 1.5,
+                    ),
+                    itemCount: _controller.rows * _controller.columns,
+                    itemBuilder: (_, index) {
+                      final row = index ~/ _controller.columns;
+                      final column = index % _controller.columns;
+                      final node = _controller.grid[row][column];
+                      final state = GridCoordinate(row: row, column: column);
 
-  Widget _buildBattleGrid() {
-    final grid = _controller.grid;
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: _controller.columns,
-        childAspectRatio: 1,
-        crossAxisSpacing: 1.5,
-        mainAxisSpacing: 1.5,
-      ),
-      itemCount: _controller.rows * _controller.columns,
-      itemBuilder: (context, index) {
-        final row = index ~/ _controller.columns;
-        final column = index % _controller.columns;
-        final node = grid[row][column];
+                      bool isExplored =
+                          executor?.exploredSet.contains(state) ?? false;
+                      bool isPath =
+                          executor?.currentPath.contains(state) ?? false;
+                      bool isCurrent = step?.currentState == state;
 
-        bool isBfsExplored = false;
-        bool isDfsExplored = false;
-        bool isPath = false;
+                      final cellColor = _getCellColorForAlgo(
+                        node,
+                        isPath,
+                        isExplored,
+                        color,
+                      );
 
-        if (_bfsStep != null) {
-          isBfsExplored = _bfsStep!.explored.any(
-            (e) => e.row == row && e.column == column,
-          );
-          isPath = _bfsStep!.path.any(
-            (e) => e.row == row && e.column == column,
-          );
-        }
-
-        if (_dfsStep != null && !isBfsExplored && !isPath) {
-          isDfsExplored = _dfsStep!.explored.any(
-            (e) => e.row == row && e.column == column,
-          );
-        }
-
-        final cellColor = _getCellBattleColor(
-          node,
-          isPath,
-          isBfsExplored,
-          isDfsExplored,
-        );
-
-        return Container(
-          decoration: BoxDecoration(
-            color: cellColor,
-            borderRadius: BorderRadius.circular(2),
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOut,
+                        decoration: BoxDecoration(
+                          color: cellColor,
+                          borderRadius: BorderRadius.circular(1.5.r),
+                          boxShadow: isCurrent
+                              ? [
+                                  BoxShadow(
+                                    color: color.withValues(alpha: 0.8),
+                                    blurRadius: 8,
+                                    spreadRadius: 2,
+                                  ),
+                                ]
+                              : (isPath
+                                    ? [
+                                        BoxShadow(
+                                          color: AppTheme.cyan.withValues(
+                                            alpha: 0.4,
+                                          ),
+                                          blurRadius: 4,
+                                        ),
+                                      ]
+                                    : null),
+                        ),
+                        child: isCurrent
+                            ? Center(
+                                child: Container(
+                                  width: 4.w,
+                                  height: 4.h,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              )
+                            : null,
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 
-  Color _getCellBattleColor(
+  Color _getCellColorForAlgo(
     GridNode node,
     bool isPath,
-    bool isBfsExplored,
-    bool isDfsExplored,
+    bool isExplored,
+    Color algoColor,
   ) {
     if (node.type == NodeType.wall) return AppTheme.cellWall;
     if (node.type == NodeType.start) return AppTheme.cellStart;
     if (node.type == NodeType.goal) return AppTheme.cellGoal;
-    if (isPath) return AppTheme.success.withValues(alpha: 0.8);
-    if (isBfsExplored) return AppTheme.warning.withValues(alpha: 0.4);
-    if (isDfsExplored) return AppTheme.error.withValues(alpha: 0.4);
+    if (isPath) return AppTheme.cyan;
+    if (isExplored) return algoColor.withValues(alpha: 0.4);
     return AppTheme.surfaceLow;
   }
 
@@ -457,10 +591,11 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 56, height: 56,
+        width: 56.w,
+        height: 56.h,
         decoration: BoxDecoration(
           color: AppTheme.surfaceHigh,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16.r),
           border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
         ),
         child: Icon(icon, color: AppTheme.accentLight, size: 28),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class AlgorithmTabsWidget extends StatefulWidget {
   final Function(String) onAlgorithmSelected;
@@ -34,13 +35,13 @@ class _AlgorithmTabsWidgetState extends State<AlgorithmTabsWidget> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       child: Row(
         children: [
           ...algorithms.map((algo) {
             final isSelected = _selectedAlgorithm == algo['name'];
             return Padding(
-              padding: const EdgeInsets.only(right: 8),
+              padding: EdgeInsets.only(right: 8.w),
               child: GestureDetector(
                 onTap: () {
                   setState(() => _selectedAlgorithm = algo['name']!);
@@ -55,7 +56,7 @@ class _AlgorithmTabsWidgetState extends State<AlgorithmTabsWidget> {
                     color: isSelected
                         ? const Color(0xFFFFA500)
                         : const Color(0xFF0E2233),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(20.r),
                     border: Border.all(
                       color: isSelected
                           ? const Color(0xFFFFA500)
@@ -72,7 +73,7 @@ class _AlgorithmTabsWidgetState extends State<AlgorithmTabsWidget> {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: isSelected ? Colors.black : Colors.white,
-                          fontSize: 12,
+                          fontSize: 12.sp,
                         ),
                       ),
                     ],
@@ -80,7 +81,7 @@ class _AlgorithmTabsWidgetState extends State<AlgorithmTabsWidget> {
                 ),
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
