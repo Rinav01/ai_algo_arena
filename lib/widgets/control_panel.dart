@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../models/grid_node.dart';
-import '../state/grid_controller.dart';
+import 'package:ai_algo_app/models/grid_node.dart';
+import 'package:ai_algo_app/state/grid_controller.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class ControlPanel extends StatelessWidget {

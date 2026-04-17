@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../core/app_theme.dart';
-import '../services/battle_analyzer.dart';
+import 'package:ai_algo_app/core/app_theme.dart';
+import 'package:ai_algo_app/services/battle_analyzer.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class BattleResultsPanel extends StatefulWidget {
   final AlgorithmMetrics? algorithmAMetrics;
@@ -247,32 +248,94 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
   }
 
   Widget _buildAnalysisBox(BattleResult result) {
+    final insights = result.getAnalysisInsights();
+    
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(16.r),
+      padding: EdgeInsets.all(20.r),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(color: AppTheme.accent.withValues(alpha: 0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.accent.withValues(alpha: 0.05),
+            blurRadius: 20,
+            spreadRadius: -5,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.analytics_outlined, size: 16.r, color: AppTheme.accent),
-              const SizedBox(width: 8),
-              Text('STRATEGIC ANALYSIS', 
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.accent, fontWeight: FontWeight.bold)),
+              Container(
+                padding: EdgeInsets.all(6.r),
+                decoration: BoxDecoration(
+                  color: AppTheme.accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Icon(Icons.insights_rounded, size: 18.r, color: AppTheme.accent),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'STRATEGIC ANALYSIS',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: AppTheme.accent,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            result.getDetailedReport().split('ANALYSIS:').last.replaceAll('║', '').replaceAll('─', '').trim(),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70, height: 1.5),
-          ),
+          const SizedBox(height: 20),
+          ...List.generate(insights.length, (index) {
+            final insight = insights[index];
+            return Padding(
+              padding: EdgeInsets.only(bottom: index == insights.length - 1 ? 0 : 16.h),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   Container(
+                    margin: EdgeInsets.only(top: 2.h),
+                    child: Icon(
+                      insight.icon,
+                      size: 16.r,
+                      color: _getInsightColor(insight.type),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      insight.text,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ).animate()
+               .fadeIn(duration: 400.ms, delay: (200 + (index * 150)).ms)
+               .slideX(begin: 0.05, curve: Curves.easeOutQuad),
+            );
+          }),
         ],
       ),
     );
+  }
+
+  Color _getInsightColor(InsightType type) {
+    switch (type) {
+      case InsightType.winner:
+        return Color(0xFFA855F7); // Purple
+      case InsightType.success:
+        return AppTheme.success;
+      case InsightType.parity:
+        return AppTheme.accent;
+      case InsightType.info:
+        return Colors.blueAccent;
+    }
   }
 }

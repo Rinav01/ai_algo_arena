@@ -2,38 +2,71 @@ import 'dart:async';
 import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 
-import '../core/problem_definition.dart';
+import 'package:ai_algo_app/core/grid_problem.dart';
+import 'package:ai_algo_app/core/problem_definition.dart';
+import 'package:ai_algo_app/core/search_algorithms.dart';
 
-/// Response message from the isolate
-class _SolveResponse<State> {
-  final List<AlgorithmStep<State>> history;
-  final Set<State> finalExplored;
-  final List<State> finalPath;
+/// Messaging for real-time streaming from isolates (Batched for performance)
+class _StreamMessage<State> {
+  final List<AlgorithmStep<State>>? batch;
+  final bool isDone;
+  final String? error;
 
-  _SolveResponse(this.history, this.finalExplored, this.finalPath);
+  _StreamMessage.batch(this.batch) : isDone = false, error = null;
+  _StreamMessage.done() : batch = null, isDone = true, error = null;
+  _StreamMessage.error(this.error) : batch = null, isDone = false;
 }
 
-/// Request message sent to the isolate
-class _SolveRequest<State> {
-  final SearchAlgorithm<State> algorithm;
-  final Problem<State> problem;
+/// Request message sent to the isolate for streaming
+class _StreamRequest {
+  final SendPort sendPort;
+  final String algorithmId;
+  final Map<String, dynamic> snapshot;
 
-  _SolveRequest(this.algorithm, this.problem);
+  _StreamRequest(this.sendPort, this.algorithmId, this.snapshot);
 }
 
-/// The actual entry point for the isolate
-_SolveResponse<State> _solveInIsolate<State>(_SolveRequest<State> request) {
-  final history = request.algorithm.solve(request.problem).toList();
-  final finalExplored = history.expand((s) => s.newlyExplored).toSet();
-  final finalPath = history.isEmpty ? <State>[] : history.last.path;
-  return _SolveResponse<State>(history, finalExplored, finalPath);
+/// The actual entry point for the isolate (Streaming version)
+Future<void> _streamInIsolate(_StreamRequest request) async {
+  try {
+    final problem = GridProblem.fromSnapshot(request.snapshot);
+    
+    // Instantiate the algorithm inside the isolate to avoid non-sendable object issues
+    final SearchAlgorithm<GridCoordinate> algorithm = switch (request.algorithmId) {
+      'Breadth-First Search' => BFSAlgorithm<GridCoordinate>(),
+      'Depth-First Search' => DFSAlgorithm<GridCoordinate>(),
+      'Dijkstra\'s Algorithm' => DijkstraAlgorithm<GridCoordinate>(),
+      'A* Search' => AStarAlgorithm<GridCoordinate>(),
+      'Greedy Best-First Search' => GreedyBestFirstAlgorithm<GridCoordinate>(),
+      _ => throw Exception('Unknown algorithm ID: ${request.algorithmId}'),
+    };
+        
+    final List<AlgorithmStep<GridCoordinate>> buffer = [];
+    const int batchSize = 100;
+
+    for (final step in algorithm.solve(problem)) {
+      buffer.add(step);
+      if (buffer.length >= batchSize) {
+        request.sendPort.send(_StreamMessage<GridCoordinate>.batch(List.from(buffer)));
+        buffer.clear();
+      }
+    }
+    
+    if (buffer.isNotEmpty) {
+      request.sendPort.send(_StreamMessage<GridCoordinate>.batch(buffer));
+    }
+    request.sendPort.send(_StreamMessage<GridCoordinate>.done());
+  } catch (e) {
+    request.sendPort.send(_StreamMessage<GridCoordinate>.error(e.toString()));
+  }
 }
 
 /// Controls execution of algorithm steps and manages playback via timer.
 /// Now optimized to accumulate incremental steps into a full state and use caching.
 class AlgorithmExecutor<State> with ChangeNotifier {
   final SearchAlgorithm<State> algorithm;
-  final Problem<State> problem;
+  final Problem<State>? _problem;
+  final Map<String, dynamic>? _problemSnapshot;
   
   Duration _stepDelay;
 
@@ -81,13 +114,24 @@ class AlgorithmExecutor<State> with ChangeNotifier {
   AlgorithmStep<State>? get lastStep => _lastStep;
 
   /// Generate a cache key for the current problem and algorithm
-  String get _cacheKey => '${algorithm.runtimeType}_${problem.hashCode}';
+  String get _cacheKey {
+    if (_problemSnapshot != null) {
+      final tempProblem = GridProblem.fromSnapshot(_problemSnapshot);
+      return '${algorithm.runtimeType}_${tempProblem.hashCode}';
+    }
+    return '${algorithm.runtimeType}_${_problem.hashCode}';
+  }
 
   AlgorithmExecutor({
     required this.algorithm,
-    required this.problem,
+    Problem<State>? problem,
+    Map<String, dynamic>? problemSnapshot,
     int? stepDelayMs,
-  }) : _stepDelay = Duration(milliseconds: stepDelayMs ?? 16); // Default to roughly 60fps
+  }) : _problem = problem,
+       _problemSnapshot = problemSnapshot,
+       _stepDelay = Duration(milliseconds: stepDelayMs ?? 50) {
+    assert(_problem != null || _problemSnapshot != null, 'Either problem or problemSnapshot must be provided');
+  }
 
   /// Start execution: compute via isolate, then start playback
   Future<void> start() async {
@@ -112,39 +156,70 @@ class AlgorithmExecutor<State> with ChangeNotifier {
           _pathSet.addAll(_currentPath);
         }
       } else {
-        // 1. Offload the search and the heavy set processing to a background isolate
-        final response = await Isolate.run(
-          () => _solveInIsolate(
-            _SolveRequest<State>(algorithm, problem)
-          )
+        // 1. Offload the search to a background isolate and stream results
+       
+        _fullHistory = [];
+        final receivePort = ReceivePort();
+        
+        final request = _StreamRequest(
+          receivePort.sendPort,
+          algorithm.name,
+          _problemSnapshot!,
         );
-        
-        _fullHistory = response.history;
-        final finalExplored = response.finalExplored;
-        final finalPath = response.finalPath;
-        
-        // Cache management: LRU-ish eviction
-        if (_resultCache.length >= _maxCacheSize) {
-          _resultCache.remove(_resultCache.keys.first);
-        }
-        
-        _resultCache[cacheKey] = (_fullHistory!, finalExplored, finalPath);
-        
-        if (_stepDelay.inMilliseconds == 0) {
-          _exploredSet.addAll(finalExplored);
-          _currentPath = finalPath;
-          _pathSet.addAll(_currentPath);
-        }
+
+        await Isolate.spawn(_streamInIsolate, request);
+
+        // Listen to the stream and collect history while playback happens
+        final completer = Completer<void>();
+        receivePort.listen((message) {
+          final streamMsg = message as _StreamMessage<State>;
+          
+          if (streamMsg.error != null) {
+            _stepController.addError(streamMsg.error!);
+            receivePort.close();
+            completer.complete();
+          } else if (streamMsg.isDone) {
+            _isComputing = false;
+            notifyListeners();
+            receivePort.close();
+            
+            // Cache the finished result
+            if (_fullHistory != null && _fullHistory!.isNotEmpty) {
+              final finalStep = _fullHistory!.last;
+              final finalExplored = _fullHistory!.expand((s) => s.newlyExplored).toSet();
+              
+              if (_resultCache.length >= _maxCacheSize) {
+                _resultCache.remove(_resultCache.keys.first);
+              }
+              _resultCache[cacheKey] = (_fullHistory!, finalExplored, finalStep.path);
+            }
+            
+            completer.complete();
+          } else if (streamMsg.batch != null) {
+            _fullHistory!.addAll(streamMsg.batch!);
+            
+            // Start playback immediately if not yet started
+            if (_playbackTimer == null && !_isStopped && !_isPaused) {
+              _startPlayback();
+            }
+          }
+        });
+
+        // Wait for the computation to fully finish
+        await completer.future;
       }
       
       _isComputing = false;
-      notifyListeners();
       
-      // 2. Start timeline playback
-      if (!_isPaused && !_isStopped) {
+      // 2. Start timeline playback if not already running
+      if (!_isPaused && !_isStopped && _playbackTimer == null) {
         _startPlayback();
+      } else {
+        // Just notify that computation is done so UI can show final stats
+        notifyListeners();
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('Error starting executor: $e\n$stack');
       _isComputing = false;
       _stepController.addError(e);
       _isStopped = true;
@@ -286,9 +361,12 @@ class BattleExecutor {
   bool get isStopped => _isStopped;
   bool get isRunning => !_isPaused && !_isStopped;
 
-  /// Start both algorithms simultaneously
+  /// Start both algorithms with a staggered delay to avoid memory spikes
   Future<void> start() async {
-    await Future.wait([algo1.start(), algo2.start()]);
+    await algo1.start();
+    // Staggered startup to prevent simultaneous Isolate initialization spikes
+    await Future.delayed(const Duration(milliseconds: 100));
+    await algo2.start();
   }
 
   /// Pause both
@@ -336,7 +414,8 @@ class AdvancedAlgorithmExecutor<State> extends AlgorithmExecutor<State> {
 
   AdvancedAlgorithmExecutor({
     required super.algorithm,
-    required super.problem,
+    super.problem,
+    super.problemSnapshot,
     super.stepDelayMs,
   }) : _baseStepDelay = Duration(milliseconds: stepDelayMs ?? 16);
 

@@ -1,4 +1,4 @@
-import '../core/problem_definition.dart';
+import 'package:ai_algo_app/core/problem_definition.dart';
 
 /// Position of a queen on the board
 class QueenPosition {

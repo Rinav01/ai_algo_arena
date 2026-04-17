@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../core/grid_problem.dart';
-import '../services/algorithm_recommender.dart';
-import '../core/app_theme.dart';
+import 'package:ai_algo_app/core/grid_problem.dart';
+import 'package:ai_algo_app/services/algorithm_recommender.dart';
+import 'package:ai_algo_app/core/app_theme.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 

@@ -1,4 +1,4 @@
-import '../core/problem_definition.dart';
+import 'package:ai_algo_app/core/problem_definition.dart';
 
 /// 8-Puzzle state: [0,1,2,3,4,5,6,7,8] where 0 = empty
 /// Layout:

@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-import '../models/grid_node.dart';
+import 'package:ai_algo_app/models/grid_node.dart';
 
 class GridController extends ChangeNotifier {
   GridController({
@@ -258,5 +258,30 @@ class GridController extends ChangeNotifier {
     });
     
     notifyListeners();
+  }
+
+  /// Exports an optimized, flat representation of the grid for background processing.
+  /// This avoids copying complex object graphs into isolates.
+  Map<String, dynamic> toOptimizedSnapshot() {
+    final types = Uint8List(rows * columns);
+    final weights = Float32List(rows * columns);
+    
+    for (int r = 0; r < rows; r++) {
+      for (int c = 0; c < columns; c++) {
+        final node = _grid[r][c];
+        final index = r * columns + c;
+        types[index] = node.type.index;
+        weights[index] = node.weight;
+      }
+    }
+
+    return {
+      'rows': rows,
+      'columns': columns,
+      'types': types,
+      'weights': weights,
+      'start': (row: _start.row, column: _start.column),
+      'goal': _goal != null ? (row: _goal!.row, column: _goal!.column) : null,
+    };
   }
 }

@@ -1,10 +1,10 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import '../core/app_theme.dart';
-import '../core/grid_problem.dart';
-import '../models/grid_node.dart';
-import '../services/algorithm_executor.dart';
-import '../state/grid_controller.dart';
+import 'package:ai_algo_app/core/app_theme.dart';
+import 'package:ai_algo_app/core/grid_problem.dart';
+import 'package:ai_algo_app/models/grid_node.dart';
+import 'package:ai_algo_app/services/algorithm_executor.dart';
+import 'package:ai_algo_app/state/grid_controller.dart';
 
 class GridVisualizerCanvas extends StatefulWidget {
   final GridController controller;
@@ -270,6 +270,7 @@ class _GridPainter extends CustomPainter {
       ..color = accentColor.withValues(alpha: 0.4)
       ..style = PaintingStyle.fill;
       
+    final path = Path();
     for (final state in executor!.exploredSet) {
       if (controller.grid[state.row][state.column].type != NodeType.empty) continue;
       
@@ -279,8 +280,9 @@ class _GridPainter extends CustomPainter {
         cellWidth - 1, 
         cellHeight - 1
       );
-      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(2)), paint);
+      path.addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(2)));
     }
+    canvas.drawPath(path, paint);
   }
 
   void _drawPath(Canvas canvas, double cellWidth, double cellHeight) {
@@ -294,6 +296,7 @@ class _GridPainter extends CustomPainter {
       ..color = AppTheme.cyan.withValues(alpha: 0.3)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
 
+    final path = Path();
     for (final state in executor!.pathSet) {
       if (controller.grid[state.row][state.column].type == NodeType.start || 
           controller.grid[state.row][state.column].type == NodeType.goal) {
@@ -306,9 +309,13 @@ class _GridPainter extends CustomPainter {
         cellWidth - 1, 
         cellHeight - 1
       );
-      canvas.drawRect(rect, shadowPaint);
-      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(2)), paint);
+      path.addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(2)));
     }
+    
+    // Draw shadow path once (for the whole path)
+    canvas.drawPath(path, shadowPaint);
+    // Draw solid path once
+    canvas.drawPath(path, paint);
   }
 
   void _drawCurrentNode(Canvas canvas, double cellWidth, double cellHeight) {

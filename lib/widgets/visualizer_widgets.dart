@@ -1,10 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../core/app_theme.dart';
-import '../widgets/animated_number_display.dart';
+import 'package:ai_algo_app/core/app_theme.dart';
+import 'package:ai_algo_app/widgets/animated_number_display.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../models/grid_node.dart';
+import 'package:ai_algo_app/models/grid_node.dart';
 
 /// Reusable glassmorphism stat card used in visualizers.
 class GlassStatCard extends StatelessWidget {

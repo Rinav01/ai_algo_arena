@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../core/app_theme.dart';
-import '../widgets/bottom_nav_bar.dart';
+import 'package:ai_algo_app/core/app_theme.dart';
+import 'package:ai_algo_app/widgets/bottom_nav_bar.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 // ─── Home Screen ─────────────────────────────────────────────────────────────

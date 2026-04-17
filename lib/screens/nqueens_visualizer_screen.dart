@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:ui';
-import '../core/app_theme.dart';
-import '../core/nqueens_problem.dart';
-import '../core/search_algorithms.dart';
-import '../services/algorithm_executor.dart';
-import '../core/problem_definition.dart';
-import '../widgets/visualizer_widgets.dart';
+import 'package:ai_algo_app/core/app_theme.dart';
+import 'package:ai_algo_app/core/nqueens_problem.dart';
+import 'package:ai_algo_app/core/search_algorithms.dart';
+import 'package:ai_algo_app/services/algorithm_executor.dart';
+import 'package:ai_algo_app/core/problem_definition.dart';
+import 'package:ai_algo_app/widgets/visualizer_widgets.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class NQueensVisualizerScreen extends StatefulWidget {

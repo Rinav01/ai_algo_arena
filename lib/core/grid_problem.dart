@@ -1,5 +1,6 @@
-import '../core/problem_definition.dart';
-import '../models/grid_node.dart';
+import 'dart:typed_data';
+import 'package:ai_algo_app/core/problem_definition.dart';
+import 'package:ai_algo_app/models/grid_node.dart';
 
 // Coordinate state for grid-based problems
 class GridCoordinate {
@@ -12,7 +13,6 @@ class GridCoordinate {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is GridCoordinate &&
-          runtimeType == other.runtimeType &&
           row == other.row &&
           column == other.column;
 
@@ -25,45 +25,91 @@ class GridCoordinate {
 
 // Grid problem implementation
 class GridProblem extends Problem<GridCoordinate> {
-  final List<List<GridNode>> grid;
+  final int rows;
+  final int cols;
+  
+  final List<List<GridNode>>? _grid;
+  final Uint8List _types;
+  final Float32List _weights;
   final GridCoordinate _start;
   final GridCoordinate _goal;
+  
   int? _cachedHashCode;
 
   GridProblem({
     required List<List<GridNode>> grid,
     required GridCoordinate start,
     required GridCoordinate goal,
-  }) : grid = grid.map((row) => List<GridNode>.from(row)).toList(),
+  }) : rows = grid.length,
+       cols = grid[0].length,
+       _types = Uint8List(grid.length * grid[0].length),
+       _weights = Float32List(grid.length * grid[0].length),
        _start = start,
-       _goal = goal;
+       _goal = goal,
+       _grid = grid {
+    
+    for (int r = 0; r < rows; r++) {
+      for (int c = 0; c < cols; c++) {
+        final node = grid[r][c];
+        final index = r * cols + c;
+        _types[index] = node.type.index;
+        _weights[index] = node.weight;
+      }
+    }
+  }
+
+  /// Get the full grid object graph (may be null if reconstructed from snapshot)
+  List<List<GridNode>> get grid {
+    if (_grid != null) return _grid;
+    throw StateError('Grid object graph is not available for snapshotted problems. Use getNeighbors/isValid instead.');
+  }
+
+  /// Reconstruct from a background processing snapshot
+  GridProblem.fromSnapshot(Map<String, dynamic> snapshot)
+      : rows = snapshot['rows'] as int,
+        cols = snapshot['columns'] as int,
+        _types = snapshot['types'] as Uint8List,
+        _weights = snapshot['weights'] as Float32List,
+        _start = GridCoordinate(
+          row: (snapshot['start'] as dynamic).row as int,
+          column: (snapshot['start'] as dynamic).column as int,
+        ),
+        _goal = GridCoordinate(
+          row: (snapshot['goal'] as dynamic).row as int,
+          column: (snapshot['goal'] as dynamic).column as int,
+        ),
+        _grid = null;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is GridProblem &&
-          runtimeType == other.runtimeType &&
+          rows == other.rows &&
+          cols == other.cols &&
           _start == other._start &&
           _goal == other._goal &&
-          _isGridEqual(grid, other.grid);
+          _isGridEqual(other);
 
   @override
   int get hashCode {
-    _cachedHashCode ??= Object.hash(
-      _start,
-      _goal,
-      Object.hashAll(grid.expand((row) => row)),
-    );
-    return _cachedHashCode!;
+    if (_cachedHashCode != null) return _cachedHashCode!;
+    
+    // Efficient hashing for flat buffers
+    int hash = _start.hashCode ^ _goal.hashCode;
+    hash = Object.hash(hash, rows, cols);
+    hash = Object.hash(hash, Object.hashAll(_types));
+    // Weights are often 1.0, so hashAll is fine
+    hash = Object.hash(hash, Object.hashAll(_weights));
+    
+    _cachedHashCode = hash;
+    return hash;
   }
 
-  bool _isGridEqual(List<List<GridNode>> a, List<List<GridNode>> b) {
-    if (a.length != b.length) return false;
-    for (int i = 0; i < a.length; i++) {
-      if (a[i].length != b[i].length) return false;
-      for (int j = 0; j < a[i].length; j++) {
-        if (a[i][j] != b[i][j]) return false;
-      }
+  bool _isGridEqual(GridProblem other) {
+    if (rows != other.rows || cols != other.cols) return false;
+    for (int i = 0; i < _types.length; i++) {
+        if (_types[i] != other._types[i]) return false;
+        if (_weights[i] != other._weights[i]) return false;
     }
     return true;
   }
@@ -81,7 +127,6 @@ class GridProblem extends Problem<GridCoordinate> {
   List<GridCoordinate> getNeighbors(GridCoordinate state) {
     final neighbors = <GridCoordinate>[];
 
-    // 4-directional movement: up, right, down, left
     const directions = [
       (-1, 0), // up
       (0, 1),  // right
@@ -93,9 +138,11 @@ class GridProblem extends Problem<GridCoordinate> {
       final newRow = state.row + rowOffset;
       final newCol = state.column + colOffset;
 
-      final neighbor = GridCoordinate(row: newRow, column: newCol);
-      if (isValid(neighbor)) {
-        neighbors.add(neighbor);
+      if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
+        final index = newRow * cols + newCol;
+        if (_types[index] != NodeType.wall.index) {
+          neighbors.add(GridCoordinate(row: newRow, column: newCol));
+        }
       }
     }
 
@@ -105,25 +152,26 @@ class GridProblem extends Problem<GridCoordinate> {
   @override
   bool isValid(GridCoordinate state) {
     if (state.row < 0 ||
-        state.row >= grid.length ||
+        state.row >= rows ||
         state.column < 0 ||
-        state.column >= grid[0].length) {
+        state.column >= cols) {
       return false;
     }
 
-    return grid[state.row][state.column].isWalkable;
+    final index = state.row * cols + state.column;
+    return _types[index] != NodeType.wall.index;
   }
 
   @override
   double heuristic(GridCoordinate state) {
-    // Manhattan distance heuristic
     return ((_goal.row - state.row).abs() + (_goal.column - state.column).abs())
         .toDouble();
   }
 
   @override
   double moveCost(GridCoordinate from, GridCoordinate to) {
-    return grid[to.row][to.column].weight;
+    final index = to.row * cols + to.column;
+    return _weights[index];
   }
 
   @override
@@ -131,31 +179,28 @@ class GridProblem extends Problem<GridCoordinate> {
     return '(${state.row},${state.column})';
   }
 
-  // Get grid dimensions
-  int get rows => grid.length;
-  int get cols => grid[0].length;
-
-  // Get total walkable nodes
-  int get walkableNodes =>
-      grid.expand((row) => row).where((node) => node.isWalkable).length;
-
-  // Get total wall nodes
-  int get wallNodes => grid
-      .expand((row) => row)
-      .where((node) => node.type == NodeType.wall)
-      .length;
-
-  // Obstacle density 0.0 - 1.0
-  double get obstacleDensity {
-    final total = rows * cols;
-    return wallNodes / total;
+  int get walkableNodes {
+    int count = 0;
+    for (final type in _types) {
+      if (type != NodeType.wall.index) count++;
+    }
+    return count;
   }
 
-  // Grid size classification
+  int get wallNodes {
+    int count = 0;
+    for (final type in _types) {
+      if (type == NodeType.wall.index) count++;
+    }
+    return count;
+  }
+
+  double get obstacleDensity => wallNodes / (rows * cols);
+
   GridSize get gridSize {
     final total = rows * cols;
-    if (total < 100) return GridSize.small;
-    if (total < 500) return GridSize.medium;
+    if (total < 400) return GridSize.small;
+    if (total < 1000) return GridSize.medium;
     return GridSize.large;
   }
 }

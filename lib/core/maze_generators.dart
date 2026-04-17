@@ -1,7 +1,7 @@
 import 'dart:math';
 
-import '../state/grid_controller.dart';
-import '../models/grid_node.dart';
+import 'package:ai_algo_app/state/grid_controller.dart';
+import 'package:ai_algo_app/models/grid_node.dart';
 
 class MazeGenerator {
   final Random _random = Random();

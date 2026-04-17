@@ -1,6 +1,6 @@
-import '../core/grid_problem.dart';
-import '../core/search_algorithms.dart';
-import '../models/grid_node.dart';
+import 'package:ai_algo_app/core/grid_problem.dart';
+import 'package:ai_algo_app/core/search_algorithms.dart';
+import 'package:ai_algo_app/models/grid_node.dart';
 
 /// Adaptor to convert between old and new systems
 class AlgorithmAdaptor {

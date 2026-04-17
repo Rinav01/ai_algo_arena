@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../models/grid_node.dart';
+import 'package:ai_algo_app/models/grid_node.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class GridPainter extends CustomPainter {

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:ui';
-import '../core/app_theme.dart';
-import '../core/eightpuzzle_problem.dart';
-import '../core/search_algorithms.dart';
-import '../services/algorithm_executor.dart';
-import '../core/problem_definition.dart';
-import '../widgets/visualizer_widgets.dart';
+import 'package:ai_algo_app/core/app_theme.dart';
+import 'package:ai_algo_app/core/eightpuzzle_problem.dart';
+import 'package:ai_algo_app/core/search_algorithms.dart';
+import 'package:ai_algo_app/services/algorithm_executor.dart';
+import 'package:ai_algo_app/core/problem_definition.dart';
+import 'package:ai_algo_app/widgets/visualizer_widgets.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class EightPuzzleVisualizerScreen extends StatefulWidget {
@@ -25,7 +25,9 @@ class _EightPuzzleVisualizerScreenState
   StreamSubscription<AlgorithmStep<PuzzleState>>? _stepSubscription;
 
   List<PuzzleState> currentPath = [];
-  Set<String> exploredStates = {};
+  Set<PuzzleState> exploredStates = {};
+  // Track last UI update time to avoid excessive setState calls
+  DateTime _lastUiUpdate = DateTime.fromMillisecondsSinceEpoch(0);
   int stepCount = 0;
   int nodesExplored = 0;
   bool isSolving = false;
@@ -112,32 +114,39 @@ class _EightPuzzleVisualizerScreenState
         (step) {
           if (!mounted) return;
 
-          setState(() {
-            stepCount = step.stepCount;
-            nodesExplored = executor!.exploredSet.length;
-            exploredStates = executor!.exploredSet.map((s) => s.toString()).toSet();
+          // Update internal values always, but throttle UI rebuilds
+          stepCount = step.stepCount;
+          nodesExplored = executor!.exploredSet.length;
+          exploredStates = executor!.exploredSet.cast<PuzzleState>().toSet();
 
-            if (step.path.isNotEmpty) {
-              currentPath = step.path;
-              currentState = step.path.last;
-            } else if (step.newlyExplored.isNotEmpty) {
-              currentState = step.newlyExplored.last;
-            }
+          if (step.path.isNotEmpty) {
+            currentPath = step.path;
+            currentState = step.path.last;
+          } else if (step.newlyExplored.isNotEmpty) {
+            currentState = step.newlyExplored.last;
+          }
 
-            _statusMessage = step.message ?? _statusMessage;
+          _statusMessage = step.message ?? _statusMessage;
 
-            if (step.isGoalReached) {
-              isSolved = true;
-              isSolving = false;
-              _statusMessage =
-                  'Solution found! Path length: ${currentPath.length} moves';
-            }
-          });
+          if (step.isGoalReached) {
+            isSolved = true;
+            isSolving = false;
+            _statusMessage =
+                'Solution found! Path length: ${currentPath.length} moves';
+          }
+
+          final now = DateTime.now();
+          if (now.difference(_lastUiUpdate) >=
+              const Duration(milliseconds: 50)) {
+            _lastUiUpdate = now;
+            setState(() {});
+          }
         },
         onError: (error) {
           if (mounted) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text('Error: $error')));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('Error: $error')));
             setState(() {
               isSolving = false;
               _statusMessage = 'Error: $error';
@@ -152,8 +161,9 @@ class _EightPuzzleVisualizerScreenState
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
         setState(() {
           isSolving = false;
           _statusMessage = 'Error: $e';
@@ -205,29 +215,35 @@ class _EightPuzzleVisualizerScreenState
       executor = AlgorithmExecutor<PuzzleState>(
         algorithm: algorithm,
         problem: problem,
-      stepDelayMs: _stepDelay.inMilliseconds,
-    );
+        stepDelayMs: _stepDelay.inMilliseconds,
+      );
       executor!.start();
       _stepSubscription?.cancel();
       _stepSubscription = executor!.stepStream.listen((step) {
         if (!mounted) return;
-        setState(() {
-          stepCount = step.stepCount;
-          nodesExplored = executor!.exploredSet.length;
-          exploredStates = executor!.exploredSet.map((s) => s.toString()).toSet();
 
-          if (step.path.isNotEmpty) {
-            currentPath = step.path;
-            currentState = step.path.last;
-          } else if (step.newlyExplored.isNotEmpty) {
-            currentState = step.newlyExplored.last;
-          }
+        // Throttle updates similarly for manual stepping playback
+        stepCount = step.stepCount;
+        nodesExplored = executor!.exploredSet.length;
+        exploredStates = executor!.exploredSet.cast<PuzzleState>().toSet();
 
-          if (step.isGoalReached) {
-            isSolved = true;
-            isSolving = false;
-          }
-        });
+        if (step.path.isNotEmpty) {
+          currentPath = step.path;
+          currentState = step.path.last;
+        } else if (step.newlyExplored.isNotEmpty) {
+          currentState = step.newlyExplored.last;
+        }
+
+        if (step.isGoalReached) {
+          isSolved = true;
+          isSolving = false;
+        }
+
+        final now = DateTime.now();
+        if (now.difference(_lastUiUpdate) >= const Duration(milliseconds: 50)) {
+          _lastUiUpdate = now;
+          setState(() {});
+        }
       });
     }
 
@@ -244,7 +260,8 @@ class _EightPuzzleVisualizerScreenState
     final tapRow = index ~/ 3;
     final tapCol = index % 3;
 
-    final isAdjacent = (emptyRow == tapRow && (emptyCol - tapCol).abs() == 1) ||
+    final isAdjacent =
+        (emptyRow == tapRow && (emptyCol - tapCol).abs() == 1) ||
         (emptyCol == tapCol && (emptyRow - tapRow).abs() == 1);
 
     if (isAdjacent) {
@@ -260,7 +277,9 @@ class _EightPuzzleVisualizerScreenState
         currentPath = [currentState];
         exploredStates.clear();
         isSolved = problem.isGoal(currentState);
-        _statusMessage = isSolved ? 'Goal reached manually!' : 'Playing manually';
+        _statusMessage = isSolved
+            ? 'Goal reached manually!'
+            : 'Playing manually';
       });
     }
   }
@@ -277,11 +296,22 @@ class _EightPuzzleVisualizerScreenState
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                 child: Container(
-                  padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    20,
+                    20,
+                    MediaQuery.of(context).viewInsets.bottom + 20,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.surfaceVariant.withValues(alpha: 0.8),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-                    border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(24.r),
+                    ),
+                    border: Border(
+                      top: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.1),
+                      ),
+                    ),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -289,7 +319,8 @@ class _EightPuzzleVisualizerScreenState
                     children: [
                       Center(
                         child: Container(
-                          width: 40.w, height: 4.h,
+                          width: 40.w,
+                          height: 4.h,
                           margin: EdgeInsets.only(bottom: 20.h),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.2),
@@ -324,7 +355,9 @@ class _EightPuzzleVisualizerScreenState
       children: [
         Text(
           'ALGORITHM',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
         ),
         const SizedBox(height: 12),
         SingleChildScrollView(
@@ -343,18 +376,27 @@ class _EightPuzzleVisualizerScreenState
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 10.h,
+                    ),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppTheme.accent.withValues(alpha: 0.15) : AppTheme.surfaceHigh,
+                      color: isSelected
+                          ? AppTheme.accent.withValues(alpha: 0.15)
+                          : AppTheme.surfaceHigh,
                       borderRadius: BorderRadius.circular(8.r),
                       border: Border.all(
-                        color: isSelected ? AppTheme.accent : Colors.white.withValues(alpha: 0.05),
+                        color: isSelected
+                            ? AppTheme.accent
+                            : Colors.white.withValues(alpha: 0.05),
                       ),
                     ),
                     child: Text(
                       algo,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: isSelected ? AppTheme.accentLight : AppTheme.textMuted,
+                        color: isSelected
+                            ? AppTheme.accentLight
+                            : AppTheme.textMuted,
                       ),
                     ),
                   ),
@@ -376,11 +418,15 @@ class _EightPuzzleVisualizerScreenState
           children: [
             Text(
               'EXECUTION SPEED',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
             ),
             Text(
               '${executionSpeed.toStringAsFixed(1)}x',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.accentLight),
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(color: AppTheme.accentLight),
             ),
           ],
         ),
@@ -422,9 +468,14 @@ class _EightPuzzleVisualizerScreenState
               backgroundColor: AppTheme.accent,
               foregroundColor: Colors.white,
               padding: EdgeInsets.symmetric(vertical: 16.h),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
             ),
-            child: const Text('AUTO SOLVE', style: TextStyle(letterSpacing: 1.5, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'AUTO SOLVE',
+              style: TextStyle(letterSpacing: 1.5, fontWeight: FontWeight.bold),
+            ),
           ),
         ),
       ],
@@ -457,11 +508,23 @@ class _EightPuzzleVisualizerScreenState
 
               Row(
                 children: [
-                  Expanded(child: GlassStatCard(label: 'STEPS', value: stepCount)),
+                  Expanded(
+                    child: GlassStatCard(label: 'STEPS', value: stepCount),
+                  ),
                   const SizedBox(width: 10),
-                  Expanded(child: GlassStatCard(label: 'EXPLORED', value: nodesExplored)),
+                  Expanded(
+                    child: GlassStatCard(
+                      label: 'EXPLORED',
+                      value: nodesExplored,
+                    ),
+                  ),
                   const SizedBox(width: 10),
-                  Expanded(child: GlassStatCard(label: 'PATH', value: currentPath.length)),
+                  Expanded(
+                    child: GlassStatCard(
+                      label: 'PATH',
+                      value: currentPath.length,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 14),
@@ -505,7 +568,9 @@ class _EightPuzzleVisualizerScreenState
             children: [
               Text(
                 'Current State',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
               ),
               const SizedBox(height: 12),
               ClipRRect(
@@ -529,13 +594,18 @@ class _EightPuzzleVisualizerScreenState
             children: [
               Text(
                 'Goal',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
               ),
               const SizedBox(height: 12),
               Container(
                 padding: EdgeInsets.all(8.r),
                 decoration: AppTheme.glassCard(radius: 12),
-                child: _buildPuzzleGrid(problem.goalState, isInteractive: false),
+                child: _buildPuzzleGrid(
+                  problem.goalState,
+                  isInteractive: false,
+                ),
               ),
             ],
           ),
@@ -561,19 +631,19 @@ class _EightPuzzleVisualizerScreenState
             final tile = state.tiles[index];
             final isEmpty = tile == 0;
 
-            final isExplored = exploredStates.contains(state.toString());
+            final isExplored = exploredStates.contains(state);
             final isPath = currentPath.contains(state);
 
             final tileColor = isEmpty
                 ? Colors.transparent
                 : isPath
-                    ? AppTheme.cellPath
-                    : isExplored
-                        ? AppTheme.cellExplored
-                        : AppTheme.surfaceHigh;
+                ? AppTheme.cellPath
+                : isExplored
+                ? AppTheme.cellExplored
+                : AppTheme.surfaceHigh;
 
             final content = AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
+              duration: const Duration(milliseconds: 80),
               decoration: BoxDecoration(
                 color: tileColor,
                 borderRadius: BorderRadius.circular(isInteractive ? 8 : 4),
@@ -581,12 +651,15 @@ class _EightPuzzleVisualizerScreenState
                   color: isEmpty
                       ? Colors.white.withValues(alpha: 0.05)
                       : (isPath || isExplored)
-                          ? Colors.transparent
-                          : Colors.white.withValues(alpha: 0.1),
+                      ? Colors.transparent
+                      : Colors.white.withValues(alpha: 0.1),
                 ),
                 boxShadow: (isPath && !isEmpty)
                     ? [
-                        BoxShadow(color: AppTheme.cellPath.withValues(alpha: 0.5), blurRadius: 8),
+                        BoxShadow(
+                          color: AppTheme.cellPath.withValues(alpha: 0.5),
+                          blurRadius: 8,
+                        ),
                       ]
                     : [],
               ),
@@ -596,8 +669,11 @@ class _EightPuzzleVisualizerScreenState
                       child: Text(
                         '$tile',
                         style: isInteractive
-                            ? Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)
-                            : Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                            ? Theme.of(context).textTheme.headlineMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold)
+                            : Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                       ),
                     ),
             );
@@ -610,7 +686,7 @@ class _EightPuzzleVisualizerScreenState
             );
           },
         );
-      }
+      },
     );
   }
 }

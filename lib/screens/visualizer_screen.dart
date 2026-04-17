@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-
-import '../painters/grid_painter.dart';
-import '../state/grid_controller.dart';
-import '../widgets/control_panel.dart';
-import '../widgets/stat_card.dart';
+import 'package:ai_algo_app/painters/grid_painter.dart';
+import 'package:ai_algo_app/state/grid_controller.dart';
+import 'package:ai_algo_app/widgets/control_panel.dart';
+import 'package:ai_algo_app/widgets/stat_card.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class VisualizerScreen extends StatefulWidget {

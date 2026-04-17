@@ -6,16 +6,16 @@ import 'package:ai_algo_app/core/problem_definition.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
-import '../core/app_theme.dart';
-import '../core/grid_problem.dart';
-import '../core/search_algorithms.dart';
-import '../services/algorithm_executor.dart';
-import '../services/map_persistence.dart';
-import '../widgets/algorithm_recommendation_card.dart';
-import '../models/grid_node.dart';
-import '../state/grid_controller.dart';
-import '../widgets/visualizer_widgets.dart';
-import 'algorithm_battle_screen.dart';
+import 'package:ai_algo_app/core/app_theme.dart';
+import 'package:ai_algo_app/core/grid_problem.dart';
+import 'package:ai_algo_app/core/search_algorithms.dart';
+import 'package:ai_algo_app/services/algorithm_executor.dart';
+import 'package:ai_algo_app/services/map_persistence.dart';
+import 'package:ai_algo_app/widgets/algorithm_recommendation_card.dart';
+import 'package:ai_algo_app/models/grid_node.dart';
+import 'package:ai_algo_app/state/grid_controller.dart';
+import 'package:ai_algo_app/widgets/visualizer_widgets.dart';
+import 'package:ai_algo_app/screens/algorithm_battle_screen.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class PathfindingVisualizerScreen extends StatefulWidget {
@@ -158,7 +158,7 @@ class _PathfindingVisualizerScreenState
 
     _executor = AlgorithmExecutor<GridCoordinate>(
       algorithm: algo,
-      problem: _problem!,
+      problemSnapshot: _controller.toOptimizedSnapshot(),
       stepDelayMs: isLiveUpdate ? 0 : _stepDelay.inMilliseconds,
     );
 

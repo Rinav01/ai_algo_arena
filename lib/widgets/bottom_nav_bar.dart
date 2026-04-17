@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../core/app_theme.dart';
+import 'package:ai_algo_app/core/app_theme.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// Glassmorphism bottom navigation bar — Neural Arena design.

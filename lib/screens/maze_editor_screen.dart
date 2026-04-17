@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import '../models/grid_node.dart';
-import '../state/grid_controller.dart';
-import '../core/grid_problem.dart';
-import '../core/search_algorithms.dart';
-import '../services/algorithm_executor.dart';
-import '../core/problem_definition.dart';
-import '../core/app_theme.dart';
+import 'package:ai_algo_app/models/grid_node.dart';
+import 'package:ai_algo_app/state/grid_controller.dart';
+import 'package:ai_algo_app/core/grid_problem.dart';
+import 'package:ai_algo_app/core/search_algorithms.dart';
+import 'package:ai_algo_app/services/algorithm_executor.dart';
+import 'package:ai_algo_app/core/problem_definition.dart';
+import 'package:ai_algo_app/core/app_theme.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../core/maze_generators.dart';
+import 'package:ai_algo_app/core/maze_generators.dart';
 
-import '../widgets/grid_visualizer_canvas.dart';
+import 'package:ai_algo_app/widgets/grid_visualizer_canvas.dart';
 
 class MazeEditorScreen extends StatefulWidget {
   const MazeEditorScreen({super.key});

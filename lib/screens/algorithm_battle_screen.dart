@@ -4,17 +4,17 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../core/app_theme.dart';
-import '../core/grid_problem.dart';
-import '../core/problem_definition.dart';
-import '../core/search_algorithms.dart';
-import '../models/grid_node.dart';
-import '../services/algorithm_executor.dart';
-import '../services/battle_analyzer.dart';
-import '../state/grid_controller.dart';
-import '../widgets/battle_results_panel.dart';
-import '../widgets/grid_visualizer_canvas.dart';
-import '../widgets/visualizer_widgets.dart';
+import 'package:ai_algo_app/core/app_theme.dart';
+import 'package:ai_algo_app/core/grid_problem.dart';
+import 'package:ai_algo_app/core/problem_definition.dart';
+import 'package:ai_algo_app/core/search_algorithms.dart';
+import 'package:ai_algo_app/models/grid_node.dart';
+import 'package:ai_algo_app/services/algorithm_executor.dart';
+import 'package:ai_algo_app/services/battle_analyzer.dart';
+import 'package:ai_algo_app/state/grid_controller.dart';
+import 'package:ai_algo_app/widgets/battle_results_panel.dart';
+import 'package:ai_algo_app/widgets/grid_visualizer_canvas.dart';
+import 'package:ai_algo_app/widgets/visualizer_widgets.dart';
 
 class AlgorithmBattleScreen extends StatefulWidget {
   final List<List<GridNode>>? initialGrid;
@@ -92,41 +92,31 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
       _metricsB = null;
     });
 
+    debugPrint('Battle starting: $_algoAId vs $_algoBId');
+
     await _executorA?.dispose();
     await _executorB?.dispose();
 
     final goal = _controller.goal;
     if (goal == null) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cannot start battle without a goal node!'),
-          backgroundColor: AppTheme.error,
-        ),
+        const SnackBar(content: Text('Please place a Goal node first')),
       );
       setState(() => _isRunning = false);
       return;
     }
 
-    final problem = GridProblem(
-      grid: _controller.grid,
-      start: GridCoordinate(
-        row: _controller.start.row,
-        column: _controller.start.column,
-      ),
-      goal: GridCoordinate(
-        row: goal.row,
-        column: goal.column,
-      ),
-    );
+    final snapshot = _controller.toOptimizedSnapshot();
 
     _executorA = AlgorithmExecutor<GridCoordinate>(
       algorithm: _getAlgorithm(_algoAId),
-      problem: problem,
+      problemSnapshot: snapshot,
       stepDelayMs: _stepDelay.inMilliseconds,
     );
     _executorB = AlgorithmExecutor<GridCoordinate>(
       algorithm: _getAlgorithm(_algoBId),
-      problem: problem,
+      problemSnapshot: snapshot,
       stepDelayMs: _stepDelay.inMilliseconds,
     );
 
@@ -136,6 +126,9 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
     final stopwatchB = Stopwatch()..start();
     AlgorithmStep<GridCoordinate>? lastStepA;
     AlgorithmStep<GridCoordinate>? lastStepB;
+
+    // Listeners for real-time updates are handled by the GridVisualizerCanvas directly.
+    // We only need to listen for completion/metrics updates at the screen level.
 
     try {
       _executorA!.stepStream.listen(
@@ -264,6 +257,23 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
               _buildSelectors(),
               const SizedBox(height: 16),
 
+              // Tool Selector
+              AnimatedBuilder(
+                animation: _controller,
+                builder: (context, _) => Opacity(
+                  opacity: _isRunning ? 0.5 : 1.0,
+                  child: IgnorePointer(
+                    ignoring: _isRunning,
+                    child: ToolSelector(
+                      selectedTool: _controller.selectedTool,
+                      onToolSelected: (tool) => _controller.setTool(tool as PaintTool),
+                      isSolving: _isRunning,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
               BattleResultsPanel(
                 algorithmAMetrics: _metricsA,
                 algorithmBMetrics: _metricsB,
@@ -328,7 +338,12 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
                 children: [
                   _buildControlButton(
                     icon: Icons.replay_rounded,
-                    onTap: _randomizeMaze,
+                    onTap: _isRunning ? () {} : _randomizeMaze,
+                  ),
+                  const SizedBox(width: 12),
+                  _buildControlButton(
+                    icon: Icons.layers_clear_rounded,
+                    onTap: _isRunning ? () {} : () => _controller.clearWalls(),
                   ),
                   const SizedBox(width: 16),
                   Expanded(

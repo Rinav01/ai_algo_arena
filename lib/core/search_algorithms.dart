@@ -1,7 +1,7 @@
 import 'dart:collection';
 import 'package:collection/collection.dart';
 
-import '../core/problem_definition.dart';
+import 'package:ai_algo_app/core/problem_definition.dart';
 
 /// Generic BFS algorithm that works with any Problem
 class BFSAlgorithm<State> extends SearchAlgorithm<State> {

@@ -1,4 +1,21 @@
 import 'dart:math';
+import 'package:flutter/material.dart';
+
+/// Types of analytical insights
+enum InsightType { info, success, winner, parity }
+
+/// A single structured observation from the battle analyzer
+class AnalysisInsight {
+  final String text;
+  final InsightType type;
+  final IconData icon;
+
+  AnalysisInsight({
+    required this.text,
+    required this.type,
+    required this.icon,
+  });
+}
 
 /// Metrics for a single algorithm run
 class AlgorithmMetrics {
@@ -148,29 +165,10 @@ $analysis
 
   String _generateAnalysis() {
     final reasons = <String>[];
-
-    final nodeDiff = (algorithm2.exploredStates.length - algorithm1.exploredStates.length).abs();
-    final nodePercent = (nodeDiff / (max(algorithm1.exploredStates.length, algorithm2.exploredStates.length) + 1) * 100);
+    final insights = getAnalysisInsights();
     
-    reasons.add(
-      '✓ ${winner.algorithmName} explored $nodeDiff fewer nodes (${nodePercent.toStringAsFixed(1)}% reduction)',
-    );
-
-    if (algorithm1.foundPath && algorithm2.foundPath) {
-      if (algorithm1.path.length == algorithm2.path.length) {
-        reasons.add('✓ Both found the optimal path length (${algorithm1.path.length})');
-      } else {
-        final lengthDiff = (algorithm1.path.length - algorithm2.path.length).abs();
-        reasons.add(
-          '✓ ${winner.algorithmName} found a path with $lengthDiff fewer nodes',
-        );
-      }
-    }
-
-    if (winner.algorithmName.contains('A*') || winner.algorithmName.contains('Greedy')) {
-      reasons.add('🎯 Heuristic guided search avoided unnecessary exploration');
-    } else if (winner.algorithmName.contains('Dijkstra')) {
-      reasons.add('⚖️ Cost-awareness ensured the global minimum path');
+    for (final insight in insights) {
+      reasons.add(insight.text);
     }
 
     return '''
@@ -178,6 +176,64 @@ $analysis
 ║${'─' * 58}║
 ${reasons.map((r) => '║ $r${' '.padRight(58 - r.length)}║').join('\n')}
     ''';
+  }
+
+  /// Returns a structured list of insights for premium UI rendering
+  List<AnalysisInsight> getAnalysisInsights() {
+    final insights = <AnalysisInsight>[];
+
+    final nodeDiff = (algorithm2.exploredStates.length - algorithm1.exploredStates.length).abs();
+    final maxNodes = max(algorithm1.exploredStates.length, algorithm2.exploredStates.length);
+    final nodePercent = (nodeDiff / (maxNodes + 1) * 100);
+    
+    insights.add(
+      AnalysisInsight(
+        text: '${winner.algorithmName} explored $nodeDiff fewer nodes (${nodePercent.toStringAsFixed(1)}% reduction)',
+        type: InsightType.winner,
+        icon: Icons.auto_graph_rounded,
+      ),
+    );
+
+    if (algorithm1.foundPath && algorithm2.foundPath) {
+      if (algorithm1.path.length == algorithm2.path.length) {
+        insights.add(
+          AnalysisInsight(
+            text: 'Both found the optimal path length (${algorithm1.path.length})',
+            type: InsightType.parity,
+            icon: Icons.check_circle_outline_rounded,
+          ),
+        );
+      } else {
+        final lengthDiff = (algorithm1.path.length - algorithm2.path.length).abs();
+        insights.add(
+          AnalysisInsight(
+            text: '${winner.algorithmName} found a path with $lengthDiff fewer nodes',
+            type: InsightType.success,
+            icon: Icons.straighten_rounded,
+          ),
+        );
+      }
+    }
+
+    if (winner.algorithmName.contains('A*') || winner.algorithmName.contains('Greedy')) {
+      insights.add(
+        AnalysisInsight(
+          text: 'Heuristic guided search avoided unnecessary exploration',
+          type: InsightType.info,
+          icon: Icons.psychology_rounded,
+        ),
+      );
+    } else if (winner.algorithmName.contains('Dijkstra')) {
+      insights.add(
+        AnalysisInsight(
+          text: 'Cost-awareness ensured the global minimum path',
+          type: InsightType.info,
+          icon: Icons.balance_rounded,
+        ),
+      );
+    }
+
+    return insights;
   }
 
   /// Summary for UI
