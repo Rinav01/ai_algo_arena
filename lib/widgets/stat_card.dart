@@ -20,28 +20,25 @@ class StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16.r),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(16.r),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-            boxShadow: [
-              BoxShadow(
-                color: accent.withValues(alpha: 0.12),
-                blurRadius: 20,
-                spreadRadius: 0,
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.35),
-                blurRadius: 16,
-                spreadRadius: -4,
-              ),
-            ],
-          ),
+    return RepaintBoundary(
+      child: Container(
+        decoration: AppTheme.glassCard(
+          radius: 16,
+          borderColor: accent.withValues(alpha: 0.35),
+        ).copyWith(
+          boxShadow: [
+            BoxShadow(
+              color: accent.withValues(alpha: 0.12),
+              blurRadius: 20,
+              spreadRadius: 0,
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.35),
+              blurRadius: 16,
+              spreadRadius: -4,
+            ),
+          ],
+        ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -94,7 +91,7 @@ class StatCard extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
+      );
+    
   }
 }

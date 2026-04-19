@@ -332,24 +332,11 @@ class _AlgoCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () => Navigator.pushNamed(context, algo.route),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16.r),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Container(
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceVariant.withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(16.r),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  blurRadius: 24, spreadRadius: -4,
-                ),
-              ],
-            ),
-            child: Stack(
-              children: [
+      child: RepaintBoundary(
+        child: Container(
+          decoration: AppTheme.glassCard(radius: 16),
+          child: Stack(
+            children: [
                 // Background icon watermark
                 Positioned(
                   right: -10, bottom: -10,
@@ -450,9 +437,7 @@ class _AlgoCard extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
+    ));
   }
 }
 
@@ -530,18 +515,13 @@ class _ArenaStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14.r),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: EdgeInsets.all(16.r),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceVariant.withValues(alpha: 0.55),
-            borderRadius: BorderRadius.circular(14.r),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
-          ),
-          child: Row(
+    return Container(
+      padding: EdgeInsets.all(16.r),
+      decoration: AppTheme.glassCard(
+        radius: 14,
+        borderColor: color.withValues(alpha: 0.3),
+      ),
+      child: Row(
             children: [
               Container(
                 width: 38.w, height: 38.h,
@@ -573,8 +553,6 @@ class _ArenaStatCard extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        ),
       ),
     );
   }
@@ -653,19 +631,23 @@ class _NodeGraphPainterWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: pulse,
-      builder: (context, child) => CustomPaint(
-        painter: _NodeGraphPainter(opacity: pulse.value * 0.06),
-        size: const Size(double.infinity, 240),
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: pulse,
+        builder: (context, child) => Opacity(
+          opacity: pulse.value * 0.06,
+          child: const CustomPaint(
+            painter: _NodeGraphPainter(), // No longer need to pass opacity
+            size: Size(double.infinity, 240),
+          ),
+        ),
       ),
     );
   }
 }
 
 class _NodeGraphPainter extends CustomPainter {
-  const _NodeGraphPainter({required this.opacity});
-  final double opacity;
+  const _NodeGraphPainter();
 
   static final List<Offset> _nodes = [
     Offset(0.1, 0.15), Offset(0.3, 0.05), Offset(0.55, 0.20),
@@ -680,10 +662,10 @@ class _NodeGraphPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final linePaint = Paint()
-      ..color = AppTheme.accent.withValues(alpha: opacity)
+      ..color = AppTheme.accent.withValues(alpha: 1.0)
       ..strokeWidth = 1.0;
     final nodePaint = Paint()
-      ..color = AppTheme.accent.withValues(alpha: opacity * 2);
+      ..color = AppTheme.accent.withValues(alpha: 1.0);
 
     final pts = _nodes.map((n) => Offset(n.dx * size.width, n.dy * size.height)).toList();
     for (final e in _edges) {
@@ -695,5 +677,5 @@ class _NodeGraphPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_NodeGraphPainter old) => old.opacity != opacity;
+  bool shouldRepaint(_NodeGraphPainter old) => false; // Static drawing, handled by Opacity
 }

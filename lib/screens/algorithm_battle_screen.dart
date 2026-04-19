@@ -510,26 +510,20 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
                     ]
                   : null,
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16.r),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Container(
-                  decoration: AppTheme.glassCard(
-                    radius: 16,
-                    borderColor: isWinner
-                        ? color.withValues(alpha: 0.8)
-                        : color.withValues(alpha: 0.2),
-                  ),
-                  padding: EdgeInsets.all(8.r),
-                  height: 240.h, // Fixed height for battle grids to prevent layout shifts
-                  child: GridVisualizerCanvas(
-                    controller: _controller,
-                    executor: executor,
-                    accentColor: color,
-                    isInteractive: !_isRunning,
-                  ),
-                ),
+            child: Container(
+              decoration: AppTheme.glassCard(
+                radius: 16,
+                borderColor: isWinner
+                    ? color.withValues(alpha: 0.8)
+                    : color.withValues(alpha: 0.2),
+              ),
+              padding: EdgeInsets.all(8.r),
+              height: 240.h, // Fixed height for battle grids to prevent layout shifts
+              child: GridVisualizerCanvas(
+                controller: _controller,
+                executor: executor,
+                accentColor: color,
+                isInteractive: !_isRunning,
               ),
             ),
           ),

@@ -61,7 +61,8 @@ abstract class AppTheme {
 
   // ── Glassmorphism helpers ──────────────────────────────────────────────────
 
-  /// Standard glass card — 60% opacity surface_variant + subtle border
+  /// Standard glass card — High-performance "Opti-Glass" (0.88 opacity + inner shadow)
+  /// Used for list items to avoid expensive BackdropFilters.
   static BoxDecoration glassCard({
     double radius = 16,
     Color? borderColor,
@@ -69,23 +70,24 @@ abstract class AppTheme {
     double borderWidth = 1.0,
   }) {
     return BoxDecoration(
-      color: surfaceVariant.withValues(alpha: 0.60),
+      color: surfaceVariant.withValues(alpha: 0.88),
       borderRadius: BorderRadius.circular(radius),
       border: Border.all(
-        color: borderColor ?? Colors.white.withValues(alpha: 0.08),
+        color: borderColor ?? Colors.white.withValues(alpha: 0.12),
         width: borderWidth,
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withValues(alpha: 0.40),
-          blurRadius: 40,
+          color: Colors.black.withValues(alpha: 0.25),
+          blurRadius: 20,
           spreadRadius: 0,
+          offset: const Offset(0, 8),
         ),
         if (glowColor != null)
           BoxShadow(
-            color: glowColor.withValues(alpha: 0.18),
+            color: glowColor.withValues(alpha: 0.15),
             blurRadius: 24,
-            spreadRadius: 0,
+            spreadRadius: -4,
           ),
       ],
     );

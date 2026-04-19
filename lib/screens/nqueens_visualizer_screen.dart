@@ -250,15 +250,12 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                child: Container(
+            return Container(
                   padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
                   decoration: BoxDecoration(
-                    color: AppTheme.surfaceVariant.withValues(alpha: 0.8),
+                    color: AppTheme.surfaceVariant.withValues(alpha: 0.98),
                     borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-                    border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+                    border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.12))),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -286,9 +283,7 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
                       _buildControlButtonsModal(setModalState),
                     ],
                   ),
-                ),
-              ),
-            );
+                );
           },
         );
       },
@@ -516,13 +511,10 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
           ],
         ),
         const SizedBox(height: 16),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16.r),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-            child: Container(
-              padding: EdgeInsets.all(12.r),
-              decoration: AppTheme.glassCardAccent(radius: 16),
+        RepaintBoundary(
+          child: Container(
+            padding: EdgeInsets.all(12.r),
+            decoration: AppTheme.glassCardAccent(radius: 16),
               child: GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -573,7 +565,6 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
               ),
             ),
           ),
-        ),
       ],
     );
   }

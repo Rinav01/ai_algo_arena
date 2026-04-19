@@ -18,20 +18,25 @@ class ArenaBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-        child: Container(
-          constraints: BoxConstraints(
-            minHeight: 64.h,
-            maxHeight: 120.h,
+    return RepaintBoundary(
+      child: Container(
+        constraints: BoxConstraints(
+          minHeight: 64.h,
+          maxHeight: 120.h,
+        ),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceVariant.withValues(alpha: 0.96),
+          border: Border(
+            top: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
           ),
-          decoration: BoxDecoration(
-            color: AppTheme.surfaceVariant.withValues(alpha: 0.85),
-            border: Border(
-              top: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.4),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
             ),
-          ),
+          ],
+        ),
           child: SafeArea(
             top: false,
             child: Row(
@@ -54,7 +59,6 @@ class ArenaBottomNavBar extends StatelessWidget {
             ),
           ),
         ),
-      ),
     );
   }
 }

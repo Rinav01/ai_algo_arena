@@ -19,18 +19,11 @@ class GlassStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12.r),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-          ),
-          child: Row(
-            children: [
+    return RepaintBoundary(
+      child: Container(
+        decoration: AppTheme.glassCard(radius: 12),
+        child: Row(
+          children: [
               // Left accent bar — separate child so borderRadius still works
               Container(
                 width: 3.w,
@@ -82,7 +75,6 @@ class GlassStatCard extends StatelessWidget {
             ],
           ),
         ),
-      ),
     );
   }
 }
@@ -109,58 +101,49 @@ class StatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(30.r),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(30.r),
-            border: Border.all(
-              color: isSolved
-                  ? AppTheme.success.withValues(alpha: 0.45)
-                  : isSolving
-                      ? AppTheme.warning.withValues(alpha: 0.45)
-                      : Colors.white.withValues(alpha: 0.10),
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+      decoration: AppTheme.glassCard(
+        radius: 30,
+        borderColor: isSolved
+            ? AppTheme.success.withValues(alpha: 0.45)
+            : isSolving
+                ? AppTheme.warning.withValues(alpha: 0.45)
+                : Colors.white.withValues(alpha: 0.10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8.w,
+            height: 8.h,
+            decoration: BoxDecoration(
+              color: _dotColor,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: _dotColor.withValues(alpha: 0.6),
+                  blurRadius: 6,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 8.w,
-                height: 8.h,
-                decoration: BoxDecoration(
-                  color: _dotColor,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: _dotColor.withValues(alpha: 0.6),
-                      blurRadius: 6,
-                      spreadRadius: 1,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              Flexible(
-                child: Text(
-                  message,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: isSolved
-                            ? AppTheme.success
-                            : isSolving
-                                ? AppTheme.warning
-                                : AppTheme.textSecondary,
-                      ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(
+              message,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: isSolved
+                        ? AppTheme.success
+                        : isSolving
+                            ? AppTheme.warning
+                            : AppTheme.textSecondary,
+                  ),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -179,14 +162,10 @@ class GridLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12.r),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-          decoration: AppTheme.glassCard(radius: 12),
-          child: Wrap(
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+      decoration: AppTheme.glassCard(radius: 12),
+      child: Wrap(
             spacing: 16,
             runSpacing: 10,
             alignment: WrapAlignment.center,
@@ -198,9 +177,8 @@ class GridLegend extends StatelessWidget {
               _LegendDot(color: exploredColor, label: 'Explored'),
               _LegendDot(color: pathColor, label: 'Path'),
             ],
+      
           ),
-        ),
-      ),
     );
   }
 }

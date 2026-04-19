@@ -497,41 +497,31 @@ class _PathfindingVisualizerScreenState
               const SizedBox(height: 16),
 
               // ── Grid ─────────────────────────────────────────────────────
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16.r),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                  child: Container(
-                    decoration: AppTheme.glassCardAccent(radius: 16),
-                    padding: EdgeInsets.all(8.r),
-                    height: 320.h, // Fixed height for visualizer grid
-                    child: GridVisualizerCanvas(
-                      controller: _controller,
-                      executor: _executor,
-                      isInteractive: true,
-                      onPointerDown: _handlePointerDown,
-                      onPointerUpdate: _handlePointerUpdate,
-                      onPointerUp: _handlePointerUp,
-                    ),
+              RepaintBoundary(
+                child: Container(
+                  decoration: AppTheme.glassCardAccent(radius: 16),
+                  padding: EdgeInsets.all(8.r),
+                  height: 320.h, // Fixed height for visualizer grid
+                  child: GridVisualizerCanvas(
+                    controller: _controller,
+                    executor: _executor,
+                    isInteractive: true,
+                    onPointerDown: _handlePointerDown,
+                    onPointerUpdate: _handlePointerUpdate,
+                    onPointerUp: _handlePointerUp,
                   ),
                 ),
               ),
               const SizedBox(height: 16),
 
               // ── Speed ───────────────────────────────────────────────────
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12.r),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                    decoration: AppTheme.glassCard(radius: 12),
-                    child: SpeedControl(
-                      speed: _executionSpeed,
-                      isSolving: _isSolving,
-                      onChanged: (v) => setState(() => _executionSpeed = v),
-                    ),
-                  ),
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                decoration: AppTheme.glassCard(radius: 12),
+                child: SpeedControl(
+                  speed: _executionSpeed,
+                  isSolving: _isSolving,
+                  onChanged: (v) => setState(() => _executionSpeed = v),
                 ),
               ),
               const SizedBox(height: 14),
