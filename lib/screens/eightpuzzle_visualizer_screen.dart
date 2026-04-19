@@ -568,7 +568,8 @@ class _EightPuzzleVisualizerScreenState
                 ).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
               ),
               const SizedBox(height: 12),
-              RepaintBoundary(
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16.r),
                 child: Container(
                   padding: EdgeInsets.all(12.r),
                   decoration: AppTheme.glassCardAccent(radius: 16),

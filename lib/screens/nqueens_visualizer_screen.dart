@@ -511,11 +511,12 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
           ],
         ),
         const SizedBox(height: 16),
-        RepaintBoundary(
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16.r),
           child: Container(
             padding: EdgeInsets.all(12.r),
             decoration: AppTheme.glassCardAccent(radius: 16),
-              child: GridView.builder(
+            child: GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -529,17 +530,48 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
                   final row = index ~/ boardSize;
                   final col = index % boardSize;
 
-                  final hasQueen = currentState.placement.length > row && currentState.placement[row] == col;
-                  Color squareColor;
+                  final depth = currentPath.length;
+                  final hasQueen = currentState.placement[row] == col;
+                  
+                  // A queen is locked if it is a parent in the current search path 
+                  // or if the entire puzzle has been solved.
+                  final isLocked = hasQueen && (row < depth - 1 || isSolved);
+                  final isSafe = hasQueen ? problem.isSafe(currentState, row, col) : true;
+                  
+                  Color squareColor = Colors.transparent;
+                  Color borderColor = Colors.white.withValues(alpha: 0.05);
+                  List<BoxShadow>? shadows;
                   
                   if (hasQueen) {
-                    if (!problem.isSafe(currentState, row, col)) {
-                      squareColor = AppTheme.error.withValues(alpha: 0.8);
+                    if (isLocked) {
+                      // Confirmed/Locked Queen
+                      squareColor = AppTheme.success;
+                      borderColor = AppTheme.surfaceHigh;
+                      shadows = [
+                        BoxShadow(
+                          color: AppTheme.success.withValues(alpha: 0.4),
+                          blurRadius: 12,
+                          spreadRadius: 2,
+                        )
+                      ];
                     } else {
-                      squareColor = AppTheme.success.withValues(alpha: 0.8);
+                      // Trial Queen - Border Only with Search Glow
+                      squareColor = Colors.transparent;
+                      borderColor = isSafe ? AppTheme.success : AppTheme.error;
+                      if (isSolving) {
+                        shadows = [
+                          BoxShadow(
+                            color: (isSafe ? AppTheme.success : AppTheme.error).withValues(alpha: 0.2),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          )
+                        ];
+                      }
                     }
                   } else {
-                    squareColor = ((row + col) % 2 == 0) ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.2);
+                    squareColor = ((row + col) % 2 == 0) 
+                        ? Colors.white.withValues(alpha: 0.05) 
+                        : Colors.black.withValues(alpha: 0.15);
                   }
 
                   return GestureDetector(
@@ -548,16 +580,47 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
                       duration: const Duration(milliseconds: 300),
                       decoration: BoxDecoration(
                         color: squareColor,
-                        borderRadius: BorderRadius.circular(2.r),
+                        borderRadius: BorderRadius.circular(4.r),
+                        boxShadow: shadows,
                         border: Border.all(
-                          color: AppTheme.surfaceHigh,
-                          width: 0.5.w,
+                          color: borderColor,
+                          width: hasQueen ? 2.w : 0.5.w,
                         ),
                       ),
-                      child: Center(
-                        child: hasQueen 
-                          ? Text('♕', style: TextStyle(fontSize: 32.sp, color: Colors.white, shadows: [Shadow(color: Colors.white.withValues(alpha: 0.5), blurRadius: 8)]))
-                          : null,
+                      child: Stack(
+                        children: [
+                          if (hasQueen)
+                            Center(
+                              child: Opacity(
+                                opacity: isLocked ? 1.0 : 0.7,
+                                child: Text(
+                                  '♕',
+                                  style: TextStyle(
+                                    fontSize: 32.sp,
+                                    color: Colors.white,
+                                    shadows: [
+                                      Shadow(
+                                        color: isLocked 
+                                          ? Colors.white.withValues(alpha: 0.5)
+                                          : (isSafe ? AppTheme.success : AppTheme.error).withValues(alpha: 0.5),
+                                        blurRadius: isLocked ? 8 : 4,
+                                      )
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          if (isLocked)
+                            Positioned(
+                              bottom: 2.r,
+                              right: 2.r,
+                              child: Icon(
+                                Icons.lock,
+                                size: 10.r,
+                                color: Colors.white.withValues(alpha: 0.8),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   );

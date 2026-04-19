@@ -46,11 +46,12 @@ class BFSAlgorithm<State> extends SearchAlgorithm<State> {
         return;
       }
 
-      // Emit current state
+      // Emit current state with partial path
+      final path = _reconstructPath(parent, current, startState);
       yield AlgorithmStep<State>(
         newlyExplored: [current],
         currentState: current,
-        path: [],
+        path: path,
         stepCount: stepCount,
         message: 'Exploring ${problem.stateToString(current)}',
         isGoalReached: false,
@@ -137,11 +138,12 @@ class DFSAlgorithm<State> extends SearchAlgorithm<State> {
         return;
       }
 
-      // Emit current state
+      // Emit current state with partial path
+      final path = _reconstructPath(parent, current, problem.initialState);
       yield AlgorithmStep<State>(
         newlyExplored: [current],
         currentState: current,
-        path: [],
+        path: path,
         stepCount: stepCount,
         message: 'Exploring ${problem.stateToString(current)}',
         isGoalReached: false,
@@ -242,11 +244,12 @@ class AStarAlgorithm<State> extends SearchAlgorithm<State> {
         return;
       }
 
-      // Emit current state
+      // Emit current state with partial path
+      final path = _reconstructPath(parent, current, startState);
       yield AlgorithmStep<State>(
         newlyExplored: [current],
         currentState: current,
-        path: [],
+        path: path,
         stepCount: stepCount,
         message:
             'Evaluating ${problem.stateToString(current)} (f=${(fScore[current] ?? 0).toStringAsFixed(1)})',
@@ -363,11 +366,12 @@ class DijkstraAlgorithm<State> extends SearchAlgorithm<State> {
         return;
       }
 
-      // Emit current state
+      // Emit current state with partial path
+      final path = _reconstructPath(parent, current, startState);
       yield AlgorithmStep<State>(
         newlyExplored: [current],
         currentState: current,
-        path: [],
+        path: path,
         stepCount: stepCount,
         message:
             'Visiting ${problem.stateToString(current)} (distance=${minDistance.toStringAsFixed(1)})',
@@ -487,11 +491,12 @@ class GreedyBestFirstAlgorithm<State> extends SearchAlgorithm<State> {
         return;
       }
 
-      // Emit current state
+      // Emit current state with partial path
+      final path = _reconstructPath(parent, current, startState);
       yield AlgorithmStep<State>(
         newlyExplored: [current],
         currentState: current,
-        path: [],
+        path: path,
         stepCount: stepCount,
         message: 'Greedy evaluating ${problem.stateToString(current)} (h=${currentNode.f.toStringAsFixed(1)})',
         isGoalReached: false,

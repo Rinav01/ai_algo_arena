@@ -497,7 +497,8 @@ class _PathfindingVisualizerScreenState
               const SizedBox(height: 16),
 
               // ── Grid ─────────────────────────────────────────────────────
-              RepaintBoundary(
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16.r),
                 child: Container(
                   decoration: AppTheme.glassCardAccent(radius: 16),
                   padding: EdgeInsets.all(8.r),

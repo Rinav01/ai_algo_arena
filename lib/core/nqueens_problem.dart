@@ -48,7 +48,7 @@ class QueensState {
   }
 
   @override
-  int get hashCode => placement.hashCode ^ n.hashCode;
+  int get hashCode => Object.hash(Object.hashAll(placement), n);
 
   @override
   String toString() => 'QueensState($placement)';
