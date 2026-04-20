@@ -1,32 +1,8 @@
-import 'package:ai_algo_app/core/problem_definition.dart';
-
-/// Position of a queen on the board
-class QueenPosition {
-  final int row;
-  final int col;
-
-  const QueenPosition(this.row, this.col);
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is QueenPosition &&
-          runtimeType == other.runtimeType &&
-          row == other.row &&
-          col == other.col;
-
-  @override
-  int get hashCode => row.hashCode ^ col.hashCode;
-
-  @override
-  String toString() => 'Q($row,$col)';
-}
-
-/// Queens state: List of (row, col) for placed queens
-/// Index represents queen number, value represents column
+/// Queens state: List of column indices for placed queens
+/// Index represents row, value represents column (-1 if empty)
 class QueensState {
-  final List<int> placement; // placement[i] = column of queen in row i
-  final int n; // board size
+  final List<int> placement;
+  final int n;
 
   const QueensState({required this.placement, required this.n});
 
@@ -52,108 +28,30 @@ class QueensState {
 
   @override
   String toString() => 'QueensState($placement)';
+
+  QueensState copyWith({List<int>? placement, int? n}) {
+    return QueensState(
+      placement: placement ?? List.from(this.placement),
+      n: n ?? this.n,
+    );
+  }
 }
 
-/// N-Queens Problem
-class NQueensProblem extends Problem<QueensState> {
-  final int n;
-  final List<int>? initialPlacement;
-
-  NQueensProblem({required this.n, this.initialPlacement});
-
-  @override
-  QueensState get initialState =>
-      QueensState(placement: initialPlacement ?? List.filled(n, -1), n: n);
-
-  @override
-  QueensState get goalState =>
-      throw UnimplementedError('Goal state is implicit (all queens placed)');
-
-  @override
-  bool isGoal(QueensState state) {
-    // All queens placed and no conflicts
-    for (int i = 0; i < n; i++) {
-      if (state.placement[i] == -1) return false;
-    }
-    return isSafe(state, n - 1, state.placement[n - 1]);
-  }
-
-  @override
-  List<QueensState> getNeighbors(QueensState state) {
-    final neighbors = <QueensState>[];
-
-    // Find first row with unplaced queen
-    int row = -1;
-    for (int i = 0; i < n; i++) {
-      if (state.placement[i] == -1) {
-        row = i;
-        break;
-      }
-    }
-
-    // No more rows to fill (prune branches with conflicts)
-    if (row == -1) return neighbors;
-
-    // Try placing queen in each column of this row
-    for (int col = 0; col < n; col++) {
-      if (_canPlace(state, row, col)) {
-        final newPlacement = [...state.placement];
-        newPlacement[row] = col;
-        neighbors.add(QueensState(placement: newPlacement, n: n));
-      }
-    }
-
-    return neighbors;
-  }
-
-  @override
-  bool isValid(QueensState state) {
-    // Check if current placement is valid
-    for (int i = 0; i < n; i++) {
-      if (state.placement[i] != -1) {
-        if (!isSafe(state, i, state.placement[i])) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  @override
-  String stateToString(QueensState state) {
-    final queensPlaced = state.placement.where((c) => c != -1).length;
-    return 'Queens: $queensPlaced/$n Placement: ${state.placement}';
-  }
-
-  /// Check if queen can be placed at (row, col)
-  bool _canPlace(QueensState state, int row, int col) {
-    // Check column
-    for (int i = 0; i < row; i++) {
-      if (state.placement[i] == col) return false;
-    }
-
-    // Check diagonals
-    for (int i = 0; i < row; i++) {
-      final placedCol = state.placement[i];
-      if (placedCol != -1) {
-        if ((row - i).abs() == (col - placedCol).abs()) return false;
-      }
-    }
-
-    return true;
-  }
-
-  /// Check if queen at (row, col) is safe
-  bool isSafe(QueensState state, int row, int col) {
+/// N-Queens Utility class for validation and safety checks
+class NQueensUtils {
+  /// Check if queen at (row, col) is safe given the current board
+  static bool isSafe(List<int> board, int row, int col) {
+    int n = board.length;
+    
     // Check column
     for (int i = 0; i < n; i++) {
-      if (i != row && state.placement[i] == col) return false;
+      if (i != row && board[i] == col) return false;
     }
 
     // Check diagonals
     for (int i = 0; i < n; i++) {
       if (i != row) {
-        final placedCol = state.placement[i];
+        final placedCol = board[i];
         if (placedCol != -1) {
           if ((row - i).abs() == (col - placedCol).abs()) return false;
         }
@@ -163,16 +61,12 @@ class NQueensProblem extends Problem<QueensState> {
     return true;
   }
 
-  /// Get board visualization
-  String getBoardString(QueensState state) {
-    final board = List.generate(n, (i) => List.filled(n, '.'));
-
-    for (int row = 0; row < n; row++) {
-      if (state.placement[row] != -1) {
-        board[row][state.placement[row]] = 'Q';
-      }
+  /// Check if the entire board is in a goal state
+  static bool isGoal(QueensState state) {
+    for (int i = 0; i < state.n; i++) {
+      if (state.placement[i] == -1) return false;
+      if (!isSafe(state.placement, i, state.placement[i])) return false;
     }
-
-    return board.map((row) => row.join(' ')).join('\n');
+    return true;
   }
 }

@@ -10,9 +10,12 @@ import 'screens/algorithm_battle_screen.dart';
 import 'screens/eightpuzzle_visualizer_screen.dart';
 import 'screens/nqueens_visualizer_screen.dart';
 import 'screens/maze_editor_screen.dart';
+import 'services/stats_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
   await ScreenUtil.ensureScreenSize();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -21,7 +24,14 @@ void main() async {
     systemNavigationBarColor: AppTheme.background,
     systemNavigationBarIconBrightness: Brightness.light,
   ));
-  runApp(const ProviderScope(child: AiAlgoApp()));
+  runApp(
+    ProviderScope(
+      overrides: [
+        sharedPrefsProvider.overrideWithValue(prefs),
+      ],
+      child: const AiAlgoApp(),
+    ),
+  );
 }
 
 class AiAlgoApp extends StatelessWidget {

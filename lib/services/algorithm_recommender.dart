@@ -44,77 +44,67 @@ class AlgorithmRecommender {
     final gridSize = problem.gridSize;
     final isLargeGrid = total > 500;
     final isHighlyObstructed = obstacleDensity > 0.4;
-    final isSparslyObstructed = obstacleDensity < 0.1;
+    
+    // Check if the grid has varied weights (costs > 1.0)
+    bool hasWeights = false;
+    for (int r = 0; r < problem.rows; r++) {
+      for (int c = 0; c < problem.cols; c++) {
+        if (problem.moveCost(GridCoordinate(row: 0, column: 0), GridCoordinate(row: r, column: c)) > 1.0) {
+          hasWeights = true;
+          break;
+        }
+      }
+      if (hasWeights) break;
+    }
 
-    // Rule 1: Large grids with sparse obstacles → A*
-    if (isLargeGrid && isSparslyObstructed) {
+    // Rule 1: Weighted grids → A* (Dijkstra is also optimal, but A* is faster)
+    if (hasWeights) {
       return RecommendationResult(
         algorithm: RecommendedAlgorithm.aStar,
-        reason:
-            'Heuristic guidance is highly efficient for large sparse grids (${problem.rows}×${problem.cols}, ${(obstacleDensity * 100).toStringAsFixed(1)}% obstacles)',
+        reason: 'Varied cell costs detected. A* ensures the cheapest path while using heuristics to minimize exploration.',
+        confidence: 0.99,
+        considerations: [
+          'Guarantees optimal path in weighted environments',
+          'Heuristic significantly outperforms Dijkstra\'s blind search',
+        ],
+      );
+    }
+
+    // Rule 2: Large grids or complex obstacles → A* (Efficiency King)
+    if (isLargeGrid || isHighlyObstructed) {
+      return RecommendationResult(
+        algorithm: RecommendedAlgorithm.aStar,
+        reason: 'Large or complex map detected. A* avoids the "flood-fill" overhead of BFS, staying focused on the goal.',
         confidence: 0.95,
         considerations: [
-          'A* explores fewer nodes than BFS/DFS',
-          'Manhattan distance heuristic optimized for grid',
-          'Guaranteed optimal path with admissible heuristic',
+          'Avoids unnecessary exploration of areas facing away from the target',
+          'Mathematically proven to visit the minimum number of states',
         ],
       );
     }
 
-    // Rule 2: Medium grids with low obstacles → A*
-    if (gridSize == GridSize.medium && isSparslyObstructed) {
-      return RecommendationResult(
-        algorithm: RecommendedAlgorithm.aStar,
-        reason: 'A* provides optimal efficiency for medium-sized open grids',
-        confidence: 0.85,
-        considerations: [
-          'Balanced between speed and accuracy',
-          'Heuristic helps avoid exploring unnecessary nodes',
-          'Perfect for interactive visualization',
-        ],
-      );
-    }
-
-    // Rule 3: Highly obstructed grids → BFS for guaranteed shortest
-    if (isHighlyObstructed) {
+    // Rule 3: Small, uniform-cost grids → BFS (Great for visualization)
+    if (gridSize == GridSize.small && obstacleDensity < 0.2) {
       return RecommendationResult(
         algorithm: RecommendedAlgorithm.bfs,
-        reason:
-            'High obstacle density (${(obstacleDensity * 100).toStringAsFixed(1)}%) means many dead ends; BFS explores all options equally',
-        confidence: 0.90,
+        reason: 'Small, simple grid. BFS is the perfect choice for visualizing how a shortest path is found layer-by-layer.',
+        confidence: 0.80,
         considerations: [
-          'Guarantees shortest path in unweighted grids',
-          'BFS systematic exploration handles dead ends well',
-          'No heuristic bias needed',
+          'Simple and intuitive visualization',
+          'Guarantees shortest path for uniform costs',
+          'Explores evenly in all directions',
         ],
       );
     }
 
-    // Rule 4: Small grids → Any algorithm works, prefer BFS for clarity
-    if (gridSize == GridSize.small) {
-      return RecommendationResult(
-        algorithm: RecommendedAlgorithm.bfs,
-        reason:
-            'Small grid (${problem.rows}×${problem.cols}); all algorithms are fast. BFS is most intuitive for learning',
-        confidence: 0.70,
-        considerations: [
-          'Grid is small enough for any algorithm',
-          'BFS is easiest to understand for beginners',
-          'Try DFS or A* for comparison',
-        ],
-      );
-    }
-
-    // Rule 5: Default: A* for general purpose
+    // Fallback: A* for everything else
     return RecommendationResult(
       algorithm: RecommendedAlgorithm.aStar,
-      reason:
-          'A* is generally the best choice for pathfinding; combines speed with optimality',
-      confidence: 0.80,
+      reason: 'General optimization: A* provides the best balance of speed and optimality for this configuration.',
+      confidence: 0.90,
       considerations: [
-        'Heuristic-guided search reduces explored nodes',
-        'Optimal path guaranteed',
-        'Suitable for interactive applications',
+        'Minimal memory footprint',
+        'Consistently outperforms non-heuristic searches',
       ],
     );
   }
@@ -176,21 +166,21 @@ class AlgorithmRecommender {
 
     switch (algorithm) {
       case RecommendedAlgorithm.aStar:
-        // A* is best for sparse grids
-        final sparsityFactor = 1.0 - obstacleDensity;
-        return 0.7 + (sparsityFactor * 0.3); // 0.7 to 1.0
+        // A* is the baseline for high efficiency
+        return 0.95; 
 
       case RecommendedAlgorithm.bfs:
-        // BFS is good for all cases, but better for dense grids
-        return 0.5 + (obstacleDensity * 0.4); // 0.5 to 0.9
-
-      case RecommendedAlgorithm.dfs:
-        // DFS is okay for most cases
-        return 0.5;
+        // BFS is highly inefficient due to uniform expansion (visits many nodes)
+        // Its efficiency decreases as the grid gets larger/clearer
+        return 0.4 + (obstacleDensity * 0.2); // 0.4 to 0.6
 
       case RecommendedAlgorithm.dijkstra:
-        // Dijkstra is like BFS but slightly slower
-        return 0.45 + (obstacleDensity * 0.4); // 0.45 to 0.85
+        // Dijkstra is slightly better than BFS for weights but same exploration
+        return 0.45 + (obstacleDensity * 0.1); // 0.45 to 0.55
+
+      case RecommendedAlgorithm.dfs:
+        // DFS is unpredictable and often highly inefficient for pathfinding
+        return 0.3;
     }
   }
 }

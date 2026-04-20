@@ -227,12 +227,6 @@ class _PathfindingVisualizerScreenState
     }
   }
 
-  void _stepOnce() {
-    if (!_isSolving && _stepCount >= 0 && _executor != null) {
-      _executor?.stepOnce();
-    }
-  }
-
   void _reset() {
     if (_isSolving) _executor?.stop();
     _pulseController.stop();
@@ -254,19 +248,15 @@ class _PathfindingVisualizerScreenState
     _reset();
   }
 
-  void _generateMaze({bool isPrims = false}) {
+  void _generateMaze() {
     if (_isSolving) return;
     _reset();
     
     final generator = MazeGenerator();
-    if (isPrims) {
-      generator.generateRandomizedPrims(_controller);
-    } else {
-      generator.generateRecursiveDivision(_controller);
-    }
+    generator.generateRandomizedPrims(_controller);
     
     setState(() {
-      _statusMessage = 'Maze generated using ${isPrims ? "Randomized Prim's" : "Recursive Division"}';
+      _statusMessage = 'Maze generated (Randomized Prim\'s + Weights)';
     });
   }
 
@@ -428,26 +418,11 @@ class _PathfindingVisualizerScreenState
               const SizedBox(height: 14),
 
               // ── Maze Generation ─────────────────────────────────────────
-              Row(
-                children: [
-                  Expanded(
-                    child: ToolButton(
-                      label: 'Recursive',
-                      icon: Icons.grid_goldenratio_rounded,
-                      onPressed: () => _generateMaze(isPrims: false),
-                      color: AppTheme.cyan,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ToolButton(
-                      label: 'Prim\'s',
-                      icon: Icons.grain_rounded,
-                      onPressed: () => _generateMaze(isPrims: true),
-                      color: AppTheme.warning,
-                    ),
-                  ),
-                ],
+              ToolButton(
+                label: 'Generate Maze (Randomized Prim\'s)',
+                icon: Icons.grain_rounded,
+                onPressed: _generateMaze,
+                color: AppTheme.warning,
               ),
               const SizedBox(height: 14),
 
@@ -541,8 +516,6 @@ class _PathfindingVisualizerScreenState
                 stepCount: _stepCount,
                 onSolve: _solvePuzzle,
                 onPauseResume: _pauseResume,
-                onStep: _stepOnce,
-                onReset: _reset,
                 onClear: _clearWalls,
                 onVersus: () {
                   Navigator.push(

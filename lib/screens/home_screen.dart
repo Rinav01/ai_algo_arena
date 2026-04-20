@@ -1,17 +1,18 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ai_algo_app/core/app_theme.dart';
+import 'package:ai_algo_app/services/stats_service.dart';
 import 'package:ai_algo_app/widgets/bottom_nav_bar.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 // ─── Home Screen ─────────────────────────────────────────────────────────────
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
+class _HomeScreenState extends ConsumerState<HomeScreen>
     with SingleTickerProviderStateMixin {
   int _selectedCategory = 0;
   late AnimationController _pulseCtrl;
@@ -45,10 +46,10 @@ class _HomeScreenState extends State<HomeScreen>
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          _buildHeroSliver(),
+          _buildHeroSliver(context, ref),
           _buildCategoryChips(),
           _buildAlgorithmGrid(),
-          _buildStatsSection(),
+          _buildStatsSection(ref),
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
@@ -57,7 +58,15 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // ── Hero Header ─────────────────────────────────────────────────────────────
-  Widget _buildHeroSliver() {
+  Widget _buildHeroSliver(BuildContext context, WidgetRef ref) {
+    // Dynamic counts
+    final categoriesCount = _categories.length;
+    final uniqueAlgosCount = _algorithmsByCategory.values
+        .expand((list) => list)
+        .map((info) => info.name)
+        .toSet()
+        .length;
+
     return SliverToBoxAdapter(
       child: Container(
         color: AppTheme.background,
@@ -132,8 +141,8 @@ class _HomeScreenState extends State<HomeScreen>
                     spacing: 12,
                     runSpacing: 12,
                     children: [
-                      _QuickStat(label: 'ALGORITHMS', value: '8+'),
-                      _QuickStat(label: 'CATEGORIES', value: '4'),
+                      _QuickStat(label: 'ALGORITHMS', value: '$uniqueAlgosCount+'),
+                      _QuickStat(label: 'CATEGORIES', value: '$categoriesCount'),
                       _QuickStat(label: 'REAL-TIME VIZ', value: '✓',
                           accent: AppTheme.cyan),
                     ],
@@ -225,7 +234,9 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // ── Stats Section ───────────────────────────────────────────────────────────
-  Widget _buildStatsSection() {
+  Widget _buildStatsSection(WidgetRef ref) {
+    final stats = ref.watch(arenaStatsProvider);
+
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
@@ -235,14 +246,14 @@ class _HomeScreenState extends State<HomeScreen>
             _SectionHeader(label: 'ARENA STATS', icon: Icons.bar_chart_rounded),
             const SizedBox(height: 14),
             Row(
-              children: const [
+              children: [
                 Expanded(child: _ArenaStatCard(
-                  label: 'Battles Run', value: '—',
+                  label: 'Battles Run', value: stats.battlesRun > 0 ? stats.battlesRun.toString() : '—',
                   icon: Icons.sports_kabaddi_rounded,
                   color: AppTheme.accent)),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Expanded(child: _ArenaStatCard(
-                  label: 'Best Algo', value: 'A*',
+                  label: 'Best Algo', value: stats.bestAlgorithm ?? '—',
                   icon: Icons.emoji_events_rounded,
                   color: AppTheme.cyan)),
               ],

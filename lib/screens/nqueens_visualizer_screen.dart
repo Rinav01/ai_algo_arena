@@ -3,11 +3,10 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:ai_algo_app/core/app_theme.dart';
 import 'package:ai_algo_app/core/nqueens_problem.dart';
-import 'package:ai_algo_app/core/search_algorithms.dart';
-import 'package:ai_algo_app/services/algorithm_executor.dart';
-import 'package:ai_algo_app/core/problem_definition.dart';
+import 'package:ai_algo_app/services/nqueens_solver.dart';
 import 'package:ai_algo_app/widgets/visualizer_widgets.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class NQueensVisualizerScreen extends StatefulWidget {
   const NQueensVisualizerScreen({super.key});
@@ -19,229 +18,119 @@ class NQueensVisualizerScreen extends StatefulWidget {
 
 class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
     with SingleTickerProviderStateMixin {
-  late NQueensProblem problem;
   late QueensState currentState;
-  AlgorithmExecutor<QueensState>? executor;
-  StreamSubscription<AlgorithmStep<QueensState>>? _stepSubscription;
-  late AnimationController _animationController;
+  NQueensSolver? solver;
+  StreamSubscription<NQueensStep>? _stepSubscription;
+  final ValueNotifier<NQueensStep?> _currentStepNotifier = ValueNotifier(null);
 
-  List<QueensState> currentPath = [];
-  Set<String> exploredStates = {};
-  int stepCount = 0;
-  int nodesExplored = 0;
-  bool isSolving = false;
-  bool isSolved = false;
-  String selectedAlgorithm = 'A*';
   int boardSize = 8;
   double executionSpeed = 2.0;
-
-  final List<String> algorithms = ['BFS', 'DFS', 'A*'];
-
-  Duration get _stepDelay {
-    final milliseconds = (220 / executionSpeed).round().clamp(10, 2200);
-    return Duration(milliseconds: milliseconds);
-  }
+  NQueensSolverMode selectedMode = NQueensSolverMode.backtracking;
+  bool isSolving = false;
+  bool isSolved = false;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
+    _resetBoard();
+  }
+
+  void _resetBoard() {
+    _stopSolver();
+    currentState = QueensState(placement: List.filled(boardSize, -1), n: boardSize);
+    _currentStepNotifier.value = NQueensStep(
+      board: currentState.placement,
+      currentRow: -1,
+      steps: 0,
+      backtracks: 0,
     );
-    _initializeProblem();
+    isSolved = false;
+    isSolving = false;
   }
 
-  void _initializeProblem() {
-    problem = NQueensProblem(n: boardSize);
-    currentState = problem.initialState;
-    currentPath = [currentState];
-    exploredStates.clear();
+  Duration get _stepDelay {
+    final milliseconds = (300 / executionSpeed).round().clamp(10, 3000);
+    return Duration(milliseconds: milliseconds);
   }
 
-  Future<void> _solvePuzzle() async {
+  void _stopSolver() {
+    solver?.stop();
+    _stepSubscription?.cancel();
+    solver = null;
+    _stepSubscription = null;
+  }
+
+  Future<void> _startSolving() async {
     if (isSolving) return;
 
-    _initializeProblem();
+    _resetBoard();
+    setState(() => isSolving = true);
 
-    setState(() {
-      isSolving = true;
-      isSolved = false;
-      exploredStates.clear();
-      currentPath = [problem.initialState];
-      stepCount = 0;
-      nodesExplored = 0;
-      _animationController.forward();
-    });
-
-    late SearchAlgorithm<QueensState> algorithm;
-    switch (selectedAlgorithm) {
-      case 'BFS':
-        algorithm = BFSAlgorithm<QueensState>();
-        break;
-      case 'DFS':
-        algorithm = DFSAlgorithm<QueensState>();
-        break;
-      case 'A*':
-        algorithm = AStarAlgorithm<QueensState>();
-        break;
-    }
-
-    executor = AlgorithmExecutor<QueensState>(
-      algorithm: algorithm,
-      problem: problem,
-      stepDelayMs: _stepDelay.inMilliseconds,
+    solver = NQueensSolver(
+      n: boardSize,
+      mode: selectedMode,
+      stepDelay: _stepDelay,
     );
 
-    try {
-      await executor!.start();
-
-      await _stepSubscription?.cancel();
-      _stepSubscription = executor!.stepStream.listen(
-        (step) {
-          if (!mounted) return;
-
-          setState(() {
-            stepCount = step.stepCount;
-            nodesExplored = executor!.exploredSet.length;
-            exploredStates = executor!.exploredSet.map((s) => s.toString()).toSet();
-
-            if (step.path.isNotEmpty) {
-              currentPath = step.path;
-              currentState = step.path.last;
-            } else if (step.newlyExplored.isNotEmpty) {
-              currentState = step.newlyExplored.last;
-            }
-
-            if (step.isGoalReached) {
-              isSolved = true;
-              isSolving = false;
-            }
-          });
-        },
-        onError: (error) {
-          if (mounted) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text('Error: $error')));
-            setState(() => isSolving = false);
-          }
-        },
-        onDone: () {
-          if (mounted) {
-            setState(() => isSolving = false);
-          }
-        },
-      );
-    } catch (e) {
-      if (mounted) {
-        setState(() => isSolving = false);
+    _stepSubscription = solver!.stepStream.listen((step) {
+      _currentStepNotifier.value = step;
+      if (step.isSolved) {
+        setState(() {
+          isSolved = true;
+          isSolving = false;
+        });
       }
-    }
+    });
+
+    await solver!.solve();
   }
 
   void _pauseResume() {
     if (isSolving) {
-      executor?.pause();
+      solver?.pause();
       setState(() => isSolving = false);
-    } else if (stepCount > 0) {
-      executor?.resume();
+    } else if (_currentStepNotifier.value != null && !isSolved) {
+      solver?.resume();
       setState(() => isSolving = true);
     }
   }
 
   void _reset() {
-    if (isSolving) executor?.stop();
-    _stepSubscription?.cancel();
-    _stepSubscription = null;
-    if (executor != null) {
-      executor!.stop();
-      executor!.dispose();
-      executor = null;
-    }
-    _animationController.reset();
     setState(() {
-      _initializeProblem();
-      isSolving = false;
-      isSolved = false;
-      stepCount = 0;
-      nodesExplored = 0;
+      _resetBoard();
     });
-  }
-
-  void _stepOnce() {
-    if (isSolving) return;
-
-    if (executor == null) {
-      late SearchAlgorithm<QueensState> algorithm;
-      switch (selectedAlgorithm) {
-        case 'BFS':
-          algorithm = BFSAlgorithm<QueensState>();
-          break;
-        case 'DFS':
-          algorithm = DFSAlgorithm<QueensState>();
-          break;
-        case 'A*':
-          algorithm = AStarAlgorithm<QueensState>();
-          break;
-      }
-
-      executor = AlgorithmExecutor<QueensState>(
-        algorithm: algorithm,
-        problem: problem,
-      stepDelayMs: _stepDelay.inMilliseconds,
-    );
-      executor!.start();
-      _stepSubscription = executor!.stepStream.listen((step) {
-        if (!mounted) return;
-        setState(() {
-          stepCount = step.stepCount;
-          nodesExplored = executor!.exploredSet.length;
-          exploredStates = executor!.exploredSet.map((s) => s.toString()).toSet();
-
-          if (step.path.isNotEmpty) {
-            currentPath = step.path;
-            currentState = step.path.last;
-          } else if (step.newlyExplored.isNotEmpty) {
-            currentState = step.newlyExplored.last;
-          }
-
-          if (step.isGoalReached) {
-            isSolved = true;
-            isSolving = false;
-          }
-        });
-      });
-    }
-
-    executor?.stepOnce();
   }
 
   void _handleSquareTap(int row, int col) {
     if (isSolving) return;
 
-    setState(() {
-      final newPlacement = List<int>.from(currentState.placement);
-      if (newPlacement[row] == col) {
-        newPlacement[row] = -1; // remove
-      } else {
-        newPlacement[row] = col; // place
-        if (!problem.isSafe(QueensState(placement: newPlacement, n: boardSize), row, col)) {
-          HapticFeedback.heavyImpact();
-        }
+    final newPlacement = List<int>.from(_currentStepNotifier.value?.board ?? currentState.placement);
+    if (newPlacement[row] == col) {
+      newPlacement[row] = -1;
+    } else {
+      newPlacement[row] = col;
+      if (!NQueensUtils.isSafe(newPlacement, row, col)) {
+        HapticFeedback.heavyImpact();
       }
+    }
 
-      currentState = QueensState(placement: newPlacement, n: boardSize);
-      problem = NQueensProblem(n: boardSize, initialPlacement: newPlacement);
-      
-      stepCount = 0;
-      nodesExplored = 0;
-      currentPath = [currentState];
-      exploredStates.clear();
-      isSolved = problem.isGoal(currentState);
+    final newState = QueensState(placement: newPlacement, n: boardSize);
+    _currentStepNotifier.value = NQueensStep(
+      board: newPlacement,
+      currentRow: row,
+      steps: 0,
+      backtracks: 0,
+    );
+    setState(() {
+      currentState = newState;
+      isSolved = NQueensUtils.isGoal(newState);
+      if (isSolved) {
+        HapticFeedback.vibrate();
+      }
     });
   }
 
-  void _showAISolveMenu() {
+  void _showSolverConfig() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -250,153 +139,111 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Container(
-                  padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceVariant.withValues(alpha: 0.98),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-                    border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.12))),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 40.w, height: 4.h,
-                          margin: EdgeInsets.only(bottom: 20.h),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(2.r),
-                          ),
-                        ),
+              padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceVariant.withValues(alpha: 0.98),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+                border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.12))),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40.w, height: 4.h,
+                      margin: EdgeInsets.only(bottom: 20.h),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(2.r),
                       ),
-                      Text(
-                        'AI Solver Config',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 20),
-                      _buildAlgorithmSelectorModal(setModalState),
-                      const SizedBox(height: 20),
-                      _buildSpeedControlModal(setModalState),
-                      const SizedBox(height: 24),
-                      _buildControlButtonsModal(setModalState),
-                    ],
+                    ),
                   ),
-                );
+                  Text('Solver Configuration', style: Theme.of(context).textTheme.headlineSmall),
+                  const SizedBox(height: 20),
+                  _buildModeSelector(setModalState),
+                  const SizedBox(height: 20),
+                  _buildSpeedControl(setModalState),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: isSolving ? null : () {
+                      Navigator.pop(context);
+                      _startSolving();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.accent,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 16.h),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                    ),
+                    child: const Text('START SOLVER', style: TextStyle(letterSpacing: 1.5, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            );
           },
         );
       },
     );
   }
 
-  Widget _buildAlgorithmSelectorModal(StateSetter setModalState) {
+  Widget _buildModeSelector(StateSetter setModalState) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'ALGORITHM',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
-        ),
+        Text('ALGORITHM MODE', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted)),
         const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: algorithms.map((algo) {
-              final isSelected = selectedAlgorithm == algo;
-              return Padding(
-                padding: EdgeInsets.only(right: 12.w),
-                child: GestureDetector(
-                  onTap: () {
-                    if (!isSolving) {
-                      setState(() => selectedAlgorithm = algo);
-                      setModalState(() {});
-                    }
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppTheme.accent.withValues(alpha: 0.15) : AppTheme.surfaceHigh,
-                      borderRadius: BorderRadius.circular(8.r),
-                      border: Border.all(
-                        color: isSelected ? AppTheme.accent : Colors.white.withValues(alpha: 0.05),
-                      ),
-                    ),
-                    child: Text(
-                      algo,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: isSelected ? AppTheme.accentLight : AppTheme.textMuted,
-                      ),
-                    ),
+        Wrap(
+          spacing: 10.w,
+          runSpacing: 10.h,
+          children: NQueensSolverMode.values.map((mode) {
+            final isSelected = selectedMode == mode;
+            return GestureDetector(
+              onTap: () {
+                setState(() => selectedMode = mode);
+                setModalState(() {});
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppTheme.accent.withValues(alpha: 0.15) : AppTheme.surfaceHigh,
+                  borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(color: isSelected ? AppTheme.accent : Colors.white.withValues(alpha: 0.05)),
+                ),
+                child: Text(
+                  mode.label,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: isSelected ? AppTheme.accentLight : AppTheme.textMuted,
                   ),
                 ),
-              );
-            }).toList(),
-          ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
   }
 
-  Widget _buildSpeedControlModal(StateSetter setModalState) {
+  Widget _buildSpeedControl(StateSetter setModalState) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'EXECUTION SPEED',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
-            ),
-            Text(
-              '${executionSpeed.toStringAsFixed(1)}x',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.accentLight),
-            ),
+            Text('SPEED', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted)),
+            Text('${executionSpeed.toStringAsFixed(1)}x', style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppTheme.accentLight)),
           ],
         ),
-        const SizedBox(height: 8),
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            activeTrackColor: AppTheme.accent,
-            inactiveTrackColor: AppTheme.surfaceHighest,
-            thumbColor: Colors.white,
-            overlayColor: AppTheme.accent.withValues(alpha: 0.2),
-          ),
-          child: Slider(
-            value: executionSpeed,
-            min: 0.1,
-            max: 5.0,
-            onChanged: isSolving
-                ? null
-                : (value) {
-                    setState(() => executionSpeed = value);
-                    setModalState(() {});
-                  },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildControlButtonsModal(StateSetter setModalState) {
-    return Row(
-      children: [
-        Expanded(
-          child: ElevatedButton(
-            onPressed: isSolving
-                ? null
-                : () {
-                    _solvePuzzle().then((_) => setModalState(() {}));
-                  },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accent,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 16.h),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-            ),
-            child: const Text('AUTO SOLVE', style: TextStyle(letterSpacing: 1.5, fontWeight: FontWeight.bold)),
-          ),
+        Slider(
+          value: executionSpeed,
+          min: 0.5,
+          max: 5.0,
+          onChanged: (value) {
+            setState(() => executionSpeed = value);
+            setModalState(() {});
+          },
         ),
       ],
     );
@@ -404,10 +251,8 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
 
   @override
   void dispose() {
-    if (isSolving) executor?.stop();
-    _stepSubscription?.cancel();
-    executor?.dispose();
-    _animationController.dispose();
+    _stopSolver();
+    _currentStepNotifier.dispose();
     super.dispose();
   }
 
@@ -417,55 +262,58 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          padding: EdgeInsets.all(20.r),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               VisualizerHeader(
                 title: 'N-Queens',
-                subtitle: 'CONSTRAINT VIZ',
+                subtitle: 'CSP VISUALIZER',
                 onBackTap: () => Navigator.pop(context),
               ),
               const SizedBox(height: 20),
-
-              Row(
-                children: [
-                  Expanded(child: GlassStatCard(label: 'STEPS', value: stepCount)),
-                  const SizedBox(width: 10),
-                  Expanded(child: GlassStatCard(label: 'EXPLORED', value: nodesExplored)),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GlassStatCard(
-                      label: 'PLACED', 
-                      value: currentState.placement.where((p) => p != -1).length,
-                    ),
-                  ),
-                ],
+              ValueListenableBuilder<NQueensStep?>(
+                valueListenable: _currentStepNotifier,
+                builder: (context, step, _) {
+                  return Row(
+                    children: [
+                      Expanded(child: GlassStatCard(label: 'STEPS', value: step?.steps ?? 0)),
+                      const SizedBox(width: 10),
+                      Expanded(child: GlassStatCard(label: 'BACKTRACKS', value: step?.backtracks ?? 0)),
+                      const SizedBox(width: 10),
+                      Expanded(child: GlassStatCard(label: 'ROW', value: (step?.currentRow ?? -1) + 1)),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 14),
-
               Center(
                 child: StatusBanner(
-                  message: isSolved ? 'Solution Found!' : isSolving ? 'Searching...' : 'Ready',
+                  message: isSolved ? 'Solution Found!' : isSolving ? 'Solving...' : 'Idle',
                   isSolved: isSolved,
                   isSolving: isSolving,
+                ).animate(
+                  target: isSolved ? 1 : 0,
+                  autoPlay: false,
+                ).scale(
+                  duration: 600.ms,
+                  curve: Curves.elasticOut,
+                ).shimmer(
+                  duration: 2.seconds,
+                  color: AppTheme.success.withValues(alpha: 0.3),
                 ),
               ),
               const SizedBox(height: 20),
-
-              _buildPuzzleVisualization(),
+              _buildBoard(),
               const SizedBox(height: 24),
-
-              VisualizerControls(
-                isSolving: isSolving,
-                isSolved: isSolved,
-                stepCount: stepCount,
-                onSolve: _showAISolveMenu,
-                onPauseResume: _pauseResume,
-                onStep: _stepOnce,
-                onReset: _reset,
-                onClear: _reset,
-              ),
+                VisualizerControls(
+                  isSolving: isSolving,
+                  isSolved: isSolved,
+                  stepCount: _currentStepNotifier.value?.steps ?? 0,
+                  onSolve: _showSolverConfig,
+                  onPauseResume: _pauseResume,
+                  onClear: _reset,
+                ),
             ],
           ),
         ),
@@ -473,160 +321,108 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
     );
   }
 
-  Widget _buildPuzzleVisualization() {
+  Widget _buildBoard() {
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'BOARD SIZE: $boardSize',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
-            ),
+            Text('BOARD SIZE: $boardSize', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted)),
             Expanded(
-              child: SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: AppTheme.accent,
-                  inactiveTrackColor: AppTheme.surfaceHighest,
-                  thumbColor: Colors.white,
-                  overlayColor: AppTheme.accent.withValues(alpha: 0.2),
-                ),
-                child: Slider(
-                  value: boardSize.toDouble(),
-                  min: 4,
-                  max: 10,
-                  divisions: 6,
-                  onChanged: isSolving
-                      ? null
-                      : (value) {
-                          setState(() {
-                            boardSize = value.toInt();
-                            _initializeProblem();
-                          });
-                        },
-                ),
+              child: Slider(
+                value: boardSize.toDouble(),
+                min: 4, max: 10, divisions: 6,
+                onChanged: isSolving ? null : (v) => setState(() { boardSize = v.toInt(); _resetBoard(); }),
               ),
             ),
           ],
         ),
         const SizedBox(height: 16),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16.r),
-          child: Container(
-            padding: EdgeInsets.all(12.r),
-            decoration: AppTheme.glassCardAccent(radius: 16),
-            child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: boardSize,
-                  childAspectRatio: 1,
-                  mainAxisSpacing: 1,
-                  crossAxisSpacing: 1,
-                ),
-                itemCount: boardSize * boardSize,
-                itemBuilder: (context, index) {
-                  final row = index ~/ boardSize;
-                  final col = index % boardSize;
+        RepaintBoundary(
+          child: ValueListenableBuilder<NQueensStep?>(
+            valueListenable: _currentStepNotifier,
+            builder: (context, step, _) {
+              final board = step?.board ?? List.filled(boardSize, -1);
+              final activeRow = step?.currentRow ?? -1;
 
-                  final depth = currentPath.length;
-                  final hasQueen = currentState.placement[row] == col;
-                  
-                  // A queen is locked if it is a parent in the current search path 
-                  // or if the entire puzzle has been solved.
-                  final isLocked = hasQueen && (row < depth - 1 || isSolved);
-                  final isSafe = hasQueen ? problem.isSafe(currentState, row, col) : true;
-                  
-                  Color squareColor = Colors.transparent;
-                  Color borderColor = Colors.white.withValues(alpha: 0.05);
-                  List<BoxShadow>? shadows;
-                  
-                  if (hasQueen) {
-                    if (isLocked) {
-                      // Confirmed/Locked Queen
-                      squareColor = AppTheme.success;
-                      borderColor = AppTheme.surfaceHigh;
-                      shadows = [
-                        BoxShadow(
-                          color: AppTheme.success.withValues(alpha: 0.4),
-                          blurRadius: 12,
-                          spreadRadius: 2,
-                        )
-                      ];
-                    } else {
-                      // Trial Queen - Border Only with Search Glow
-                      squareColor = Colors.transparent;
-                      borderColor = isSafe ? AppTheme.success : AppTheme.error;
-                      if (isSolving) {
-                        shadows = [
-                          BoxShadow(
-                            color: (isSafe ? AppTheme.success : AppTheme.error).withValues(alpha: 0.2),
-                            blurRadius: 8,
-                            spreadRadius: 1,
-                          )
-                        ];
-                      }
+              return Container(
+                padding: EdgeInsets.all(12.r),
+                decoration: AppTheme.glassCardAccent(radius: 16),
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: boardSize,
+                    mainAxisSpacing: 2,
+                    crossAxisSpacing: 2,
+                  ),
+                  itemCount: boardSize * boardSize,
+                  itemBuilder: (context, index) {
+                    final row = index ~/ boardSize;
+                    final col = index % boardSize;
+                    final hasQueen = board[row] == col;
+                    final isActiveRow = row == activeRow;
+                    
+                    bool isConflict = false;
+                    if (hasQueen) {
+                      isConflict = !NQueensUtils.isSafe(board, row, col);
                     }
-                  } else {
-                    squareColor = ((row + col) % 2 == 0) 
+
+                    Color cellColor = ((row + col) % 2 == 0) 
                         ? Colors.white.withValues(alpha: 0.05) 
                         : Colors.black.withValues(alpha: 0.15);
-                  }
+                    
+                    if (isActiveRow) {
+                      cellColor = AppTheme.accent.withValues(alpha: 0.1);
+                    }
 
-                  return GestureDetector(
-                    onTap: () => _handleSquareTap(row, col),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      decoration: BoxDecoration(
-                        color: squareColor,
-                        borderRadius: BorderRadius.circular(4.r),
-                        boxShadow: shadows,
-                        border: Border.all(
-                          color: borderColor,
-                          width: hasQueen ? 2.w : 0.5.w,
+                    return GestureDetector(
+                      onTap: () => _handleSquareTap(row, col),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        decoration: BoxDecoration(
+                          color: cellColor,
+                          borderRadius: BorderRadius.circular(4.r),
+                          border: Border.all(
+                            color: hasQueen 
+                                ? (isConflict ? AppTheme.error : AppTheme.success) 
+                                : (isActiveRow ? AppTheme.accent.withValues(alpha: 0.3) : Colors.transparent),
+                            width: hasQueen ? 2.w : 1.w,
+                          ),
                         ),
+                        child: hasQueen ? Center(
+                          child: Text('♕', style: TextStyle(
+                            fontSize: 28.sp, 
+                            color: isConflict ? AppTheme.error : Colors.white,
+                            shadows: [Shadow(color: isConflict ? AppTheme.error : AppTheme.success, blurRadius: 10)],
+                          )),
+                        ).animate().scale(
+                          duration: 200.ms,
+                          curve: Curves.easeOut,
+                        ).animate(
+                          target: isSolved ? 1 : 0,
+                        ).shimmer(
+                          duration: 1200.ms,
+                          color: AppTheme.success.withValues(alpha: 0.5),
+                        ).shake(
+                          duration: 400.ms,
+                          hz: 4,
+                          rotation: 0.05,
+                          delay: (index * 20).ms,
+                        ).scale(
+                          begin: const Offset(1, 1),
+                          end: const Offset(1.2, 1.2),
+                          duration: 400.ms,
+                          curve: Curves.easeOutBack,
+                        ) : null,
                       ),
-                      child: Stack(
-                        children: [
-                          if (hasQueen)
-                            Center(
-                              child: Opacity(
-                                opacity: isLocked ? 1.0 : 0.7,
-                                child: Text(
-                                  '♕',
-                                  style: TextStyle(
-                                    fontSize: 32.sp,
-                                    color: Colors.white,
-                                    shadows: [
-                                      Shadow(
-                                        color: isLocked 
-                                          ? Colors.white.withValues(alpha: 0.5)
-                                          : (isSafe ? AppTheme.success : AppTheme.error).withValues(alpha: 0.5),
-                                        blurRadius: isLocked ? 8 : 4,
-                                      )
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          if (isLocked)
-                            Positioned(
-                              bottom: 2.r,
-                              right: 2.r,
-                              child: Icon(
-                                Icons.lock,
-                                size: 10.r,
-                                color: Colors.white.withValues(alpha: 0.8),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
+                    );
+                  },
+                ),
+              );
+            },
           ),
+        ),
       ],
     );
   }

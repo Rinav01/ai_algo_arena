@@ -86,6 +86,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
   final Set<State> _exploredSet = {};
   final Set<State> _pathSet = {};
   List<State> _currentPath = [];
+  int _frontierSize = 0;
 
   // Result caching: Stores (History, Final Explored Set, Final Path)
   static final Map<String, (List<AlgorithmStep<dynamic>>, Set<dynamic>, List<dynamic>)> _resultCache = {};
@@ -105,6 +106,9 @@ class AlgorithmExecutor<State> with ChangeNotifier {
 
   /// Get current path as a list for ordered traversal if needed
   List<State> get currentPath => _currentPath;
+
+  /// Get current frontier size
+  int get frontierSize => _frontierSize;
 
   /// Current execution state
   bool get isPaused => _isPaused;
@@ -163,7 +167,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
         final request = _StreamRequest(
           receivePort.sendPort,
           algorithm.name,
-          _problemSnapshot!,
+          _problemSnapshot,
         );
 
         await Isolate.spawn(_streamInIsolate, request);
@@ -209,7 +213,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
       } else if (_problem != null) {
         // 2. Fallback: Compute locally for non-snapshottable problems (e.g. Puzzles)
         // These are typically fast enough to run on the main thread for the visualization depths used
-        _fullHistory = algorithm.solve(_problem!).toList();
+        _fullHistory = algorithm.solve(_problem).toList();
         
         // Cache the finished result
         if (_fullHistory!.isNotEmpty) {
@@ -249,6 +253,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
         // Explored and Path already handled in start() for efficiency
         _currentIndex = _fullHistory!.length - 1;
         _lastStep = _fullHistory![_currentIndex];
+        _frontierSize = _lastStep!.frontierSize ?? 0;
         _stepController.add(_lastStep!);
         notifyListeners();
       }
@@ -289,6 +294,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
         _currentPath = _lastStep!.path;
         _pathSet.clear();
         _pathSet.addAll(_currentPath);
+        _frontierSize = _lastStep!.frontierSize ?? 0;
         
         // Notify UI on the last step of the batch
         if (i == stepsPerTick - 1 || _currentIndex == _fullHistory!.length - 1) {

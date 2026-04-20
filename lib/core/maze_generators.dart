@@ -5,93 +5,6 @@ import 'package:ai_algo_app/models/grid_node.dart';
 
 class MazeGenerator {
   final Random _random = Random();
-
-  /// Generates a procedural maze using Recursive Division.
-  /// Expects a clear grid to start with.
-  void generateRecursiveDivision(GridController controller) {
-    controller.clearWalls();
-    
-    // Add border walls
-    for (int i = 0; i < controller.rows; i++) {
-        controller.setNodeType(i, 0, NodeType.wall);
-        controller.setNodeType(i, controller.columns - 1, NodeType.wall);
-    }
-    for (int j = 0; j < controller.columns; j++) {
-        controller.setNodeType(0, j, NodeType.wall);
-        controller.setNodeType(controller.rows - 1, j, NodeType.wall);
-    }
-
-    _divide(
-      controller,
-      1, 
-      1, 
-      controller.columns - 2, 
-      controller.rows - 2, 
-      _chooseOrientation(controller.columns - 2, controller.rows - 2)
-    );
-    
-    // Ensure start is open
-    controller.setNodeType(controller.start.row, controller.start.column, NodeType.start);
-    _clearNeighbors(controller, controller.start.row, controller.start.column);
-
-    // Ensure goal is open if it exists
-    if (controller.goal != null) {
-      controller.setNodeType(controller.goal!.row, controller.goal!.column, NodeType.goal);
-      _clearNeighbors(controller, controller.goal!.row, controller.goal!.column);
-    }
-  }
-
-  void _divide(GridController controller, int x, int y, int width, int height, bool isHorizontal) {
-    if (width < 2 || height < 2) return;
-
-    final isHorizontalDiv = isHorizontal;
-
-    int wx = x + (isHorizontalDiv ? 0 : _random.nextInt(width - 1));
-    int wy = y + (isHorizontalDiv ? _random.nextInt(height - 1) : 0);
-
-    int px = wx + (isHorizontalDiv ? _random.nextInt(width) : 0);
-    int py = wy + (isHorizontalDiv ? 0 : _random.nextInt(height));
-
-    int dx = isHorizontalDiv ? 1 : 0;
-    int dy = isHorizontalDiv ? 0 : 1;
-
-    int length = isHorizontalDiv ? width : height;
-
-
-    for (int i = 0; i < length; i++) {
-      if (wx != px || wy != py) {
-          // don't overwrite start/goal
-          final currentType = controller.grid[wy][wx].type;
-          if (currentType != NodeType.start && currentType != NodeType.goal) {
-              controller.setNodeType(wy, wx, NodeType.wall);
-          }
-      }
-      wx += dx;
-      wy += dy;
-    }
-
-    int nx = x;
-    int ny = y;
-    int w = isHorizontalDiv ? width : wx - x + 1;
-    int h = isHorizontalDiv ? wy - y + 1 : height;
-    _divide(controller, nx, ny, w, h, _chooseOrientation(w, h));
-
-    nx = isHorizontalDiv ? x : wx + 1;
-    ny = isHorizontalDiv ? wy + 1 : y;
-    w = isHorizontalDiv ? width : x + width - wx - 1;
-    h = isHorizontalDiv ? y + height - wy - 1 : height;
-    _divide(controller, nx, ny, w, h, _chooseOrientation(w, h));
-  }
-
-  bool _chooseOrientation(int width, int height) {
-    if (width < height) {
-      return true; // Horizontal
-    } else if (height < width) {
-      return false; // Vertical
-    } else {
-      return _random.nextBool();
-    }
-  }
   
   void _clearNeighbors(GridController controller, int r, int c) {
       final moves = [[0,1], [1,0], [0,-1], [-1,0]];
@@ -145,8 +58,11 @@ class MazeGenerator {
         final midY = (current.y + neighbor.y) ~/ 2;
         final midX = (current.x + neighbor.x) ~/ 2;
         
-        controller.setNodeType(current.y, current.x, NodeType.empty);
-        controller.setNodeType(midY, midX, NodeType.empty);
+        final currentType = _random.nextDouble() < 0.35 ? NodeType.weight : NodeType.empty;
+        final midType = _random.nextDouble() < 0.35 ? NodeType.weight : NodeType.empty;
+        
+        controller.setNodeType(current.y, current.x, currentType);
+        controller.setNodeType(midY, midX, midType);
         inMaze.add(current);
 
         // Add new frontier nodes

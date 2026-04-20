@@ -1,7 +1,6 @@
 import 'dart:async';
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:ai_algo_app/core/app_theme.dart';
@@ -12,11 +11,12 @@ import 'package:ai_algo_app/models/grid_node.dart';
 import 'package:ai_algo_app/services/algorithm_executor.dart';
 import 'package:ai_algo_app/services/battle_analyzer.dart';
 import 'package:ai_algo_app/state/grid_controller.dart';
+import 'package:ai_algo_app/services/stats_service.dart';
 import 'package:ai_algo_app/widgets/battle_results_panel.dart';
 import 'package:ai_algo_app/widgets/grid_visualizer_canvas.dart';
 import 'package:ai_algo_app/widgets/visualizer_widgets.dart';
 
-class AlgorithmBattleScreen extends StatefulWidget {
+class AlgorithmBattleScreen extends ConsumerStatefulWidget {
   final List<List<GridNode>>? initialGrid;
   final GridCoordinate? start;
   final GridCoordinate? goal;
@@ -29,10 +29,10 @@ class AlgorithmBattleScreen extends StatefulWidget {
   });
 
   @override
-  State<AlgorithmBattleScreen> createState() => _AlgorithmBattleScreenState();
+  ConsumerState<AlgorithmBattleScreen> createState() => _AlgorithmBattleScreenState();
 }
 
-class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
+class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
   String _algoAId = 'BFS';
   String _algoBId = 'A*';
   AlgorithmExecutor<GridCoordinate>? _executorA;
@@ -195,6 +195,15 @@ class _AlgorithmBattleScreenState extends State<AlgorithmBattleScreen> {
 
       await Future.wait([_executorA!.start(), _executorB!.start()]);
       await Future.wait([completerA.future, completerB.future]);
+
+      // Record stats after completion
+      if (mounted) {
+        String? winnerName;
+        if (_metricsA != null && _metricsB != null) {
+          winnerName = BattleResult(algorithm1: _metricsA!, algorithm2: _metricsB!).winner.algorithmName;
+        }
+        ref.read(arenaStatsProvider.notifier).recordBattleCompletion(winnerName);
+      }
     } finally {
       if (mounted) setState(() => _isRunning = false);
     }

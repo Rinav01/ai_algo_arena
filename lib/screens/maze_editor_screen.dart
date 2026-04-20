@@ -272,10 +272,10 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
     );
   }
 
-  // Generate a random maze using recursive division algorithm
+  // Generate a random maze using Prim's algorithm
   void _generateRandomMaze() {
     final generator = MazeGenerator();
-    generator.generateRecursiveDivision(_controller);
+    generator.generateRandomizedPrims(_controller);
     setState(() {});
   }
 

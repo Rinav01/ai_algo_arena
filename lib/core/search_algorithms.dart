@@ -55,6 +55,7 @@ class BFSAlgorithm<State> extends SearchAlgorithm<State> {
         stepCount: stepCount,
         message: 'Exploring ${problem.stateToString(current)}',
         isGoalReached: false,
+        frontierSize: queue.length,
       );
 
       // Explore neighbors
@@ -254,6 +255,7 @@ class AStarAlgorithm<State> extends SearchAlgorithm<State> {
         message:
             'Evaluating ${problem.stateToString(current)} (f=${(fScore[current] ?? 0).toStringAsFixed(1)})',
         isGoalReached: false,
+        frontierSize: openQueue.length,
       );
 
       // Check all neighbors
@@ -269,14 +271,11 @@ class AStarAlgorithm<State> extends SearchAlgorithm<State> {
           gScore[neighbor] = tentativeGScore;
           fScore[neighbor] = tentativeGScore + problem.heuristic(neighbor);
 
-          if (!inOpen.contains(neighbor)) {
-            openQueue.add(neighbor);
-            inOpen.add(neighbor);
-          } else {
-            // Need to remove and re-insert to update priority
-            openQueue.remove(neighbor);
-            openQueue.add(neighbor);
-          }
+          // Lazy update: Add the node again. The priority queue will 
+          // pop the cheapest instance first, and subsequent duplicate pops
+          // will be ignored by the `visited.contains(current)` check above.
+          openQueue.add(neighbor);
+          inOpen.add(neighbor);
         }
       }
     }
@@ -389,13 +388,9 @@ class DijkstraAlgorithm<State> extends SearchAlgorithm<State> {
           distances[neighbor] = newDistance;
           parent[neighbor] = current;
           
-          if (!inOpen.contains(neighbor)) {
-            openQueue.add(neighbor);
-            inOpen.add(neighbor);
-          } else {
-            openQueue.remove(neighbor);
-            openQueue.add(neighbor);
-          }
+          // Lazy update pattern for priority queue
+          openQueue.add(neighbor);
+          inOpen.add(neighbor);
         }
       }
     }
@@ -500,6 +495,7 @@ class GreedyBestFirstAlgorithm<State> extends SearchAlgorithm<State> {
         stepCount: stepCount,
         message: 'Greedy evaluating ${problem.stateToString(current)} (h=${currentNode.f.toStringAsFixed(1)})',
         isGoalReached: false,
+        frontierSize: openSet.length,
       );
 
       for (final neighbor in problem.getNeighbors(current)) {

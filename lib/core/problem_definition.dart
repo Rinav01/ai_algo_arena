@@ -10,6 +10,7 @@ class AlgorithmStep<State> {
   final String? message;
   final DateTime timestamp;
   final bool isGoalReached;
+  final int? frontierSize;
 
   AlgorithmStep({
     required this.newlyExplored,
@@ -19,6 +20,7 @@ class AlgorithmStep<State> {
     this.message,
     DateTime? timestamp,
     this.isGoalReached = false,
+    this.frontierSize,
   }) : timestamp = timestamp ?? DateTime.now();
 
   AlgorithmStep<State> copyWith({
@@ -38,6 +40,7 @@ class AlgorithmStep<State> {
       message: message ?? this.message,
       timestamp: timestamp ?? this.timestamp,
       isGoalReached: isGoalReached ?? this.isGoalReached,
+      frontierSize: frontierSize ?? this.frontierSize,
     );
   }
 }
@@ -60,7 +63,10 @@ class AlgorithmResult<State> {
     required this.executionTime,
     required this.algorithmName,
     this.succeeded = true,
+    this.maxFrontierSize,
   });
+
+  final int? maxFrontierSize;
 }
 
 // Abstract problem definition - can be implemented for any domain

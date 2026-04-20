@@ -80,7 +80,7 @@ class AlgorithmRecommendationCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 
-                // Reasoning Box
+                // Reasoning & Efficiency Box
                 Container(
                   padding: EdgeInsets.all(12.r),
                   decoration: BoxDecoration(
@@ -91,12 +91,23 @@ class AlgorithmRecommendationCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'WHY THIS CHOICE?',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppTheme.textMuted,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'WHY THIS CHOICE?',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: AppTheme.textMuted,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          _buildEfficiencyIndicator(
+                            AlgorithmRecommender.getEfficiencyScore(
+                              problem, 
+                              recommendation.algorithm,
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -151,6 +162,38 @@ class AlgorithmRecommendationCard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEfficiencyIndicator(double efficiency) {
+    final percent = (efficiency * 100).toInt();
+    final color = efficiency > 0.8
+        ? AppTheme.success
+        : (efficiency > 0.6 ? AppTheme.accent : AppTheme.error);
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6.r),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.bolt_rounded, color: color, size: 12.r),
+          const SizedBox(width: 4),
+          Text(
+            '$percent% EFFICIENCY',
+            style: TextStyle(
+              color: color,
+              fontSize: 9.sp,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
             ),
           ),
         ],

@@ -317,8 +317,6 @@ class VisualizerControls extends StatelessWidget {
     required this.stepCount,
     required this.onSolve,
     required this.onPauseResume,
-    required this.onStep,
-    required this.onReset,
     required this.onClear,
     this.onVersus,
   });
@@ -328,8 +326,6 @@ class VisualizerControls extends StatelessWidget {
   final int stepCount;
   final VoidCallback onSolve;
   final VoidCallback onPauseResume;
-  final VoidCallback onStep;
-  final VoidCallback onReset;
   final VoidCallback onClear;
   final VoidCallback? onVersus;
 
@@ -337,23 +333,11 @@ class VisualizerControls extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Premium "Versus" CTA - only show if callback is provided
-        if (onVersus != null) ...[
-          _CtaButton(
-            icon: Icons.compare_arrows_rounded,
-            label: 'BATTLE ARENA — COMPARE ALGORITHMS',
-            enabled: true,
-            primary: true,
-            accentColor: AppTheme.warning,
-            onTap: onVersus!,
-          ),
-          const SizedBox(height: 12),
-        ],
         // Row 1: primary actions
         Row(
           children: [
             Expanded(
-              flex: 3,
+              flex: 4,
               child: _CtaButton(
                 icon: Icons.play_arrow_rounded,
                 label: 'Solve',
@@ -364,18 +348,7 @@ class VisualizerControls extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Expanded(
-              flex: 3,
-              child: _CtaButton(
-                icon: Icons.fast_forward_rounded,
-                label: 'Auto',
-                enabled: !isSolving,
-                primary: false,
-                onTap: onSolve,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 2,
+              flex: 4,
               child: _GhostBtn(
                 icon: isSolving ? Icons.pause_rounded : Icons.play_arrow_rounded,
                 label: isSolving ? 'Pause' : 'Resume',
@@ -383,31 +356,9 @@ class VisualizerControls extends StatelessWidget {
                 onTap: onPauseResume,
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        // Row 2: secondary actions
-        Row(
-          children: [
-            Expanded(
-              child: _GhostBtn(
-                icon: Icons.skip_next_rounded,
-                label: 'Step',
-                enabled: stepCount > 0,
-                onTap: onStep,
-              ),
-            ),
             const SizedBox(width: 8),
             Expanded(
-              child: _GhostBtn(
-                icon: Icons.refresh_rounded,
-                label: 'Reset',
-                enabled: true,
-                onTap: onReset,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
+              flex: 3,
               child: _GhostBtn(
                 icon: Icons.delete_sweep_rounded,
                 label: 'Clear',
@@ -418,6 +369,17 @@ class VisualizerControls extends StatelessWidget {
             ),
           ],
         ),
+        if (onVersus != null) ...[
+          const SizedBox(height: 12),
+          _CtaButton(
+            icon: Icons.compare_arrows_rounded,
+            label: 'BATTLE ARENA — COMPARE ALGORITHMS',
+            enabled: true,
+            primary: true,
+            accentColor: AppTheme.warning,
+            onTap: onVersus!,
+          ),
+        ],
       ],
     );
   }

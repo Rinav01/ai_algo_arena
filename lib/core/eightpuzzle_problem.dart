@@ -1,4 +1,6 @@
+import 'dart:math' as math;
 import 'package:ai_algo_app/core/problem_definition.dart';
+import 'package:collection/collection.dart';
 
 /// 8-Puzzle state: [0,1,2,3,4,5,6,7,8] where 0 = empty
 /// Layout:
@@ -28,21 +30,13 @@ class PuzzleState {
       identical(this, other) ||
       other is PuzzleState &&
           runtimeType == other.runtimeType &&
-          _listEquals(tiles, other.tiles);
-
-  bool _listEquals(List a, List b) {
-    if (a.length != b.length) return false;
-    for (int i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
-  }
+          const ListEquality<int>().equals(tiles, other.tiles);
 
   @override
   int get hashCode => Object.hashAll(tiles);
 
   @override
-  String toString() => 'PuzzleState(${tiles.join("")})';
+  String toString() => 'PuzzleState(${tiles.join(",")})';
 
   /// Get board visualization
   String toBoard() {
@@ -121,15 +115,21 @@ class EightPuzzleProblem extends Problem<PuzzleState> {
 
   @override
   double heuristic(PuzzleState state) {
-    // Manhattan distance heuristic
+    // Manhattan distance summed for all non-empty tiles
     int distance = 0;
     for (int i = 0; i < 9; i++) {
-      if (state.tiles[i] != 0 && state.tiles[i] != i + 1) {
-        final currentRow = i ~/ 3;
-        final currentCol = i % 3;
-        final goalRow = (state.tiles[i] - 1) ~/ 3;
-        final goalCol = (state.tiles[i] - 1) % 3;
-        distance += (currentRow - goalRow).abs() + (currentCol - goalCol).abs();
+      final value = state.tiles[i];
+      if (value != 0) {
+        // Current position
+        final curR = i ~/ 3;
+        final curC = i % 3;
+        
+        // Target position for value 'v' (assuming goal [1,2,3,4,5,6,7,8,0])
+        final targetIdx = value - 1;
+        final tarR = targetIdx ~/ 3;
+        final tarC = targetIdx % 3;
+        
+        distance += (curR - tarR).abs() + (curC - tarC).abs();
       }
     }
     return distance.toDouble();
@@ -158,14 +158,29 @@ class EightPuzzleProblem extends Problem<PuzzleState> {
   /// Scramble puzzle n times
   static PuzzleState scramble(int times) {
     PuzzleState state = defaultGoalState;
-    final random = DateTime.now().millisecondsSinceEpoch;
+    final random = math.Random();
+
+    // To prevent immediate backtracking during the random walk
+    PuzzleState? previousState;
 
     for (int i = 0; i < times; i++) {
       final neighbors = EightPuzzleProblem()._getNeighborsForState(state);
-      state = neighbors[(random + i) % neighbors.length];
+      
+      // Filter out immediate backtracking if possible for a better scramble
+      final validNeighbors = neighbors.where((n) => n != previousState).toList();
+      
+      previousState = state;
+      
+      if (validNeighbors.isNotEmpty) {
+        state = validNeighbors[random.nextInt(validNeighbors.length)];
+      } else {
+        state = neighbors[random.nextInt(neighbors.length)];
+      }
     }
 
-    return isSolvable(state) ? state : scramble(times + 1);
+    // Since we generate via legal moves from the goal state, 
+    // it is mathematically guaranteed to be solvable!
+    return state;
   }
 
   List<PuzzleState> _getNeighborsForState(PuzzleState state) {
