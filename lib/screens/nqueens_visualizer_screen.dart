@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
-import 'dart:ui';
 import 'package:ai_algo_app/core/app_theme.dart';
 import 'package:ai_algo_app/core/nqueens_problem.dart';
 import 'package:ai_algo_app/core/search_algorithms.dart';
