@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:isolate';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import 'package:ai_algo_app/core/grid_problem.dart';
 import 'package:ai_algo_app/core/problem_definition.dart';
 import 'package:ai_algo_app/core/search_algorithms.dart';
+import 'package:ai_algo_app/models/app_settings.dart';
 
 /// Messaging for real-time streaming from isolates (Batched for performance)
 class _StreamMessage<State> {
@@ -299,6 +301,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
         // Notify UI on the last step of the batch
         if (i == stepsPerTick - 1 || _currentIndex == _fullHistory!.length - 1) {
           _stepController.add(_lastStep!);
+          _handleHaptics();
           notifyListeners();
         }
         
@@ -309,6 +312,26 @@ class AlgorithmExecutor<State> with ChangeNotifier {
         _finishPlayback();
       }
     });
+  }
+
+  void _handleHaptics() {
+    if (_lastStep == null) return;
+    
+    // Get settings from snapshot or problem
+    AppSettings settings = const AppSettings();
+    if (_problemSnapshot != null && _problemSnapshot!.containsKey('settings')) {
+      settings = AppSettings.fromJson(_problemSnapshot!['settings']);
+    } else if (_problem is GridProblem) {
+      settings = (_problem as GridProblem).settings;
+    }
+
+    if (settings.executionPulse && _currentIndex % 5 == 0) {
+      HapticFeedback.lightImpact();
+    }
+
+    if (settings.collisionVibration && _lastStep!.isGoalReached) {
+       HapticFeedback.mediumImpact();
+    }
   }
   
   void _finishPlayback() {

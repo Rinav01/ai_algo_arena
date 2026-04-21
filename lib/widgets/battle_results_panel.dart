@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ai_algo_app/core/app_theme.dart';
 import 'package:ai_algo_app/services/battle_analyzer.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class BattleResultsPanel extends StatefulWidget {
@@ -76,7 +75,7 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
               _buildWinnerBanner(result, isAWinner),
               
               Padding(
-                padding: EdgeInsets.all(20.r),
+                padding: EdgeInsets.all(20.0),
                 child: Column(
                   children: [
                     // Comparison Grid
@@ -104,7 +103,7 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
   Widget _buildWinnerBanner(BattleResult result, bool isAWinner) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: 20.h),
+      padding: EdgeInsets.symmetric(vertical: 20.0),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -115,8 +114,8 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
           end: Alignment.bottomCenter,
         ),
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20.r),
-          topRight: Radius.circular(20.r),
+          topLeft: Radius.circular(20.0),
+          topRight: Radius.circular(20.0),
         ),
       ),
       child: Column(
@@ -131,7 +130,7 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
                 style: TextStyle(
                   color: AppTheme.success,
                   fontWeight: FontWeight.w900,
-                  fontSize: 18.sp,
+                  fontSize: 18.0,
                   letterSpacing: 2,
                 ),
               ),
@@ -184,10 +183,10 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
   Widget _buildValueBox(String value, bool isBetter, String algo) {
     final color = isBetter ? AppTheme.success : AppTheme.textMuted;
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 4.w),
+      padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8.r),
+        borderRadius: BorderRadius.circular(8.0),
         border: Border.all(color: color.withValues(alpha: 0.2)),
         boxShadow: isBetter ? [
           BoxShadow(
@@ -203,7 +202,7 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
           style: TextStyle(
             color: isBetter ? Colors.white : AppTheme.textMuted,
             fontWeight: isBetter ? FontWeight.bold : FontWeight.normal,
-            fontSize: 14.sp,
+            fontSize: 14.0,
           ),
         ),
       ),
@@ -224,9 +223,9 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
           style: Theme.of(context).textTheme.labelSmall?.copyWith(letterSpacing: 1.5, color: AppTheme.textMuted)),
         const SizedBox(height: 8),
         ClipRRect(
-          borderRadius: BorderRadius.circular(4.r),
+          borderRadius: BorderRadius.circular(4.0),
           child: SizedBox(
-            height: 8.h,
+            height: 8.0,
             child: Row(
               children: [
                 Expanded(flex: flexA, child: Container(color: AppTheme.accent)),
@@ -239,8 +238,8 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('${widget.algorithmAName}: $flexA%', style: TextStyle(color: AppTheme.accent, fontSize: 10.sp, fontWeight: FontWeight.bold)),
-            Text('${widget.algorithmBName}: $flexB%', style: TextStyle(color: AppTheme.error, fontSize: 10.sp, fontWeight: FontWeight.bold)),
+            Text('${widget.algorithmAName}: $flexA%', style: TextStyle(color: AppTheme.accent, fontSize: 10.0, fontWeight: FontWeight.bold)),
+            Text('${widget.algorithmBName}: $flexB%', style: TextStyle(color: AppTheme.error, fontSize: 10.0, fontWeight: FontWeight.bold)),
           ],
         ),
       ],
@@ -252,10 +251,10 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
     
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(20.r),
+      padding: EdgeInsets.all(20.0),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(20.r),
+        borderRadius: BorderRadius.circular(20.0),
         border: Border.all(color: AppTheme.accent.withValues(alpha: 0.15)),
         boxShadow: [
           BoxShadow(
@@ -271,12 +270,12 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(6.r),
+                padding: EdgeInsets.all(6.0),
                 decoration: BoxDecoration(
                   color: AppTheme.accent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8.r),
+                  borderRadius: BorderRadius.circular(8.0),
                 ),
-                child: Icon(Icons.insights_rounded, size: 18.r, color: AppTheme.accent),
+                child: Icon(Icons.insights_rounded, size: 18.0, color: AppTheme.accent),
               ),
               const SizedBox(width: 12),
               Text(
@@ -293,15 +292,15 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
           ...List.generate(insights.length, (index) {
             final insight = insights[index];
             return Padding(
-              padding: EdgeInsets.only(bottom: index == insights.length - 1 ? 0 : 16.h),
+              padding: EdgeInsets.only(bottom: index == insights.length - 1 ? 0 : 16.0),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                    Container(
-                    margin: EdgeInsets.only(top: 2.h),
+                    margin: EdgeInsets.only(top: 2.0),
                     child: Icon(
                       insight.icon,
-                      size: 16.r,
+                      size: 16.0,
                       color: _getInsightColor(insight.type),
                     ),
                   ),

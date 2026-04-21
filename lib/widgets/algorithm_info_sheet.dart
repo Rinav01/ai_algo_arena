@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class AlgorithmInfoSheet extends StatelessWidget {
   final String algorithmName;
@@ -32,7 +31,7 @@ class AlgorithmInfoSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(24.r),
+      padding: EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -81,10 +80,10 @@ class AlgorithmInfoSheet extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Container(
-          padding: EdgeInsets.all(12.r),
+          padding: EdgeInsets.all(12.0),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(8.r),
+            borderRadius: BorderRadius.circular(8.0),
           ),
           child: Text(content, style: TextStyle(color: Colors.grey[300])),
         ),
@@ -103,12 +102,12 @@ class AlgorithmInfoSheet extends StatelessWidget {
         const SizedBox(height: 8),
         ...complexities.map((complexity) {
           return Padding(
-            padding: EdgeInsets.only(bottom: 8.h),
+            padding: EdgeInsets.only(bottom: 8.0),
             child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+              padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
               decoration: BoxDecoration(
                 color: Colors.blue.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6.r),
+                borderRadius: BorderRadius.circular(6.0),
                 border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
               ),
               child: Text(
@@ -137,14 +136,14 @@ class AlgorithmInfoSheet extends StatelessWidget {
         const SizedBox(height: 8),
         ...items.map((item) {
           return Padding(
-            padding: EdgeInsets.only(bottom: 8.h),
+            padding: EdgeInsets.only(bottom: 8.0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 6.w,
-                  height: 6.h,
-                  margin: EdgeInsets.only(top: 6.h),
+                  width: 6.0,
+                  height: 6.0,
+                  margin: EdgeInsets.only(top: 6.0),
                   decoration: BoxDecoration(
                     color: color,
                     shape: BoxShape.circle,

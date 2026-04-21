@@ -1,6 +1,7 @@
-import 'dart:ui';
 import 'package:ai_algo_app/core/maze_generators.dart';
+import 'package:ai_algo_app/screens/algorithm_battle_screen.dart';
 import 'package:ai_algo_app/widgets/grid_visualizer_canvas.dart';
+import 'package:ai_algo_app/widgets/visualizer_widgets.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:ai_algo_app/core/problem_definition.dart';
 import 'package:flutter/material.dart';
@@ -14,11 +15,11 @@ import 'package:ai_algo_app/services/map_persistence.dart';
 import 'package:ai_algo_app/widgets/algorithm_recommendation_card.dart';
 import 'package:ai_algo_app/models/grid_node.dart';
 import 'package:ai_algo_app/state/grid_controller.dart';
-import 'package:ai_algo_app/widgets/visualizer_widgets.dart';
-import 'package:ai_algo_app/screens/algorithm_battle_screen.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ai_algo_app/state/settings_provider.dart';
+import 'package:ai_algo_app/models/algo_info.dart';
 
-class PathfindingVisualizerScreen extends StatefulWidget {
+class PathfindingVisualizerScreen extends ConsumerStatefulWidget {
   final String algorithmId;
   final String title;
 
@@ -29,12 +30,12 @@ class PathfindingVisualizerScreen extends StatefulWidget {
   });
 
   @override
-  State<PathfindingVisualizerScreen> createState() =>
+  ConsumerState<PathfindingVisualizerScreen> createState() =>
       _PathfindingVisualizerScreenState();
 }
 
 class _PathfindingVisualizerScreenState
-    extends State<PathfindingVisualizerScreen> with SingleTickerProviderStateMixin {
+    extends ConsumerState<PathfindingVisualizerScreen> with SingleTickerProviderStateMixin {
   late final GridController _controller;
   AlgorithmExecutor<GridCoordinate>? _executor;
   StreamSubscription<AlgorithmStep<GridCoordinate>>? _stepSubscription;
@@ -91,6 +92,8 @@ class _PathfindingVisualizerScreenState
       _problem = null;
       return;
     }
+
+    final settings = ref.read(settingsProvider);
     
     _problem = GridProblem(
       grid: _controller.grid,
@@ -102,6 +105,7 @@ class _PathfindingVisualizerScreenState
         row: goal.row,
         column: goal.column,
       ),
+      settings: settings,
     );
   }
 
@@ -158,7 +162,7 @@ class _PathfindingVisualizerScreenState
 
     _executor = AlgorithmExecutor<GridCoordinate>(
       algorithm: algo,
-      problemSnapshot: _controller.toOptimizedSnapshot(),
+      problemSnapshot: _controller.toOptimizedSnapshot(ref.read(settingsProvider)),
       stepDelayMs: isLiveUpdate ? 0 : _stepDelay.inMilliseconds,
     );
 
@@ -369,7 +373,6 @@ class _PathfindingVisualizerScreenState
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -377,6 +380,7 @@ class _PathfindingVisualizerScreenState
               VisualizerHeader(
                 title: widget.title,
                 subtitle: 'PATHFINDING VISUALIZER',
+                info: AlgoInfo.pathfinding[widget.algorithmId],
               ),
               const SizedBox(height: 20),
 
@@ -473,18 +477,20 @@ class _PathfindingVisualizerScreenState
 
               // ── Grid ─────────────────────────────────────────────────────
               ClipRRect(
-                borderRadius: BorderRadius.circular(16.r),
+                borderRadius: BorderRadius.circular(16.0),
                 child: Container(
                   decoration: AppTheme.glassCardAccent(radius: 16),
-                  padding: EdgeInsets.all(8.r),
-                  height: 320.h, // Fixed height for visualizer grid
-                  child: GridVisualizerCanvas(
-                    controller: _controller,
-                    executor: _executor,
-                    isInteractive: true,
-                    onPointerDown: _handlePointerDown,
-                    onPointerUpdate: _handlePointerUpdate,
-                    onPointerUp: _handlePointerUp,
+                  padding: EdgeInsets.all(8.0),
+                  child: AspectRatio(
+                    aspectRatio: 25 / 15, // Native ratio based on cols and rows
+                    child: GridVisualizerCanvas(
+                      controller: _controller,
+                      executor: _executor,
+                      isInteractive: true,
+                      onPointerDown: _handlePointerDown,
+                      onPointerUpdate: _handlePointerUpdate,
+                      onPointerUp: _handlePointerUp,
+                    ),
                   ),
                 ),
               ),

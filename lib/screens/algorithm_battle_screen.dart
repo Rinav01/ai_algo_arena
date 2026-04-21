@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:ai_algo_app/core/app_theme.dart';
 import 'package:ai_algo_app/core/grid_problem.dart';
@@ -15,6 +14,8 @@ import 'package:ai_algo_app/services/stats_service.dart';
 import 'package:ai_algo_app/widgets/battle_results_panel.dart';
 import 'package:ai_algo_app/widgets/grid_visualizer_canvas.dart';
 import 'package:ai_algo_app/widgets/visualizer_widgets.dart';
+import 'package:ai_algo_app/state/settings_provider.dart';
+import 'package:ai_algo_app/models/algo_info.dart';
 
 class AlgorithmBattleScreen extends ConsumerStatefulWidget {
   final List<List<GridNode>>? initialGrid;
@@ -107,7 +108,8 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
       return;
     }
 
-    final snapshot = _controller.toOptimizedSnapshot();
+    final settings = ref.read(settingsProvider);
+    final snapshot = _controller.toOptimizedSnapshot(settings);
 
     _executorA = AlgorithmExecutor<GridCoordinate>(
       algorithm: _getAlgorithm(_algoAId),
@@ -259,6 +261,7 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
                 title: 'Algorithm Battle',
                 subtitle: 'SHOWPIECE ARENA',
                 onBackTap: () => Navigator.pop(context),
+                info: AlgoInfo.battleArena,
               ),
               const SizedBox(height: 20),
 
@@ -359,10 +362,10 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
                     child: GestureDetector(
                       onTap: _isRunning ? null : _runBattle,
                       child: Container(
-                        height: 56.h,
+                        height: 56.0,
                         decoration: BoxDecoration(
                           gradient: AppTheme.ctaGradient,
-                          borderRadius: BorderRadius.circular(16.r),
+                          borderRadius: BorderRadius.circular(16.0),
                           boxShadow: [
                             BoxShadow(
                               color: AppTheme.accent.withValues(alpha: 0.3),
@@ -378,7 +381,7 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
                                 ?.copyWith(
                                   color: Colors.white,
                                   letterSpacing: 2,
-                                  fontSize: 16.sp,
+                                  fontSize: 16.0,
                                   fontWeight: FontWeight.w900,
                                 ),
                           ),
@@ -418,22 +421,22 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
     final color = isPlayerA ? AppTheme.accent : AppTheme.error;
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12.w),
+      padding: EdgeInsets.symmetric(horizontal: 12.0),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(12.0),
         border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: current,
           dropdownColor: AppTheme.surfaceHigh,
-          icon: Icon(Icons.keyboard_arrow_down, color: color, size: 18.r),
+          icon: Icon(Icons.keyboard_arrow_down, color: color, size: 18.0),
           isExpanded: true,
           style: TextStyle(
             color: color,
             fontWeight: FontWeight.bold,
-            fontSize: 13.sp,
+            fontSize: 13.0,
           ),
           items: ['BFS', 'DFS', 'Dijkstra', 'Greedy', 'A*'].map((id) {
             return DropdownMenuItem(value: id, child: Text(id));
@@ -473,7 +476,7 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(left: 4.w, bottom: 8.h),
+          padding: EdgeInsets.only(left: 4.0, bottom: 8.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -487,16 +490,16 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
               ),
               if (isWinner)
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                  padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
                   decoration: BoxDecoration(
                     color: color,
-                    borderRadius: BorderRadius.circular(4.r),
+                    borderRadius: BorderRadius.circular(4.0),
                   ),
                   child: Text(
                     'WINNER',
                     style: TextStyle(
                       color: Colors.black,
-                      fontSize: 10.sp,
+                      fontSize: 10.0,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -508,7 +511,7 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
           opacity: isLoser ? 0.4 : 1.0,
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16.r),
+              borderRadius: BorderRadius.circular(16.0),
               boxShadow: isWinner
                   ? [
                       BoxShadow(
@@ -526,13 +529,15 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
                     ? color.withValues(alpha: 0.8)
                     : color.withValues(alpha: 0.2),
               ),
-              padding: EdgeInsets.all(8.r),
-              height: 240.h, // Fixed height for battle grids to prevent layout shifts
-              child: GridVisualizerCanvas(
-                controller: _controller,
-                executor: executor,
-                accentColor: color,
-                isInteractive: !_isRunning,
+              padding: EdgeInsets.all(8.0),
+              child: AspectRatio(
+                aspectRatio: 25 / 15, // Match GridController native default size
+                child: GridVisualizerCanvas(
+                  controller: _controller,
+                  executor: executor,
+                  accentColor: color,
+                  isInteractive: !_isRunning,
+                ),
               ),
             ),
           ),
@@ -548,11 +553,11 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 56.w,
-        height: 56.h,
+        width: 56.0,
+        height: 56.0,
         decoration: BoxDecoration(
           color: AppTheme.surfaceHigh,
-          borderRadius: BorderRadius.circular(16.r),
+          borderRadius: BorderRadius.circular(16.0),
           border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
         ),
         child: Icon(icon, color: AppTheme.accentLight, size: 28),

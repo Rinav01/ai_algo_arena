@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class AlgorithmTabsWidget extends StatefulWidget {
   final Function(String) onAlgorithmSelected;
@@ -35,13 +34,13 @@ class _AlgorithmTabsWidgetState extends State<AlgorithmTabsWidget> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Row(
         children: [
           ...algorithms.map((algo) {
             final isSelected = _selectedAlgorithm == algo['name'];
             return Padding(
-              padding: EdgeInsets.only(right: 8.w),
+              padding: EdgeInsets.only(right: 8.0),
               child: GestureDetector(
                 onTap: () {
                   setState(() => _selectedAlgorithm = algo['name']!);
@@ -56,7 +55,7 @@ class _AlgorithmTabsWidgetState extends State<AlgorithmTabsWidget> {
                     color: isSelected
                         ? const Color(0xFFFFA500)
                         : const Color(0xFF0E2233),
-                    borderRadius: BorderRadius.circular(20.r),
+                    borderRadius: BorderRadius.circular(20.0),
                     border: Border.all(
                       color: isSelected
                           ? const Color(0xFFFFA500)
@@ -73,7 +72,7 @@ class _AlgorithmTabsWidgetState extends State<AlgorithmTabsWidget> {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: isSelected ? Colors.black : Colors.white,
-                          fontSize: 12.sp,
+                          fontSize: 12.0,
                         ),
                       ),
                     ],

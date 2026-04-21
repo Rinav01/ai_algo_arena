@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// Animated number display widget that smoothly transitions between values
 /// with configurable duration and curve
@@ -75,7 +74,7 @@ class _AnimatedNumberDisplayState extends State<AnimatedNumberDisplay>
             '${widget.prefix ?? ''}$displayValue${widget.suffix ?? ''}';
 
         final defaultStyle = TextStyle(
-          fontSize: 16.sp,
+          fontSize: 16.0,
           fontWeight: FontWeight.bold,
           color: Colors.white,
         );

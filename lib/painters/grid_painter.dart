@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:ai_algo_app/models/grid_node.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class GridPainter extends CustomPainter {
   GridPainter({required this.grid, required this.cellSize});
@@ -28,7 +27,7 @@ class GridPainter extends CustomPainter {
 
         cellPaint.color = _fillColor(node.type);
         canvas.drawRRect(
-          RRect.fromRectAndRadius(rect.deflate(0.8), Radius.circular(4.r)),
+          RRect.fromRectAndRadius(rect.deflate(0.8), Radius.circular(4.0)),
           cellPaint,
         );
 

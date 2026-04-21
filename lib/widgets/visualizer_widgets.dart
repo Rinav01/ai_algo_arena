@@ -1,11 +1,10 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:ai_algo_app/core/app_theme.dart';
 import 'package:ai_algo_app/widgets/animated_number_display.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:ai_algo_app/models/grid_node.dart';
-
+import 'package:ai_algo_app/models/algo_info.dart';
+import 'package:ai_algo_app/widgets/algo_info_modal.dart';
 /// Reusable glassmorphism stat card used in visualizers.
 class GlassStatCard extends StatelessWidget {
   const GlassStatCard({
@@ -26,12 +25,12 @@ class GlassStatCard extends StatelessWidget {
           children: [
               // Left accent bar — separate child so borderRadius still works
               Container(
-                width: 3.w,
+                width: 3.0,
                 decoration: BoxDecoration(
                   color: AppTheme.accent,
                   borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(12.r),
-                    bottomLeft: Radius.circular(12.r),
+                    topLeft: Radius.circular(12.0),
+                    bottomLeft: Radius.circular(12.0),
                   ),
                 ),
               ),
@@ -54,7 +53,7 @@ class GlassStatCard extends StatelessWidget {
                         duration: const Duration(milliseconds: 600),
                         curve: Curves.easeOutCubic,
                         textStyle: TextStyle(
-                          fontSize: 22.sp,
+                          fontSize: 22.0,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.onBackground,
                           fontFamily: 'Inter',
@@ -62,7 +61,7 @@ class GlassStatCard extends StatelessWidget {
                       ) : Text(
                         value.toString(),
                         style: TextStyle(
-                          fontSize: 18.sp,
+                          fontSize: 18.0,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.onBackground,
                           fontFamily: 'Inter',
@@ -102,7 +101,7 @@ class StatusBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
       decoration: AppTheme.glassCard(
         radius: 30,
         borderColor: isSolved
@@ -115,8 +114,8 @@ class StatusBanner extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 8.w,
-            height: 8.h,
+            width: 8.0,
+            height: 8.0,
             decoration: BoxDecoration(
               color: _dotColor,
               shape: BoxShape.circle,
@@ -163,7 +162,7 @@ class GridLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       decoration: AppTheme.glassCard(radius: 12),
       child: Wrap(
             spacing: 16,
@@ -194,11 +193,11 @@ class _LegendDot extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 10.w,
-          height: 10.h,
+          width: 10.0,
+          height: 10.0,
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(3.r),
+            borderRadius: BorderRadius.circular(3.0),
           ),
         ),
         const SizedBox(width: 6),
@@ -208,6 +207,8 @@ class _LegendDot extends StatelessWidget {
   }
 }
 
+
+
 /// Visualizer header with back button and title.
 class VisualizerHeader extends StatelessWidget {
   const VisualizerHeader({
@@ -215,11 +216,13 @@ class VisualizerHeader extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.onBackTap,
+    this.info,
   });
 
   final String title;
   final String subtitle;
   final VoidCallback? onBackTap;
+  final AlgoInfo? info;
 
   @override
   Widget build(BuildContext context) {
@@ -228,12 +231,12 @@ class VisualizerHeader extends StatelessWidget {
         GestureDetector(
           onTap: onBackTap ?? () => Navigator.pop(context),
           child: Container(
-            width: 36.w,
-            height: 36.h,
+            width: 36.0,
+            height: 36.0,
             decoration: AppTheme.glassCard(radius: 10),
             child: Icon(
               Icons.arrow_back_ios_new_rounded,
-              size: 16.sp,
+              size: 16.0,
               color: AppTheme.onBackground,
             ),
           ),
@@ -256,16 +259,23 @@ class VisualizerHeader extends StatelessWidget {
             ],
           ),
         ),
-        Container(
-          width: 36.w,
-          height: 36.h,
-          decoration: AppTheme.glassCard(radius: 10),
-          child: Icon(
-            Icons.settings_rounded,
-            size: 16.sp,
-            color: AppTheme.textSecondary,
+        const SizedBox(width: 8),
+        if (info != null)
+          GestureDetector(
+            onTap: () => AlgoInfoModal.show(context, info!),
+            child: Container(
+              width: 36.0,
+              height: 36.0,
+              decoration: AppTheme.glassCard(radius: 10).copyWith(
+                  color: AppTheme.accent.withValues(alpha: 0.1),
+                  border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3))),
+              child: Icon(
+                Icons.info_outline_rounded,
+                size: 18.0,
+                color: AppTheme.accentLight,
+              ),
+            ),
           ),
-        ),
       ],
     );
   }
@@ -411,8 +421,8 @@ class _CtaButton extends StatelessWidget {
         disabledBackgroundColor: AppTheme.surfaceHighest.withValues(alpha: 0.5),
         disabledForegroundColor: AppTheme.textSecondary,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
-        padding: EdgeInsets.symmetric(vertical: 13.h),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+        padding: EdgeInsets.symmetric(vertical: 13.0),
         side: primary
             ? null
             : BorderSide(color: Colors.white.withValues(alpha: 0.12)),
@@ -421,7 +431,7 @@ class _CtaButton extends StatelessWidget {
       label: Text(
         label,
         style: TextStyle(
-          fontSize: 13.sp,
+          fontSize: 13.0,
           fontWeight: FontWeight.w700,
           fontFamily: 'Inter',
         ),
@@ -457,15 +467,15 @@ class _GhostBtn extends StatelessWidget {
               : AppTheme.outline.withValues(alpha: 0.4),
         ),
         backgroundColor: Colors.white.withValues(alpha: 0.03),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
-        padding: EdgeInsets.symmetric(vertical: 13.h),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+        padding: EdgeInsets.symmetric(vertical: 13.0),
         disabledForegroundColor: AppTheme.textSecondary.withValues(alpha: 0.4),
       ),
       icon: Icon(icon, size: 16),
       label: Text(
         label,
         style: TextStyle(
-          fontSize: 13.sp,
+          fontSize: 13.0,
           fontWeight: FontWeight.w600,
           fontFamily: 'Inter',
         ),
@@ -557,10 +567,10 @@ class _ToolBtn extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+        padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
         decoration: BoxDecoration(
           color: isSelected ? color.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.03),
-          borderRadius: BorderRadius.circular(10.r),
+          borderRadius: BorderRadius.circular(10.0),
           border: Border.all(
             color: isSelected ? color.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.08),
             width: isSelected ? 1.5 : 1,
@@ -568,12 +578,12 @@ class _ToolBtn extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 14.sp, color: isSelected ? color : AppTheme.textSecondary),
+            Icon(icon, size: 14.0, color: isSelected ? color : AppTheme.textSecondary),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                fontSize: 11.sp,
+                fontSize: 11.0,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected ? Colors.white : AppTheme.textSecondary,
                 fontFamily: 'SpaceGrotesk',
@@ -605,21 +615,21 @@ class ToolButton extends StatelessWidget {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 10.h),
+        padding: EdgeInsets.symmetric(vertical: 10.0),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10.r),
+          borderRadius: BorderRadius.circular(10.0),
           border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16.sp, color: color),
+            Icon(icon, size: 16.0, color: color),
             const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
-                fontSize: 12.sp,
+                fontSize: 12.0,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
                 fontFamily: 'SpaceGrotesk',
@@ -645,8 +655,8 @@ class PerformanceChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 200.h,
-      padding: EdgeInsets.fromLTRB(16.r, 16.r, 24.r, 8.r),
+      height: 200.0,
+      padding: EdgeInsets.fromLTRB(16.0, 16.0, 24.0, 8.0),
       decoration: AppTheme.glassCard(radius: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -661,7 +671,7 @@ class PerformanceChart extends StatelessWidget {
                       letterSpacing: 1.5,
                     ),
               ),
-              Icon(Icons.query_stats_rounded, color: accentColor, size: 16.sp),
+              Icon(Icons.query_stats_rounded, color: accentColor, size: 16.0),
             ],
           ),
           const SizedBox(height: 20),
@@ -686,7 +696,7 @@ class PerformanceChart extends StatelessWidget {
                       reservedSize: 30,
                       getTitlesWidget: (val, meta) => Text(
                         val.toInt().toString(),
-                        style: TextStyle(color: AppTheme.textMuted, fontSize: 10.sp),
+                        style: TextStyle(color: AppTheme.textMuted, fontSize: 10.0),
                       ),
                     ),
                   ),
@@ -697,7 +707,7 @@ class PerformanceChart extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 8.0),
                         child: Text(
                           val.toInt().toString(),
-                          style: TextStyle(color: AppTheme.textMuted, fontSize: 10.sp),
+                          style: TextStyle(color: AppTheme.textMuted, fontSize: 10.0),
                         ),
                       ),
                     ),

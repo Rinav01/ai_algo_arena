@@ -5,8 +5,8 @@ import 'package:ai_algo_app/core/app_theme.dart';
 import 'package:ai_algo_app/core/nqueens_problem.dart';
 import 'package:ai_algo_app/services/nqueens_solver.dart';
 import 'package:ai_algo_app/widgets/visualizer_widgets.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:ai_algo_app/models/algo_info.dart';
 
 class NQueensVisualizerScreen extends StatefulWidget {
   const NQueensVisualizerScreen({super.key});
@@ -142,7 +142,7 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
               padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
               decoration: BoxDecoration(
                 color: AppTheme.surfaceVariant.withValues(alpha: 0.98),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
                 border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.12))),
               ),
               child: Column(
@@ -151,11 +151,11 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
                 children: [
                   Center(
                     child: Container(
-                      width: 40.w, height: 4.h,
-                      margin: EdgeInsets.only(bottom: 20.h),
+                      width: 40.0, height: 4.0,
+                      margin: EdgeInsets.only(bottom: 20.0),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(2.r),
+                        borderRadius: BorderRadius.circular(2.0),
                       ),
                     ),
                   ),
@@ -173,8 +173,8 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.accent,
                       foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 16.h),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                      padding: EdgeInsets.symmetric(vertical: 16.0),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
                     ),
                     child: const Text('START SOLVER', style: TextStyle(letterSpacing: 1.5, fontWeight: FontWeight.bold)),
                   ),
@@ -194,8 +194,8 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
         Text('ALGORITHM MODE', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted)),
         const SizedBox(height: 12),
         Wrap(
-          spacing: 10.w,
-          runSpacing: 10.h,
+          spacing: 10.0,
+          runSpacing: 10.0,
           children: NQueensSolverMode.values.map((mode) {
             final isSelected = selectedMode == mode;
             return GestureDetector(
@@ -205,10 +205,10 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
                 decoration: BoxDecoration(
                   color: isSelected ? AppTheme.accent.withValues(alpha: 0.15) : AppTheme.surfaceHigh,
-                  borderRadius: BorderRadius.circular(8.r),
+                  borderRadius: BorderRadius.circular(8.0),
                   border: Border.all(color: isSelected ? AppTheme.accent : Colors.white.withValues(alpha: 0.05)),
                 ),
                 child: Text(
@@ -262,7 +262,7 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.all(20.r),
+          padding: EdgeInsets.all(20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -270,6 +270,7 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
                 title: 'N-Queens',
                 subtitle: 'CSP VISUALIZER',
                 onBackTap: () => Navigator.pop(context),
+                info: AlgoInfo.nQueens,
               ),
               const SizedBox(height: 20),
               ValueListenableBuilder<NQueensStep?>(
@@ -345,13 +346,16 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
               final board = step?.board ?? List.filled(boardSize, -1);
               final activeRow = step?.currentRow ?? -1;
 
-              return Container(
-                padding: EdgeInsets.all(12.r),
-                decoration: AppTheme.glassCardAccent(radius: 16),
-                child: GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              return Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: 600.0),
+                  child: Container(
+                    padding: EdgeInsets.all(12.0),
+                    decoration: AppTheme.glassCardAccent(radius: 16),
+                    child: GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: boardSize,
                     mainAxisSpacing: 2,
                     crossAxisSpacing: 2,
@@ -382,17 +386,17 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
                         duration: const Duration(milliseconds: 200),
                         decoration: BoxDecoration(
                           color: cellColor,
-                          borderRadius: BorderRadius.circular(4.r),
+                          borderRadius: BorderRadius.circular(4.0),
                           border: Border.all(
                             color: hasQueen 
                                 ? (isConflict ? AppTheme.error : AppTheme.success) 
                                 : (isActiveRow ? AppTheme.accent.withValues(alpha: 0.3) : Colors.transparent),
-                            width: hasQueen ? 2.w : 1.w,
+                            width: hasQueen ? 2.0 : 1.0,
                           ),
                         ),
                         child: hasQueen ? Center(
                           child: Text('♕', style: TextStyle(
-                            fontSize: 28.sp, 
+                            fontSize: 28.0, 
                             color: isConflict ? AppTheme.error : Colors.white,
                             shadows: [Shadow(color: isConflict ? AppTheme.error : AppTheme.success, blurRadius: 10)],
                           )),
@@ -419,8 +423,10 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
                     );
                   },
                 ),
-              );
-            },
+              ), 
+            ),
+          );
+        },
           ),
         ),
       ],

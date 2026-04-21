@@ -1,12 +1,15 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ai_algo_app/core/app_theme.dart';
 import 'package:ai_algo_app/core/grid_problem.dart';
 import 'package:ai_algo_app/models/grid_node.dart';
+import 'package:ai_algo_app/models/app_settings.dart';
 import 'package:ai_algo_app/services/algorithm_executor.dart';
 import 'package:ai_algo_app/state/grid_controller.dart';
+import 'package:ai_algo_app/state/settings_provider.dart';
 
-class GridVisualizerCanvas extends StatefulWidget {
+class GridVisualizerCanvas extends ConsumerStatefulWidget {
   final GridController controller;
   final AlgorithmExecutor<GridCoordinate>? executor;
   final Color? accentColor;
@@ -27,12 +30,13 @@ class GridVisualizerCanvas extends StatefulWidget {
   });
 
   @override
-  State<GridVisualizerCanvas> createState() => _GridVisualizerCanvasState();
+  ConsumerState<GridVisualizerCanvas> createState() => _GridVisualizerCanvasState();
 }
 
-class _GridVisualizerCanvasState extends State<GridVisualizerCanvas>
+class _GridVisualizerCanvasState extends ConsumerState<GridVisualizerCanvas>
     with SingleTickerProviderStateMixin {
   ui.Picture? _staticGridPicture;
+  AppSettings? _lastSettings;
   
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -140,6 +144,14 @@ class _GridVisualizerCanvasState extends State<GridVisualizerCanvas>
 
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(settingsProvider);
+    
+    // Invalidate if transparency changes
+    if (_lastSettings?.gridTransparency != settings.gridTransparency) {
+       _invalidateStaticPicture();
+       _lastSettings = settings;
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
@@ -160,6 +172,7 @@ class _GridVisualizerCanvasState extends State<GridVisualizerCanvas>
                   accentColor: widget.accentColor ?? AppTheme.accent,
                   pulseValue: _pulseAnimation.value,
                   staticPicture: _staticGridPicture,
+                  settings: settings,
                   onPictureCreated: (picture) {
                     _staticGridPicture = picture;
                   },
@@ -179,6 +192,7 @@ class _GridPainter extends CustomPainter {
   final Color accentColor;
   final double pulseValue;
   final ui.Picture? staticPicture;
+  final AppSettings settings;
   final Function(ui.Picture) onPictureCreated;
 
   _GridPainter({
@@ -187,6 +201,7 @@ class _GridPainter extends CustomPainter {
     required this.accentColor,
     required this.pulseValue,
     required this.staticPicture,
+    required this.settings,
     required this.onPictureCreated,
   });
 
@@ -251,7 +266,7 @@ class _GridPainter extends CustomPainter {
     
     // Grid Lines (Subtle)
     final linePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.03)
+      ..color = Colors.white.withValues(alpha: settings.gridTransparency * 0.1) // Sensitivity to settings
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.5;
       
@@ -326,9 +341,12 @@ class _GridPainter extends CustomPainter {
       ..color = Colors.white
       ..style = PaintingStyle.fill;
       
+    // Sensitivity to settings.neonGlowIntensity
+    final glowValue = pulseValue * settings.neonGlowIntensity * 2.0;
+    
     final pulsePaint = Paint()
       ..color = accentColor.withValues(alpha: 0.8)
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, pulseValue);
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, glowValue.clamp(0.1, 20.0));
       
     final center = Offset(
       current.column * cellWidth + cellWidth / 2,
@@ -344,6 +362,7 @@ class _GridPainter extends CustomPainter {
     return oldDelegate.pulseValue != pulseValue || 
            oldDelegate.staticPicture != staticPicture ||
            oldDelegate.executor?.lastStep != executor?.lastStep ||
-           oldDelegate.controller != controller;
+           oldDelegate.controller != controller ||
+           oldDelegate.settings != settings;
   }
 }

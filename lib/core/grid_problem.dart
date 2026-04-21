@@ -1,6 +1,8 @@
 import 'dart:typed_data';
+import 'dart:math' as math;
 import 'package:ai_algo_app/core/problem_definition.dart';
 import 'package:ai_algo_app/models/grid_node.dart';
+import 'package:ai_algo_app/models/app_settings.dart';
 
 // Coordinate state for grid-based problems
 class GridCoordinate {
@@ -33,6 +35,7 @@ class GridProblem extends Problem<GridCoordinate> {
   final Float32List _weights;
   final GridCoordinate _start;
   final GridCoordinate _goal;
+  final AppSettings settings;
   
   int? _cachedHashCode;
 
@@ -40,6 +43,7 @@ class GridProblem extends Problem<GridCoordinate> {
     required List<List<GridNode>> grid,
     required GridCoordinate start,
     required GridCoordinate goal,
+    this.settings = const AppSettings(),
   }) : rows = grid.length,
        cols = grid[0].length,
        _types = Uint8List(grid.length * grid[0].length),
@@ -78,6 +82,7 @@ class GridProblem extends Problem<GridCoordinate> {
           row: (snapshot['goal'] as dynamic).row as int,
           column: (snapshot['goal'] as dynamic).column as int,
         ),
+        settings = AppSettings.fromJson(snapshot['settings'] as Map<String, dynamic>),
         _grid = null;
 
   @override
@@ -88,6 +93,7 @@ class GridProblem extends Problem<GridCoordinate> {
           cols == other.cols &&
           _start == other._start &&
           _goal == other._goal &&
+          settings == other.settings &&
           _isGridEqual(other);
 
   @override
@@ -95,7 +101,7 @@ class GridProblem extends Problem<GridCoordinate> {
     if (_cachedHashCode != null) return _cachedHashCode!;
     
     // Efficient hashing for flat buffers
-    int hash = _start.hashCode ^ _goal.hashCode;
+    int hash = _start.hashCode ^ _goal.hashCode ^ settings.hashCode;
     hash = Object.hash(hash, rows, cols);
     hash = Object.hash(hash, Object.hashAll(_types));
     // Weights are often 1.0, so hashAll is fine
@@ -127,11 +133,17 @@ class GridProblem extends Problem<GridCoordinate> {
   List<GridCoordinate> getNeighbors(GridCoordinate state) {
     final neighbors = <GridCoordinate>[];
 
-    const directions = [
+    final directions = [
       (-1, 0), // up
       (0, 1),  // right
       (1, 0),  // down
       (0, -1), // left
+      if (settings.allowDiagonalMoves) ...[
+        (-1, -1), // up-left
+        (-1, 1),  // up-right
+        (1, -1),  // down-left
+        (1, 1),   // down-right
+      ]
     ];
 
     for (final (rowOffset, colOffset) in directions) {
@@ -164,20 +176,38 @@ class GridProblem extends Problem<GridCoordinate> {
 
   @override
   double heuristic(GridCoordinate state) {
-    return ((_goal.row - state.row).abs() + (_goal.column - state.column).abs())
-        .toDouble();
+    final dy = (_goal.row - state.row).abs();
+    final dx = (_goal.column - state.column).abs();
+
+    if (settings.allowDiagonalMoves) {
+      // Octile distance: 1 for cardinal, sqrt(2) for diagonal
+      const d1 = 1.0;
+      final d2 = math.sqrt(2.0);
+      return (d1 * (dx + dy) + (d2 - 2 * d1) * math.min(dx, dy)) * settings.heuristicWeight;
+    }
+
+    // Manhattan distance
+    return (dx + dy).toDouble() * settings.heuristicWeight;
   }
 
   @override
   double moveCost(GridCoordinate from, GridCoordinate to) {
     final index = to.row * cols + to.column;
-    return _weights[index];
+    final baseCost = _weights[index];
+    
+    // If diagonal move, multiply by sqrt(2)
+    if (from.row != to.row && from.column != to.column) {
+      return baseCost * math.sqrt(2.0);
+    }
+    
+    return baseCost;
   }
 
   @override
   String stateToString(GridCoordinate state) {
     return '(${state.row},${state.column})';
   }
+
 
   int get walkableNodes {
     int count = 0;

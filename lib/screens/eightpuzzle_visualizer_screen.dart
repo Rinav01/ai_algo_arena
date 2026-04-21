@@ -1,3 +1,4 @@
+import 'package:ai_algo_app/widgets/visualizer_widgets.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:ai_algo_app/core/app_theme.dart';
@@ -5,9 +6,8 @@ import 'package:ai_algo_app/core/eightpuzzle_problem.dart';
 import 'package:ai_algo_app/core/search_algorithms.dart';
 import 'package:ai_algo_app/services/algorithm_executor.dart';
 import 'package:ai_algo_app/core/problem_definition.dart';
-import 'package:ai_algo_app/widgets/visualizer_widgets.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:ai_algo_app/models/algo_info.dart';
 
 class EightPuzzleVisualizerScreen extends StatefulWidget {
   const EightPuzzleVisualizerScreen({super.key});
@@ -316,7 +316,7 @@ class _EightPuzzleVisualizerScreenState
               ),
               decoration: BoxDecoration(
                 color: AppTheme.surfaceVariant.withValues(alpha: 0.98),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
                 border: Border(
                   top: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
                 ),
@@ -327,12 +327,12 @@ class _EightPuzzleVisualizerScreenState
                 children: [
                   Center(
                     child: Container(
-                      width: 40.w,
-                      height: 4.h,
-                      margin: EdgeInsets.only(bottom: 20.h),
+                      width: 40.0,
+                      height: 4.0,
+                      margin: EdgeInsets.only(bottom: 20.0),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(2.r),
+                        borderRadius: BorderRadius.circular(2.0),
                       ),
                     ),
                   ),
@@ -372,7 +372,7 @@ class _EightPuzzleVisualizerScreenState
             children: algorithms.map((algo) {
               final isSelected = selectedAlgorithm == algo;
               return Padding(
-                padding: EdgeInsets.only(right: 12.w),
+                padding: EdgeInsets.only(right: 12.0),
                 child: GestureDetector(
                   onTap: () {
                     if (!isSolving) {
@@ -383,14 +383,14 @@ class _EightPuzzleVisualizerScreenState
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding: EdgeInsets.symmetric(
-                      horizontal: 16.w,
-                      vertical: 10.h,
+                      horizontal: 16.0,
+                      vertical: 10.0,
                     ),
                     decoration: BoxDecoration(
                       color: isSelected
                           ? AppTheme.accent.withValues(alpha: 0.15)
                           : AppTheme.surfaceHigh,
-                      borderRadius: BorderRadius.circular(8.r),
+                      borderRadius: BorderRadius.circular(8.0),
                       border: Border.all(
                         color: isSelected
                             ? AppTheme.accent
@@ -473,9 +473,9 @@ class _EightPuzzleVisualizerScreenState
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accent,
               foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 16.h),
+              padding: EdgeInsets.symmetric(vertical: 16.0),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
+                borderRadius: BorderRadius.circular(12.0),
               ),
             ),
             child: const Text(
@@ -511,6 +511,7 @@ class _EightPuzzleVisualizerScreenState
                 title: '8-Puzzle Solver',
                 subtitle: 'SLIDING TILE VIZ',
                 onBackTap: () => Navigator.pop(context),
+                info: AlgoInfo.eightPuzzle,
               ),
               const SizedBox(height: 20),
 
@@ -558,7 +559,7 @@ class _EightPuzzleVisualizerScreenState
                 children: [
                   Expanded(
                     child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12.w),
+                      padding: EdgeInsets.symmetric(horizontal: 12.0),
                       decoration: AppTheme.glassCard(radius: 12),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
@@ -567,7 +568,7 @@ class _EightPuzzleVisualizerScreenState
                           dropdownColor: AppTheme.surfaceHighest,
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 13.sp,
+                            fontSize: 13.0,
                           ),
                           items: difficulties.keys
                               .map(
@@ -595,11 +596,11 @@ class _EightPuzzleVisualizerScreenState
                       backgroundColor: AppTheme.surfaceHighest,
                       foregroundColor: AppTheme.accentLight,
                       padding: EdgeInsets.symmetric(
-                        horizontal: 16.w,
-                        vertical: 12.h,
+                        horizontal: 16.0,
+                        vertical: 12.0,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
+                        borderRadius: BorderRadius.circular(12.0),
                       ),
                     ),
                   ),
@@ -640,9 +641,9 @@ class _EightPuzzleVisualizerScreenState
               ),
               const SizedBox(height: 12),
               ClipRRect(
-                borderRadius: BorderRadius.circular(16.r),
+                borderRadius: BorderRadius.circular(16.0),
                 child: Container(
-                  padding: EdgeInsets.all(12.r),
+                  padding: EdgeInsets.all(12.0),
                   decoration: AppTheme.glassCardAccent(radius: 16),
                   child: _buildPuzzleGrid(currentState, isInteractive: true),
                 ),
@@ -663,7 +664,7 @@ class _EightPuzzleVisualizerScreenState
               ),
               const SizedBox(height: 12),
               Container(
-                padding: EdgeInsets.all(8.r),
+                padding: EdgeInsets.all(8.0),
                 decoration: AppTheme.glassCard(radius: 12),
                 child: _buildPuzzleGrid(
                   problem.goalState,
@@ -726,20 +727,20 @@ class _EightPuzzleVisualizerScreenState
                             ? AppTheme.success.withValues(alpha: 0.08)
                             : AppTheme.surfaceHigh,
                         borderRadius: BorderRadius.circular(
-                          isInteractive ? 12.r : 6.r,
+                          isInteractive ? 12.0 : 6.0,
                         ),
                         border: Border.all(
                           color: isSolved
                               ? AppTheme.success.withValues(alpha: 0.4)
                               : Colors.white.withValues(alpha: 0.1),
-                          width: 1.w,
+                          width: 1.0,
                         ),
                         boxShadow: isSolved
                             ? [
                                 BoxShadow(
                                   color: AppTheme.success.withValues(alpha: 0.15),
-                                  blurRadius: 15.r,
-                                  spreadRadius: -2.r,
+                                  blurRadius: 15.0,
+                                  spreadRadius: -2.0,
                                 )
                               ]
                             : null,

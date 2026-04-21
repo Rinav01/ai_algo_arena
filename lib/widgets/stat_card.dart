@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:ai_algo_app/core/app_theme.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// Glassmorphism stat card for the Algorithm Battle screen.
 class StatCard extends StatelessWidget {
@@ -44,27 +43,27 @@ class StatCard extends StatelessWidget {
             children: [
               // Left accent bar
               Container(
-                width: 3.w,
+                width: 3.0,
                 decoration: BoxDecoration(
                   color: accent,
                   borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(16.r),
-                    bottomLeft: Radius.circular(16.r),
+                    topLeft: Radius.circular(16.0),
+                    bottomLeft: Radius.circular(16.0),
                   ),
                 ),
               ),
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.all(18.r),
+                  padding: EdgeInsets.all(18.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        width: 36.w,
-                        height: 36.h,
+                        width: 36.0,
+                        height: 36.0,
                         decoration: BoxDecoration(
                           color: accent.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8.r),
+                          borderRadius: BorderRadius.circular(8.0),
                           border: Border.all(color: accent.withValues(alpha: 0.35)),
                         ),
                         child: Icon(icon, color: accent, size: 18),

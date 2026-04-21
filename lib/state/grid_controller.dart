@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:ai_algo_app/models/grid_node.dart';
+import 'package:ai_algo_app/models/app_settings.dart';
 
 class GridController extends ChangeNotifier {
   GridController({
@@ -262,7 +263,7 @@ class GridController extends ChangeNotifier {
 
   /// Exports an optimized, flat representation of the grid for background processing.
   /// This avoids copying complex object graphs into isolates.
-  Map<String, dynamic> toOptimizedSnapshot() {
+  Map<String, dynamic> toOptimizedSnapshot(AppSettings settings) {
     final types = Uint8List(rows * columns);
     final weights = Float32List(rows * columns);
     
@@ -282,6 +283,7 @@ class GridController extends ChangeNotifier {
       'weights': weights,
       'start': (row: _start.row, column: _start.column),
       'goal': _goal != null ? (row: _goal!.row, column: _goal!.column) : null,
+      'settings': settings.toJson(),
     };
   }
 }

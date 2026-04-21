@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:ai_algo_app/models/grid_node.dart';
 import 'package:ai_algo_app/state/grid_controller.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class ControlPanel extends StatelessWidget {
   const ControlPanel({super.key, required this.controller});
@@ -13,7 +12,7 @@ class ControlPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: EdgeInsets.all(20.r),
+        padding: EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -151,21 +150,21 @@ class _LegendChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+      padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(16.0),
         border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 12.w,
-            height: 12.h,
+            width: 12.0,
+            height: 12.0,
             decoration: BoxDecoration(
               color: color,
-              borderRadius: BorderRadius.circular(99.r),
+              borderRadius: BorderRadius.circular(99.0),
             ),
           ),
           const SizedBox(width: 8),
