@@ -319,8 +319,8 @@ class AlgorithmExecutor<State> with ChangeNotifier {
     
     // Get settings from snapshot or problem
     AppSettings settings = const AppSettings();
-    if (_problemSnapshot != null && _problemSnapshot!.containsKey('settings')) {
-      settings = AppSettings.fromJson(_problemSnapshot!['settings']);
+    if (_problemSnapshot != null && _problemSnapshot.containsKey('settings')) {
+      settings = AppSettings.fromJson(_problemSnapshot['settings']);
     } else if (_problem is GridProblem) {
       settings = (_problem as GridProblem).settings;
     }

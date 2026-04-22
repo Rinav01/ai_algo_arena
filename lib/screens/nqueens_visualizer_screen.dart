@@ -270,7 +270,8 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
                 title: 'N-Queens',
                 subtitle: 'CSP VISUALIZER',
                 onBackTap: () => Navigator.pop(context),
-                info: AlgoInfo.nQueens,
+                comparisonInfos: AlgoInfo.nQueens,
+                initialKey: selectedMode.label,
               ),
               const SizedBox(height: 20),
               ValueListenableBuilder<NQueensStep?>(

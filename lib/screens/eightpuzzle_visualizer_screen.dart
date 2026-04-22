@@ -511,7 +511,8 @@ class _EightPuzzleVisualizerScreenState
                 title: '8-Puzzle Solver',
                 subtitle: 'SLIDING TILE VIZ',
                 onBackTap: () => Navigator.pop(context),
-                info: AlgoInfo.eightPuzzle,
+                comparisonInfos: AlgoInfo.eightPuzzle,
+                initialKey: selectedAlgorithm,
               ),
               const SizedBox(height: 20),
 

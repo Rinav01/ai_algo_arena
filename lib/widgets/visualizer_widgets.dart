@@ -217,12 +217,16 @@ class VisualizerHeader extends StatelessWidget {
     required this.subtitle,
     this.onBackTap,
     this.info,
+    this.comparisonInfos,
+    this.initialKey,
   });
 
   final String title;
   final String subtitle;
   final VoidCallback? onBackTap;
   final AlgoInfo? info;
+  final Map<String, AlgoInfo>? comparisonInfos;
+  final String? initialKey;
 
   @override
   Widget build(BuildContext context) {
@@ -260,9 +264,14 @@ class VisualizerHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        if (info != null)
+        if (info != null || comparisonInfos != null)
           GestureDetector(
-            onTap: () => AlgoInfoModal.show(context, info!),
+            onTap: () => AlgoInfoModal.show(
+              context,
+              info: info,
+              comparisonInfos: comparisonInfos,
+              initialKey: initialKey,
+            ),
             child: Container(
               width: 36.0,
               height: 36.0,

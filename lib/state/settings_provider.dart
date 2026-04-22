@@ -1,7 +1,5 @@
 import 'dart:convert';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ai_algo_app/models/app_settings.dart';
 import 'package:ai_algo_app/services/stats_service.dart';
 
