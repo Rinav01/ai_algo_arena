@@ -11,11 +11,11 @@ import 'package:ai_algo_app/services/algorithm_executor.dart';
 import 'package:ai_algo_app/services/battle_analyzer.dart';
 import 'package:ai_algo_app/state/grid_controller.dart';
 import 'package:ai_algo_app/services/stats_service.dart';
-import 'package:ai_algo_app/widgets/battle_results_panel.dart';
 import 'package:ai_algo_app/widgets/grid_visualizer_canvas.dart';
 import 'package:ai_algo_app/widgets/visualizer_widgets.dart';
 import 'package:ai_algo_app/state/settings_provider.dart';
 import 'package:ai_algo_app/models/algo_info.dart';
+import 'package:ai_algo_app/services/maze_generator.dart';
 
 class AlgorithmBattleScreen extends ConsumerStatefulWidget {
   final List<List<GridNode>>? initialGrid;
@@ -38,11 +38,13 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
   String _algoBId = 'A*';
   AlgorithmExecutor<GridCoordinate>? _executorA;
   AlgorithmExecutor<GridCoordinate>? _executorB;
+  bool _isRunning = false;
+  bool _showVictoryAnimation = false;
+  String? _winnerId;
   AlgorithmStep<GridCoordinate>? _stepA;
   AlgorithmStep<GridCoordinate>? _stepB;
   AlgorithmMetrics? _metricsA;
   AlgorithmMetrics? _metricsB;
-  bool _isRunning = false;
   late final GridController _controller;
 
   @override
@@ -91,9 +93,9 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
       _stepB = null;
       _metricsA = null;
       _metricsB = null;
+      _winnerId = null;
+      _showVictoryAnimation = false;
     });
-
-    debugPrint('Battle starting: $_algoAId vs $_algoBId');
 
     await _executorA?.dispose();
     await _executorB?.dispose();
@@ -129,15 +131,10 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
     AlgorithmStep<GridCoordinate>? lastStepA;
     AlgorithmStep<GridCoordinate>? lastStepB;
 
-    // Listeners for real-time updates are handled by the GridVisualizerCanvas directly.
-    // We only need to listen for completion/metrics updates at the screen level.
-
     try {
       _executorA!.stepStream.listen(
         (step) {
           lastStepA = step;
-          if (!mounted) return;
-          // Local state update not needed here as Canvas listens to executor
           if (_stepA == null) setState(() => _stepA = step);
         },
         onDone: () {
@@ -167,8 +164,6 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
       _executorB!.stepStream.listen(
         (step) {
           lastStepB = step;
-          if (!mounted) return;
-          // Local state update not needed here as Canvas listens to executor
           if (_stepB == null) setState(() => _stepB = step);
         },
         onDone: () {
@@ -198,33 +193,63 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
       await Future.wait([_executorA!.start(), _executorB!.start()]);
       await Future.wait([completerA.future, completerB.future]);
 
-      // Record stats after completion
       if (mounted) {
-        String? winnerName;
+        String? winnerAlgo;
         if (_metricsA != null && _metricsB != null) {
-          winnerName = BattleResult(algorithm1: _metricsA!, algorithm2: _metricsB!).winner.algorithmName;
+          final result = BattleResult(algorithm1: _metricsA!, algorithm2: _metricsB!);
+          winnerAlgo = result.winner.algorithmName;
+          
+          setState(() {
+            _winnerId = (winnerAlgo == _algoAId) ? 'A' : 'B';
+            _showVictoryAnimation = true;
+          });
+
+          await Future.delayed(const Duration(seconds: 4));
+          
+          if (mounted) {
+            setState(() => _showVictoryAnimation = false);
+            _showBattleAnalytics(result);
+          }
         }
-        ref.read(arenaStatsProvider.notifier).recordBattleCompletion(winnerName);
+        ref.read(arenaStatsProvider.notifier).recordBattleCompletion(winnerAlgo);
       }
     } finally {
-      if (mounted) setState(() => _isRunning = false);
+      if (mounted) {
+        setState(() => _isRunning = false);
+      }
     }
   }
 
-  void _randomizeMaze() {
-    _controller.clearWalls();
-    final randomSeed = DateTime.now().millisecondsSinceEpoch % 100;
-    for (int i = 0; i < randomSeed; i++) {
-      final row = (i * 7) % _controller.rows;
-      final col = (i * 11) % _controller.columns;
-      _controller.handleCellInteraction(row, col);
-    }
+  void _showBattleAnalytics(BattleResult result) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => _BattleAnalyticsSheet(result: result),
+    );
+  }
 
+  void _randomizeMaze() {
+    MazeGenerator.generatePrims(_controller, includeWeights: true);
     setState(() {
       _stepA = null;
       _stepB = null;
       _metricsA = null;
       _metricsB = null;
+      _winnerId = null;
+      _showVictoryAnimation = false;
+    });
+  }
+
+  void _resetArena() {
+    _controller.resetGrid();
+    setState(() {
+      _stepA = null;
+      _stepB = null;
+      _metricsA = null;
+      _metricsB = null;
+      _winnerId = null;
+      _showVictoryAnimation = false;
     });
   }
 
@@ -236,163 +261,203 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
     super.dispose();
   }
 
-  // Default step delay for executors
   Duration get _stepDelay => const Duration(milliseconds: 5);
 
   @override
   Widget build(BuildContext context) {
-    bool? isAWinner;
-    if (_metricsA != null && _metricsB != null) {
-      isAWinner =
-          BattleResult(algorithm1: _metricsA!, algorithm2: _metricsB!).winner ==
-          _metricsA;
-    }
+    final bool isAWinner = _winnerId == 'A';
+    final bool isBWinner = _winnerId == 'B';
 
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header
-              VisualizerHeader(
-                title: 'Algorithm Battle',
-                subtitle: 'SHOWPIECE ARENA',
-                onBackTap: () => Navigator.pop(context),
-                info: AlgoInfo.battleArena,
-              ),
-              const SizedBox(height: 20),
-
-              // Algorithm Selectors
-              _buildSelectors(),
-              const SizedBox(height: 16),
-
-              // Tool Selector
-              AnimatedBuilder(
-                animation: _controller,
-                builder: (context, _) => Opacity(
-                  opacity: _isRunning ? 0.5 : 1.0,
-                  child: IgnorePointer(
-                    ignoring: _isRunning,
-                    child: ToolSelector(
-                      selectedTool: _controller.selectedTool,
-                      onToolSelected: (tool) => _controller.setTool(tool as PaintTool),
-                      isSolving: _isRunning,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              BattleResultsPanel(
-                algorithmAMetrics: _metricsA,
-                algorithmBMetrics: _metricsB,
-                algorithmAName: _algoAId,
-                algorithmBName: _algoBId,
-                isLoading: _isRunning,
-              ),
-              const SizedBox(height: 16),
-
-              AnimatedBuilder(
-                animation: _controller,
-                builder: (context, _) => Column(
-                  children: [
-                    _buildIndividualGrid(
-                      label: 'PLAYER 1: $_algoAId',
-                      step: _stepA,
-                      executor: _executorA,
-                      color: AppTheme.accent,
-                      isWinner: isAWinner == true,
-                    ),
-                    const SizedBox(height: 24),
-                    _buildIndividualGrid(
-                      label: 'PLAYER 2: $_algoBId',
-                      step: _stepB,
-                      executor: _executorB,
-                      color: AppTheme.error,
-                      isWinner: isAWinner == false,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              Row(
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: GlassStatCard(
-                      label: '$_algoAId EXPLORED',
-                      value: _executorA?.exploredSet.length ?? 0,
-                    ),
+                  VisualizerHeader(
+                    title: 'Algorithm Battle',
+                    subtitle: 'SHOWPIECE ARENA',
+                    onBackTap: () => Navigator.pop(context),
+                    info: AlgoInfo.battleArena,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GlassStatCard(
-                      label: '$_algoBId EXPLORED',
-                      value: _executorB?.exploredSet.length ?? 0,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GlassStatCard(
-                      label: 'STATUS',
-                      value: _isRunning ? 'BATTLING' : 'READY',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildControlButton(
-                    icon: Icons.replay_rounded,
-                    onTap: _isRunning ? () {} : _randomizeMaze,
-                  ),
-                  const SizedBox(width: 12),
-                  _buildControlButton(
-                    icon: Icons.layers_clear_rounded,
-                    onTap: _isRunning ? () {} : () => _controller.clearWalls(),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: _isRunning ? null : _runBattle,
-                      child: Container(
-                        height: 56.0,
-                        decoration: BoxDecoration(
-                          gradient: AppTheme.ctaGradient,
-                          borderRadius: BorderRadius.circular(16.0),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.accent.withValues(alpha: 0.3),
-                              blurRadius: 16,
-                              spreadRadius: -4,
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Text(
-                            _isRunning ? 'COMPUTING...' : 'START BATTLE',
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  letterSpacing: 2,
-                                  fontSize: 16.0,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                          ),
+                  const SizedBox(height: 20),
+                  _buildSelectors(),
+                  const SizedBox(height: 16),
+                  AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, _) => Opacity(
+                      opacity: _isRunning ? 0.5 : 1.0,
+                      child: IgnorePointer(
+                        ignoring: _isRunning,
+                        child: ToolSelector(
+                          selectedTool: _controller.selectedTool,
+                          onToolSelected: (tool) => _controller.setTool(tool as PaintTool),
+                          isSolving: _isRunning,
                         ),
                       ),
                     ),
                   ),
+                  const SizedBox(height: 24),
+                  AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, _) => Column(
+                      children: [
+                        _buildIndividualGrid(
+                          label: 'PLAYER 1: $_algoAId',
+                          step: _stepA,
+                          executor: _executorA,
+                          color: AppTheme.accent,
+                          isWinner: isAWinner,
+                        ),
+                        const SizedBox(height: 24),
+                        _buildIndividualGrid(
+                          label: 'PLAYER 2: $_algoBId',
+                          step: _stepB,
+                          executor: _executorB,
+                          color: AppTheme.error,
+                          isWinner: isBWinner,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GlassStatCard(
+                          label: '$_algoAId EXPLORED',
+                          value: _executorA?.exploredSet.length ?? 0,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: GlassStatCard(
+                          label: '$_algoBId EXPLORED',
+                          value: _executorB?.exploredSet.length ?? 0,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: GlassStatCard(
+                          label: 'STATUS',
+                          value: _isRunning ? 'BATTLING' : 'READY',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildControlButton(
+                        icon: Icons.auto_awesome_rounded,
+                        onTap: _isRunning ? () {} : _randomizeMaze,
+                        tooltip: 'Randomize Arena',
+                      ),
+                      const SizedBox(width: 12),
+                      _buildControlButton(
+                        icon: Icons.restart_alt_rounded,
+                        onTap: _isRunning ? () {} : _resetArena,
+                        tooltip: 'Clear Grid',
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: _isRunning ? null : _runBattle,
+                          child: Container(
+                            height: 56.0,
+                            decoration: BoxDecoration(
+                              gradient: AppTheme.ctaGradient,
+                              borderRadius: BorderRadius.circular(16.0),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.accent.withValues(alpha: 0.3),
+                                  blurRadius: 16,
+                                  spreadRadius: -4,
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Text(
+                                _isRunning ? 'COMPUTING...' : 'START BATTLE',
+                                style: Theme.of(context).textTheme.labelLarge
+                                    ?.copyWith(
+                                      color: Colors.white,
+                                      letterSpacing: 2,
+                                      fontSize: 16.0,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
+            ),
+            
+            // Victory Overlay
+            if (_showVictoryAnimation && _winnerId != null)
+              Positioned.fill(
+                child: TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 600),
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  builder: (context, value, child) {
+                    return Container(
+                      color: Colors.black.withValues(alpha: 0.7 * value),
+                      child: Center(
+                        child: Opacity(
+                          opacity: value,
+                          child: Transform.scale(
+                            scale: 0.8 + (0.2 * value),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.emoji_events_rounded,
+                                  size: 80,
+                                  color: _winnerId == 'A' ? AppTheme.accent : AppTheme.error,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  '${_winnerId == 'A' ? _algoAId : _algoBId} WINS!',
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 2,
+                                    shadows: [
+                                      Shadow(
+                                        color: (_winnerId == 'A' ? AppTheme.accent : AppTheme.error).withValues(alpha: 0.5),
+                                        blurRadius: 20,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'SUPERIOR PERFORMANCE',
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Colors.white60,
+                                    letterSpacing: 4,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -421,7 +486,7 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
     final color = isPlayerA ? AppTheme.accent : AppTheme.error;
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12.0),
@@ -470,13 +535,13 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
     required Color color,
     bool isWinner = false,
   }) {
-    final bool isLoser = !isWinner && _metricsA != null && _metricsB != null;
+    final bool isWinningNow = isWinner && _showVictoryAnimation;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.only(left: 4.0, bottom: 8.0),
+          padding: const EdgeInsets.only(left: 4.0, bottom: 8.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -490,14 +555,21 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
               ),
               if (isWinner)
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
                   decoration: BoxDecoration(
                     color: color,
                     borderRadius: BorderRadius.circular(4.0),
+                    boxShadow: isWinningNow ? [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.6),
+                        blurRadius: 12,
+                        spreadRadius: 2,
+                      )
+                    ] : null,
                   ),
                   child: Text(
-                    'WINNER',
-                    style: TextStyle(
+                    isWinningNow ? 'VICTORY' : 'WINNER',
+                    style: const TextStyle(
                       color: Colors.black,
                       fontSize: 10.0,
                       fontWeight: FontWeight.bold,
@@ -507,37 +579,46 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
             ],
           ),
         ),
-        Opacity(
-          opacity: isLoser ? 0.4 : 1.0,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16.0),
-              boxShadow: isWinner
-                  ? [
-                      BoxShadow(
-                        color: color.withValues(alpha: 0.3),
-                        blurRadius: 30,
-                        spreadRadius: 6,
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Container(
-              decoration: AppTheme.glassCard(
-                radius: 16,
-                borderColor: isWinner
-                    ? color.withValues(alpha: 0.8)
-                    : color.withValues(alpha: 0.2),
-              ),
-              padding: EdgeInsets.all(8.0),
-              child: AspectRatio(
-                aspectRatio: 25 / 15, // Match GridController native default size
-                child: GridVisualizerCanvas(
-                  controller: _controller,
-                  executor: executor,
-                  accentColor: color,
-                  isInteractive: !_isRunning,
+        TweenAnimationBuilder<double>(
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.elasticOut,
+          tween: Tween(begin: 1.0, end: isWinningNow ? 1.04 : 1.0),
+          builder: (context, scale, child) {
+            return Transform.scale(
+              scale: scale,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 400),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16.0),
+                  boxShadow: isWinner
+                      ? [
+                          BoxShadow(
+                            color: color.withValues(alpha: isWinningNow ? 0.5 : 0.3),
+                            blurRadius: isWinningNow ? 40 : 30,
+                            spreadRadius: isWinningNow ? 10 : 6,
+                          ),
+                        ]
+                      : null,
                 ),
+                child: child,
+              ),
+            );
+          },
+          child: Container(
+            decoration: AppTheme.glassCard(
+              radius: 16,
+              borderColor: isWinner
+                  ? color.withValues(alpha: 0.8)
+                  : color.withValues(alpha: 0.2),
+            ),
+            padding: const EdgeInsets.all(8.0),
+            child: AspectRatio(
+              aspectRatio: 25 / 15,
+              child: GridVisualizerCanvas(
+                controller: _controller,
+                executor: executor,
+                accentColor: color,
+                isInteractive: !_isRunning && !_showVictoryAnimation,
               ),
             ),
           ),
@@ -549,18 +630,205 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
   Widget _buildControlButton({
     required IconData icon,
     required VoidCallback onTap,
+    String? tooltip,
   }) {
+    Widget child = Container(
+      width: 56.0,
+      height: 56.0,
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceHigh,
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Icon(icon, color: AppTheme.accentLight, size: 28),
+    );
+
+    if (tooltip != null) {
+      child = Tooltip(message: tooltip, child: child);
+    }
+
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 56.0,
-        height: 56.0,
-        decoration: BoxDecoration(
-          color: AppTheme.surfaceHigh,
-          borderRadius: BorderRadius.circular(16.0),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      child: child,
+    );
+  }
+}
+
+class _BattleAnalyticsSheet extends StatelessWidget {
+  final BattleResult result;
+
+  const _BattleAnalyticsSheet({required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceLow,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'BATTLE ANALYTICS',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              letterSpacing: 4,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.accentLight,
+            ),
+          ),
+          const SizedBox(height: 32),
+          _buildMetricRow(
+            context,
+            'TIME ELAPSED',
+            '${result.algorithm1.executionTime.inMilliseconds}ms',
+            '${result.algorithm2.executionTime.inMilliseconds}ms',
+            result.winner == result.algorithm1,
+          ),
+          const SizedBox(height: 16),
+          _buildMetricRow(
+            context,
+            'NODES EXPLORED',
+            result.algorithm1.totalSteps.toString(),
+            result.algorithm2.totalSteps.toString(),
+            result.algorithm1.totalSteps < result.algorithm2.totalSteps,
+          ),
+          const SizedBox(height: 16),
+          _buildMetricRow(
+            context,
+            'PATH LENGTH',
+            result.algorithm1.pathCost.toInt().toString(),
+            result.algorithm2.pathCost.toInt().toString(),
+            result.algorithm1.pathCost <= result.algorithm2.pathCost,
+          ),
+          const SizedBox(height: 32),
+          Text(
+            'KEY INSIGHTS',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(letterSpacing: 2),
+          ),
+          const SizedBox(height: 12),
+          ...result.getAnalysisInsights().map((insight) => Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(insight.icon, size: 16, color: AppTheme.accentLight),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      insight.text,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: AppTheme.primaryButton(),
+              child: const Text('DISMISS'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricRow(BuildContext context, String label, String valA, String valB, bool isAWinner) {
+    return Column(
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelSmall),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _MetricPill(
+                value: valA,
+                color: AppTheme.accent,
+                isBetter: isAWinner,
+                label: result.algorithm1.algorithmName,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _MetricPill(
+                value: valB,
+                color: AppTheme.error,
+                isBetter: !isAWinner,
+                label: result.algorithm2.algorithmName,
+              ),
+            ),
+          ],
         ),
-        child: Icon(icon, color: AppTheme.accentLight, size: 28),
+      ],
+    );
+  }
+}
+
+class _MetricPill extends StatelessWidget {
+  final String value;
+  final String label;
+  final Color color;
+  final bool isBetter;
+
+  const _MetricPill({
+    required this.value,
+    required this.label,
+    required this.color,
+    required this.isBetter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isBetter ? color : color.withValues(alpha: 0.1),
+          width: isBetter ? 2 : 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isBetter ? Colors.white : Colors.white.withValues(alpha: 0.5),
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: color.withValues(alpha: 0.7),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,4 +1,4 @@
-import 'package:ai_algo_app/core/maze_generators.dart';
+import 'package:ai_algo_app/services/maze_generator.dart';
 import 'package:ai_algo_app/screens/algorithm_battle_screen.dart';
 import 'package:ai_algo_app/widgets/grid_visualizer_canvas.dart';
 import 'package:ai_algo_app/widgets/visualizer_widgets.dart';
@@ -256,11 +256,10 @@ class _PathfindingVisualizerScreenState
     if (_isSolving) return;
     _reset();
     
-    final generator = MazeGenerator();
-    generator.generateRandomizedPrims(_controller);
+    MazeGenerator.generatePrims(_controller, includeWeights: true);
     
     setState(() {
-      _statusMessage = 'Maze generated (Randomized Prim\'s + Weights)';
+      _statusMessage = 'Maze generated (Randomized Prim\'s)';
     });
   }
 

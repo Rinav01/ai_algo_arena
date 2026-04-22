@@ -180,8 +180,8 @@ class GridController extends ChangeNotifier {
   }
 
   // Public method to set node type (used by maze generator)
-  void setNodeType(int row, int column, NodeType type) {
-    _setNodeType(row, column, type);
+  void setNodeType(int row, int column, NodeType type, {double weight = 1.0}) {
+    _setNodeType(row, column, type, weight: weight);
     notifyListeners();
   }
 

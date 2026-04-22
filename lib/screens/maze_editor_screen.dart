@@ -7,7 +7,7 @@ import 'package:ai_algo_app/core/search_algorithms.dart';
 import 'package:ai_algo_app/services/algorithm_executor.dart';
 import 'package:ai_algo_app/core/problem_definition.dart';
 import 'package:ai_algo_app/core/app_theme.dart';
-import 'package:ai_algo_app/core/maze_generators.dart';
+import 'package:ai_algo_app/services/maze_generator.dart';
 
 import 'package:ai_algo_app/widgets/grid_visualizer_canvas.dart';
 
@@ -276,8 +276,7 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
 
   // Generate a random maze using Prim's algorithm
   void _generateRandomMaze() {
-    final generator = MazeGenerator();
-    generator.generateRandomizedPrims(_controller);
+    MazeGenerator.generatePrims(_controller, includeWeights: true);
     setState(() {});
   }
 

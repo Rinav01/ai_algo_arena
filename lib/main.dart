@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'core/app_theme.dart';
 import 'screens/home_screen.dart';
+import 'screens/splash_screen.dart';
 import 'screens/pathfinding_visualizer_screen.dart';
 import 'screens/algorithm_battle_screen.dart';
 import 'screens/eightpuzzle_visualizer_screen.dart';
@@ -80,8 +81,9 @@ class AiAlgoApp extends StatelessWidget {
           title: 'AI Algorithm Arena',
           debugShowCheckedModeBanner: false,
           theme: theme,
-          home: const HomeScreen(),
+          home: const SplashScreen(),
           routes: {
+            '/splash':    (_) => const SplashScreen(),
             '/home':      (_) => const HomeScreen(),
             '/battle':    (_) => const AlgorithmBattleScreen(),
             '/eightpuzzle':(_) => const EightPuzzleVisualizerScreen(),
