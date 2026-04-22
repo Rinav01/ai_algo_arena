@@ -48,6 +48,10 @@ class ArenaBottomNavBar extends StatelessWidget {
                   label: item.label,
                   isActive: isActive,
                   onTap: () {
+                    if (item.label == 'Ranks') {
+                      _showComingSoonDialog(context, 'Leaderboards');
+                      return;
+                    }
                     if (!isActive) {
                       Navigator.pushNamed(
                           context, item.route);
@@ -104,24 +108,85 @@ class _NavItem extends StatelessWidget {
               color: isActive ? AppTheme.accent : AppTheme.textMuted,
             ),
             SizedBox(height: math.min(4.0, 6.0)),
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: isActive ? AppTheme.accentLight : AppTheme.textMuted,
-                        fontSize: math.min(10.0, 14.0),
-                        letterSpacing: 0.5,
-                      ),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: isActive ? AppTheme.accentLight : AppTheme.textMuted,
+                            fontSize: math.min(10.0, 14.0),
+                            letterSpacing: 0.5,
+                          ),
+                    ),
+                  ),
                 ),
-              ),
+                if (label == 'Ranks')
+                  Positioned(
+                    top: -4,
+                    right: -12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accent,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'SOON',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 6,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ],
         ),
       ),
     );
   }
+}
+
+void _showComingSoonDialog(BuildContext context, String feature) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: AppTheme.surfaceLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: AppTheme.accent.withValues(alpha: 0.2)),
+      ),
+      title: Row(
+        children: [
+          const Icon(Icons.rocket_launch_rounded, color: AppTheme.accent),
+          const SizedBox(width: 12),
+          Text(
+            'Coming Soon',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+      content: Text(
+        '$feature is currently under development. We\'re working hard to bring you a premium experience!',
+        style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('EXCITING!', style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.bold)),
+        ),
+      ],
+    ),
+  );
 }

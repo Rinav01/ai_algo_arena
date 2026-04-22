@@ -9,7 +9,6 @@ import 'screens/pathfinding_visualizer_screen.dart';
 import 'screens/algorithm_battle_screen.dart';
 import 'screens/eightpuzzle_visualizer_screen.dart';
 import 'screens/nqueens_visualizer_screen.dart';
-import 'screens/maze_editor_screen.dart';
 import 'screens/settings_screen.dart';
 import 'services/stats_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -88,7 +87,6 @@ class AiAlgoApp extends StatelessWidget {
             '/battle':    (_) => const AlgorithmBattleScreen(),
             '/eightpuzzle':(_) => const EightPuzzleVisualizerScreen(),
             '/nqueens':   (_) => const NQueensVisualizerScreen(),
-            '/maze':      (_) => const MazeEditorScreen(),
             '/settings':  (_) => const SettingsScreen(),
           },
           // Named routes that need parameters use onGenerateRoute

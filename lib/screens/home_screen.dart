@@ -289,6 +289,7 @@ class _AlgoInfo {
   final IconData icon;
   final Color color;
   final String route;
+  final bool isComingSoon;
 
   const _AlgoInfo({
     required this.name,
@@ -297,6 +298,7 @@ class _AlgoInfo {
     required this.icon,
     required this.color,
     required this.route,
+    this.isComingSoon = false,
   });
 }
 
@@ -337,7 +339,7 @@ const _algorithmsByCategory = <int, List<_AlgoInfo>>{
   3: [ // Maze
     _AlgoInfo(name: 'Maze Gen', subtitle: 'Procedural Maze',
         difficulty: 'MEDIUM', icon: Icons.route_rounded,
-        color: AppTheme.cyan, route: '/maze'),
+        color: AppTheme.cyan, route: '/maze', isComingSoon: true),
   ],
 };
 
@@ -356,7 +358,6 @@ class _AlgoCard extends StatelessWidget {
     };
 
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, algo.route),
       child: RepaintBoundary(
         child: Container(
           decoration: AppTheme.glassCard(radius: 16),
@@ -444,14 +445,43 @@ class _AlgoCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                // Coming Soon Badge
+                if (algo.isComingSoon)
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accent.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(6),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.accent.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        'ARRIVING SOON',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                  ),
                 // Tap ripple overlay
                 Positioned.fill(
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16.0),
-                      onTap: () =>
-                          Navigator.pushNamed(context, algo.route),
+                      onTap: algo.isComingSoon
+                          ? () => _showComingSoonDialog(context, algo.name)
+                          : () => Navigator.pushNamed(context, algo.route),
                       splashColor:
                           algo.color.withValues(alpha: 0.12),
                       highlightColor:
@@ -703,4 +733,40 @@ class _NodeGraphPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_NodeGraphPainter old) => false; // Static drawing, handled by Opacity
+}
+
+void _showComingSoonDialog(BuildContext context, String feature) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: AppTheme.surfaceLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: AppTheme.accent.withValues(alpha: 0.2)),
+      ),
+      title: Row(
+        children: [
+          const Icon(Icons.rocket_launch_rounded, color: AppTheme.accent),
+          const SizedBox(width: 12),
+          Text(
+            'Coming Soon',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+      content: Text(
+        '$feature is currently under development. We\'re working hard to bring you a premium experience!',
+        style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('EXCITING!', style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.bold)),
+        ),
+      ],
+    ),
+  );
 }
