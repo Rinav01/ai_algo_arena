@@ -9,11 +9,7 @@ class AnalysisInsight {
   final InsightType type;
   final IconData icon;
 
-  AnalysisInsight({
-    required this.text,
-    required this.type,
-    required this.icon,
-  });
+  AnalysisInsight({required this.text, required this.type, required this.icon});
 }
 
 /// Metrics for a single algorithm run
@@ -55,15 +51,16 @@ class AlgorithmMetrics {
     // 1. Efficiency: Useful path nodes vs total explored (Weight: 60%)
     // 2. Parsimony: Total nodes explored (Weight: 20%)
     // 3. Optimality: How close to "perfect" the path is (Weight: 20%)
-    
+
     final efficiencyPart = efficiencyScore.clamp(0.0, 1.0) * 60;
-    
+
     // Parsimony: Penalize massive exploration
     final parsimonyRatio = (path.length / (exploredStates.length + 1));
     final parsimonyPart = (parsimonyRatio.clamp(0.0, 1.0)) * 20;
-    
+
     // For grid problems, moveCost is usually length, but we use pathCost for flexibility
-    final optimalityPart = 20.0; // Currently assuming optimal if foundPath, can be refined
+    final optimalityPart =
+        20.0; // Currently assuming optimal if foundPath, can be refined
 
     return efficiencyPart + parsimonyPart + optimalityPart;
   }
@@ -114,17 +111,18 @@ class BattleResult {
   /// Victory margin as percentage (based on nodes explored reduction)
   double get victoryMargin {
     if (!algorithm1.foundPath || !algorithm2.foundPath) return 0.0;
-    
+
     final wNodes = winner.exploredStates.length;
     final lNodes = loser.exploredStates.length;
-    
+
     if (lNodes == 0) return 0.0;
     return (((lNodes - wNodes) / lNodes) * 100).abs();
   }
 
   /// Detailed comparison report
   String getDetailedReport() {
-    const separator = '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+    const separator =
+        '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
 
     final header =
         '''
@@ -170,7 +168,7 @@ $analysis
 
   String _generateAnalysis() {
     final insights = getAnalysisInsights();
-    
+
     return '''
 ║ ANALYSIS:                                                  ║
 ║${'─' * 58}║
@@ -182,13 +180,16 @@ ${insights.map((insight) => '║ • ${insight.text.padRight(56)} ║').join('\n
   List<AnalysisInsight> getAnalysisInsights() {
     final insights = <AnalysisInsight>[];
 
-    final nodeDiff = (algorithm1.exploredStates.length - algorithm2.exploredStates.length).abs();
+    final nodeDiff =
+        (algorithm1.exploredStates.length - algorithm2.exploredStates.length)
+            .abs();
     final lNodes = loser.exploredStates.length;
     final nodePercent = lNodes > 0 ? (nodeDiff / lNodes * 100) : 0.0;
-    
+
     insights.add(
       AnalysisInsight(
-        text: '${winner.algorithmName} reduced exploration by ${nodePercent.toStringAsFixed(1)}%',
+        text:
+            '${winner.algorithmName} reduced exploration by ${nodePercent.toStringAsFixed(1)}%',
         type: InsightType.winner,
         icon: Icons.auto_graph_rounded,
       ),
@@ -207,7 +208,8 @@ ${insights.map((insight) => '║ • ${insight.text.padRight(56)} ║').join('\n
         final costDiff = (algorithm1.pathCost - algorithm2.pathCost).abs();
         insights.add(
           AnalysisInsight(
-            text: '${winner.algorithmName} found a more optimal path (cost -$costDiff)',
+            text:
+                '${winner.algorithmName} found a more optimal path (cost -$costDiff)',
             type: InsightType.success,
             icon: Icons.straighten_rounded,
           ),
@@ -226,9 +228,10 @@ ${insights.map((insight) => '║ • ${insight.text.padRight(56)} ║').join('\n
     }
 
     if (loser.pathCost > winner.pathCost && loser.foundPath) {
-       insights.add(
+      insights.add(
         AnalysisInsight(
-          text: '${loser.algorithmName} found a sub-optimal path; speed over accuracy',
+          text:
+              '${loser.algorithmName} found a sub-optimal path; speed over accuracy',
           type: InsightType.info,
           icon: Icons.warning_amber_rounded,
         ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:ai_algo_app/core/app_theme.dart';
-import 'package:ai_algo_app/services/battle_analyzer.dart';
+import 'package:algo_arena/core/app_theme.dart';
+import 'package:algo_arena/services/battle_analyzer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class BattleResultsPanel extends StatefulWidget {
@@ -48,14 +48,18 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
   @override
   void didUpdateWidget(BattleResultsPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!widget.isLoading && widget.algorithmAMetrics != null && oldWidget.isLoading) {
+    if (!widget.isLoading &&
+        widget.algorithmAMetrics != null &&
+        oldWidget.isLoading) {
       _animationController.forward(from: 0.0);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (widget.isLoading || widget.algorithmAMetrics == null) return const SizedBox.shrink();
+    if (widget.isLoading || widget.algorithmAMetrics == null) {
+      return const SizedBox.shrink();
+    }
 
     final metricsA = widget.algorithmAMetrics!;
     final metricsB = widget.algorithmBMetrics!;
@@ -66,28 +70,33 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
       opacity: _animationController,
       child: SlideTransition(
         position: Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero)
-            .animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic)),
+            .animate(
+              CurvedAnimation(
+                parent: _animationController,
+                curve: Curves.easeOutCubic,
+              ),
+            ),
         child: Container(
           decoration: AppTheme.glassCardAccent(radius: 20),
           child: Column(
             children: [
               // 🏆 Elite Winner Banner
               _buildWinnerBanner(result, isAWinner),
-              
+
               Padding(
                 padding: EdgeInsets.all(20.0),
                 child: Column(
                   children: [
                     // Comparison Grid
                     _buildMetricsComparison(metricsA, metricsB, isAWinner),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Efficiency Bar
                     _buildEfficiencyBar(metricsA, metricsB),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // Analysis Report
                     _buildAnalysisBox(result),
                   ],
@@ -141,33 +150,69 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
           const SizedBox(height: 4),
           Text(
             'Margin calculated based on nodes explored efficiency',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMetricsComparison(AlgorithmMetrics a, AlgorithmMetrics b, bool isAWinner) {
+  Widget _buildMetricsComparison(
+    AlgorithmMetrics a,
+    AlgorithmMetrics b,
+    bool isAWinner,
+  ) {
     return Column(
       children: [
-        _buildMetricRow('Nodes Explored', a.exploredStates.length.toString(), b.exploredStates.length.toString(), isAWinner),
+        _buildMetricRow(
+          'Nodes Explored',
+          a.exploredStates.length.toString(),
+          b.exploredStates.length.toString(),
+          isAWinner,
+        ),
         const SizedBox(height: 12),
-        _buildMetricRow('Path Length', a.path.length.toString(), b.path.length.toString(), a.path.length <= b.path.length),
+        _buildMetricRow(
+          'Path Length',
+          a.path.length.toString(),
+          b.path.length.toString(),
+          a.path.length <= b.path.length,
+        ),
         const SizedBox(height: 12),
-        _buildMetricRow('Efficiency', a.efficiencyScore.toStringAsFixed(2), b.efficiencyScore.toStringAsFixed(2), isAWinner),
+        _buildMetricRow(
+          'Efficiency',
+          a.efficiencyScore.toStringAsFixed(2),
+          b.efficiencyScore.toStringAsFixed(2),
+          isAWinner,
+        ),
         const SizedBox(height: 12),
-        _buildMetricRow('Time', '${a.executionTime.inMilliseconds}ms', '${b.executionTime.inMilliseconds}ms', a.executionTime < b.executionTime),
+        _buildMetricRow(
+          'Time',
+          '${a.executionTime.inMilliseconds}ms',
+          '${b.executionTime.inMilliseconds}ms',
+          a.executionTime < b.executionTime,
+        ),
       ],
     );
   }
 
-  Widget _buildMetricRow(String label, String valA, String valB, bool preferredA) {
+  Widget _buildMetricRow(
+    String label,
+    String valA,
+    String valB,
+    bool preferredA,
+  ) {
     return Row(
       children: [
         Expanded(
           flex: 2,
-          child: Text(label, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textMuted)),
+          child: Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppTheme.textMuted),
+          ),
         ),
         Expanded(
           child: _buildValueBox(valA, preferredA, widget.algorithmAName),
@@ -188,13 +233,15 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8.0),
         border: Border.all(color: color.withValues(alpha: 0.2)),
-        boxShadow: isBetter ? [
-          BoxShadow(
-            color: AppTheme.success.withValues(alpha: 0.1),
-            blurRadius: 8,
-            spreadRadius: -2,
-          )
-        ] : null,
+        boxShadow: isBetter
+            ? [
+                BoxShadow(
+                  color: AppTheme.success.withValues(alpha: 0.1),
+                  blurRadius: 8,
+                  spreadRadius: -2,
+                ),
+              ]
+            : null,
       ),
       child: Center(
         child: Text(
@@ -219,8 +266,13 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('EFFICIENCY SCORE COMPARISON', 
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(letterSpacing: 1.5, color: AppTheme.textMuted)),
+        Text(
+          'EFFICIENCY SCORE COMPARISON',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            letterSpacing: 1.5,
+            color: AppTheme.textMuted,
+          ),
+        ),
         const SizedBox(height: 8),
         ClipRRect(
           borderRadius: BorderRadius.circular(4.0),
@@ -228,8 +280,14 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
             height: 8.0,
             child: Row(
               children: [
-                Expanded(flex: flexA, child: Container(color: AppTheme.accent)),
-                Expanded(flex: flexB, child: Container(color: AppTheme.error)),
+                Expanded(
+                  flex: flexA,
+                  child: Container(color: AppTheme.accent),
+                ),
+                Expanded(
+                  flex: flexB,
+                  child: Container(color: AppTheme.error),
+                ),
               ],
             ),
           ),
@@ -238,8 +296,22 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('${widget.algorithmAName}: $flexA%', style: TextStyle(color: AppTheme.accent, fontSize: 10.0, fontWeight: FontWeight.bold)),
-            Text('${widget.algorithmBName}: $flexB%', style: TextStyle(color: AppTheme.error, fontSize: 10.0, fontWeight: FontWeight.bold)),
+            Text(
+              '${widget.algorithmAName}: $flexA%',
+              style: TextStyle(
+                color: AppTheme.accent,
+                fontSize: 10.0,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              '${widget.algorithmBName}: $flexB%',
+              style: TextStyle(
+                color: AppTheme.error,
+                fontSize: 10.0,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       ],
@@ -248,7 +320,7 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
 
   Widget _buildAnalysisBox(BattleResult result) {
     final insights = result.getAnalysisInsights();
-    
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(20.0),
@@ -275,7 +347,11 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
                   color: AppTheme.accent.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8.0),
                 ),
-                child: Icon(Icons.insights_rounded, size: 18.0, color: AppTheme.accent),
+                child: Icon(
+                  Icons.insights_rounded,
+                  size: 18.0,
+                  color: AppTheme.accent,
+                ),
               ),
               const SizedBox(width: 12),
               Text(
@@ -292,32 +368,37 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
           ...List.generate(insights.length, (index) {
             final insight = insights[index];
             return Padding(
-              padding: EdgeInsets.only(bottom: index == insights.length - 1 ? 0 : 16.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                   Container(
-                    margin: EdgeInsets.only(top: 2.0),
-                    child: Icon(
-                      insight.icon,
-                      size: 16.0,
-                      color: _getInsightColor(insight.type),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      insight.text,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ],
-              ).animate()
-               .fadeIn(duration: 400.ms, delay: (200 + (index * 150)).ms)
-               .slideX(begin: 0.05, curve: Curves.easeOutQuad),
+              padding: EdgeInsets.only(
+                bottom: index == insights.length - 1 ? 0 : 16.0,
+              ),
+              child:
+                  Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            margin: EdgeInsets.only(top: 2.0),
+                            child: Icon(
+                              insight.icon,
+                              size: 16.0,
+                              color: _getInsightColor(insight.type),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              insight.text,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.85),
+                                    height: 1.4,
+                                  ),
+                            ),
+                          ),
+                        ],
+                      )
+                      .animate()
+                      .fadeIn(duration: 400.ms, delay: (200 + (index * 150)).ms)
+                      .slideX(begin: 0.05, curve: Curves.easeOutQuad),
             );
           }),
         ],

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:ai_algo_app/core/grid_problem.dart';
-import 'package:ai_algo_app/services/algorithm_recommender.dart';
-import 'package:ai_algo_app/core/app_theme.dart';
+import 'package:algo_arena/core/grid_problem.dart';
+import 'package:algo_arena/services/algorithm_recommender.dart';
+import 'package:algo_arena/core/app_theme.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class AlgorithmRecommendationCard extends StatelessWidget {
@@ -26,17 +26,23 @@ class AlgorithmRecommendationCard extends StatelessWidget {
           Positioned(
             right: -10,
             top: -10,
-            child: Container(
-              width: 80.0,
-              height: 80.0,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.accent.withValues(alpha: 0.1),
-              ),
-            ).animate(onPlay: (c) => c.repeat(reverse: true))
-             .scale(begin: const Offset(0.8, 0.8), end: const Offset(1.2, 1.2), duration: 2.seconds),
+            child:
+                Container(
+                      width: 80.0,
+                      height: 80.0,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppTheme.accent.withValues(alpha: 0.1),
+                      ),
+                    )
+                    .animate(onPlay: (c) => c.repeat(reverse: true))
+                    .scale(
+                      begin: const Offset(0.8, 0.8),
+                      end: const Offset(1.2, 1.2),
+                      duration: 2.seconds,
+                    ),
           ),
-          
+
           Padding(
             padding: EdgeInsets.all(20.0),
             child: Column(
@@ -52,11 +58,12 @@ class AlgorithmRecommendationCard extends StatelessWidget {
                         children: [
                           Text(
                             'AI AGENT RECOMMENDATION',
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              letterSpacing: 2,
-                              color: AppTheme.accent,
-                              fontWeight: FontWeight.w900,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  letterSpacing: 2,
+                                  color: AppTheme.accent,
+                                  fontWeight: FontWeight.w900,
+                                ),
                           ),
                           Row(
                             children: [
@@ -78,14 +85,16 @@ class AlgorithmRecommendationCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Reasoning & Efficiency Box
                 Container(
                   padding: EdgeInsets.all(12.0),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12.0),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.05),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,14 +104,15 @@ class AlgorithmRecommendationCard extends StatelessWidget {
                         children: [
                           Text(
                             'WHY THIS CHOICE?',
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppTheme.textMuted,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: AppTheme.textMuted,
+                                  fontWeight: FontWeight.bold,
+                                ),
                           ),
                           _buildEfficiencyIndicator(
                             AlgorithmRecommender.getEfficiencyScore(
-                              problem, 
+                              problem,
                               recommendation.algorithm,
                             ),
                           ),
@@ -120,9 +130,9 @@ class AlgorithmRecommendationCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Action Button
                 GestureDetector(
                   onTap: onUseRecommended,
@@ -137,14 +147,18 @@ class AlgorithmRecommendationCard extends StatelessWidget {
                           color: AppTheme.accent.withValues(alpha: 0.3),
                           blurRadius: 12,
                           spreadRadius: -2,
-                        )
+                        ),
                       ],
                     ),
                     child: Center(
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.auto_fix_high_rounded, size: 18.0, color: Colors.white),
+                          Icon(
+                            Icons.auto_fix_high_rounded,
+                            size: 18.0,
+                            color: Colors.white,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'APPLY RECOMMENDATION',

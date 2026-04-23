@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'package:ai_algo_app/models/grid_node.dart';
+import 'package:algo_arena/models/grid_node.dart';
 
 class GridPainter extends CustomPainter {
   GridPainter({required this.grid, required this.cellSize});

@@ -1,14 +1,12 @@
 import 'package:flutter/foundation.dart';
 
-import 'package:ai_algo_app/models/grid_node.dart';
-import 'package:ai_algo_app/models/app_settings.dart';
+import 'package:algo_arena/models/grid_node.dart';
+import 'package:algo_arena/models/app_settings.dart';
 
 class GridController extends ChangeNotifier {
-  GridController({
-    int rows = 18,
-    int columns = 28,
-  })  : _rows = rows,
-        _columns = columns {
+  GridController({int rows = 18, int columns = 28})
+    : _rows = rows,
+      _columns = columns {
     _start = (row: (rows / 2).floor(), column: (columns * 0.2).floor());
     _goal = null; // Goal must be placed manually
     _buildGrid();
@@ -34,15 +32,10 @@ class GridController extends ChangeNotifier {
       .expand((row) => row)
       .where((node) => node.type == NodeType.wall)
       .length;
-  int get walkableCount => _grid
-      .expand((row) => row)
-      .where((node) => node.isWalkable)
-      .length;
+  int get walkableCount =>
+      _grid.expand((row) => row).where((node) => node.isWalkable).length;
 
-  void updateDimensions({
-    int? rows,
-    int? columns,
-  }) {
+  void updateDimensions({int? rows, int? columns}) {
     final nextRows = rows ?? _rows;
     final nextColumns = columns ?? _columns;
 
@@ -52,14 +45,8 @@ class GridController extends ChangeNotifier {
 
     _rows = nextRows;
     _columns = nextColumns;
-    _start = (
-      row: (_rows / 2).floor(),
-      column: (_columns * 0.2).floor(),
-    );
-    _goal = (
-      row: (_rows / 2).floor(),
-      column: (_columns * 0.8).floor(),
-    );
+    _start = (row: (_rows / 2).floor(), column: (_columns * 0.2).floor());
+    _goal = (row: (_rows / 2).floor(), column: (_columns * 0.8).floor());
     _buildGrid();
     notifyListeners();
   }
@@ -149,10 +136,10 @@ class GridController extends ChangeNotifier {
       if (row == _start.row && column == _start.column) {
         return;
       }
-      
+
       final previous = _start;
       _start = (row: row, column: column);
-      
+
       // Update grid states correctly
       _grid[previous.row][previous.column] =
           _grid[previous.row][previous.column].copyWith(type: NodeType.empty);
@@ -164,14 +151,14 @@ class GridController extends ChangeNotifier {
     if (row == _start.row && column == _start.column) {
       return;
     }
-    
+
     if (_goal != null && row == _goal!.row && column == _goal!.column) {
       return;
     }
 
     final previous = _goal;
     _goal = (row: row, column: column);
-    
+
     if (previous != null) {
       _grid[previous.row][previous.column] =
           _grid[previous.row][previous.column].copyWith(type: NodeType.empty);
@@ -195,8 +182,6 @@ class GridController extends ChangeNotifier {
     _grid[row][column] = current.copyWith(type: type, weight: weight);
   }
 
-
-
   void _buildGrid() {
     _grid = List.generate(
       _rows,
@@ -218,20 +203,20 @@ class GridController extends ChangeNotifier {
   void loadFromJson(Map<String, dynamic> data) {
     final int nextRows = data['rows'] as int;
     final int nextCols = data['columns'] as int;
-    
+
     _rows = nextRows;
     _columns = nextCols;
-    
+
     final startData = data['start'] as Map<String, dynamic>;
     _start = (row: startData['row'] as int, column: startData['column'] as int);
-    
+
     if (data['goal'] != null) {
       final goalData = data['goal'] as Map<String, dynamic>;
       _goal = (row: goalData['row'] as int, column: goalData['column'] as int);
     } else {
       _goal = null;
     }
-    
+
     final List<dynamic> gridData = data['grid'] as List<dynamic>;
     _grid = List.generate(_rows, (r) {
       final List<dynamic> rowData = gridData[r] as List<dynamic>;
@@ -239,14 +224,14 @@ class GridController extends ChangeNotifier {
         return GridNode.fromJson(rowData[c] as Map<String, dynamic>);
       });
     });
-    
+
     notifyListeners();
   }
 
   void loadFromGrid(List<List<GridNode>> newGrid) {
     _rows = newGrid.length;
     _columns = newGrid[0].length;
-    
+
     // Deep copy the grid
     _goal = null; // Reset and let loop find it
     _grid = List.generate(_rows, (r) {
@@ -257,7 +242,7 @@ class GridController extends ChangeNotifier {
         return node.copyWith();
       });
     });
-    
+
     notifyListeners();
   }
 
@@ -266,7 +251,7 @@ class GridController extends ChangeNotifier {
   Map<String, dynamic> toOptimizedSnapshot(AppSettings settings) {
     final types = Uint8List(rows * columns);
     final weights = Float32List(rows * columns);
-    
+
     for (int r = 0; r < rows; r++) {
       for (int c = 0; c < columns; c++) {
         final node = _grid[r][c];

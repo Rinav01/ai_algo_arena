@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ai_algo_app/core/app_theme.dart';
-import 'package:ai_algo_app/services/stats_service.dart';
-import 'package:ai_algo_app/widgets/bottom_nav_bar.dart';
+import 'package:algo_arena/core/app_theme.dart';
+import 'package:algo_arena/services/stats_service.dart';
+import 'package:algo_arena/widgets/bottom_nav_bar.dart';
 
 // ─── Home Screen ─────────────────────────────────────────────────────────────
 class HomeScreen extends ConsumerStatefulWidget {
@@ -26,9 +26,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
-    _pulse = Tween<double>(begin: 0.6, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
+    _pulse = Tween<double>(
+      begin: 0.6,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -75,7 +76,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             Positioned.fill(child: _NodeGraphPainterWidget(pulse: _pulse)),
             // Glow orb behind title
             Positioned(
-              top: -30, right: -40,
+              top: -30,
+              right: -40,
               child: AnimatedBuilder(
                 animation: _pulse,
                 builder: (_, _) => Container(
@@ -85,7 +87,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        AppTheme.accentContainer.withValues(alpha: 0.35 * _pulse.value),
+                        AppTheme.accentContainer.withValues(
+                          alpha: 0.35 * _pulse.value,
+                        ),
                         Colors.transparent,
                       ],
                     ),
@@ -100,26 +104,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 children: [
                   // Tag line
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 10.0,
+                      vertical: 4.0,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.accentContainer.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(6.0),
-                      border: Border.all(color: AppTheme.accent.withValues(alpha: 0.4)),
+                      border: Border.all(
+                        color: AppTheme.accent.withValues(alpha: 0.4),
+                      ),
                     ),
                     child: Text(
                       'NEURAL ARENA  v1.0',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: AppTheme.accentLight,
-                            letterSpacing: 2,
-                          ),
+                        color: AppTheme.accentLight,
+                        letterSpacing: 2,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 14),
                   Text(
                     'AI Algorithm\nArena',
-                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          height: 1.1,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.displayLarge?.copyWith(height: 1.1),
                   ),
                   const SizedBox(height: 10),
                   // Animated subtitle
@@ -128,10 +137,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     builder: (_, _) => Text(
                       'Visualize · Learn · Compete',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.accentLight
-                                .withValues(alpha: 0.6 + 0.4 * _pulse.value),
-                            letterSpacing: 1.0,
-                          ),
+                        color: AppTheme.accentLight.withValues(
+                          alpha: 0.6 + 0.4 * _pulse.value,
+                        ),
+                        letterSpacing: 1.0,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -140,10 +150,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     spacing: 12,
                     runSpacing: 12,
                     children: [
-                      _QuickStat(label: 'ALGORITHMS', value: '$uniqueAlgosCount+'),
-                      _QuickStat(label: 'CATEGORIES', value: '$categoriesCount'),
-                      _QuickStat(label: 'REAL-TIME VIZ', value: '✓',
-                          accent: AppTheme.cyan),
+                      _QuickStat(
+                        label: 'ALGORITHMS',
+                        value: '$uniqueAlgosCount+',
+                      ),
+                      _QuickStat(
+                        label: 'CATEGORIES',
+                        value: '$categoriesCount',
+                      ),
+                      _QuickStat(
+                        label: 'REAL-TIME VIZ',
+                        value: '✓',
+                        accent: AppTheme.cyan,
+                      ),
                     ],
                   ),
                 ],
@@ -173,7 +192,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 250),
                     curve: Curves.easeOut,
-                    padding: EdgeInsets.symmetric(horizontal: 18.0, vertical: 9.0),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 18.0,
+                      vertical: 9.0,
+                    ),
                     decoration: BoxDecoration(
                       color: isActive
                           ? AppTheme.accentContainer
@@ -190,17 +212,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 color: AppTheme.accent.withValues(alpha: 0.35),
                                 blurRadius: 12,
                                 spreadRadius: 0,
-                              )
+                              ),
                             ]
                           : [],
                     ),
                     child: Text(
                       _categories[i],
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: isActive
-                                ? Colors.white
-                                : AppTheme.textMuted,
-                          ),
+                        color: isActive ? Colors.white : AppTheme.textMuted,
+                      ),
                     ),
                   ),
                 ),
@@ -214,18 +234,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   Widget _buildAlgorithmGrid(BuildContext context) {
     final algorithms = _algorithmsByCategory[_selectedCategory] ?? [];
-    
-    // Just add media query everywhere dynamically! 
+
+    // Just add media query everywhere dynamically!
     final screenWidth = MediaQuery.of(context).size.width;
-    
+
     int crossAxisCount = 2;
-    if (screenWidth > 800) crossAxisCount = 4;
-    else if (screenWidth > 600) crossAxisCount = 3;
-    else crossAxisCount = 2;
+    if (screenWidth > 800) {
+      crossAxisCount = 4;
+    } else if (screenWidth > 600)
+      crossAxisCount = 3;
+    else
+      crossAxisCount = 2;
 
     double availableWidth = screenWidth - 32.0 - (crossAxisCount - 1) * 12;
     double cardWidth = availableWidth / crossAxisCount;
-    
+
     // We enforce a minimum explicit safe height of 270 logical pixels independently of card scaling width.
     double safeHeight = 270;
     double cardAspectRatio = cardWidth / safeHeight;
@@ -261,15 +284,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             const SizedBox(height: 14),
             Row(
               children: [
-                Expanded(child: _ArenaStatCard(
-                  label: 'Battles Run', value: stats.battlesRun > 0 ? stats.battlesRun.toString() : '—',
-                  icon: Icons.sports_kabaddi_rounded,
-                  color: AppTheme.accent)),
+                Expanded(
+                  child: _ArenaStatCard(
+                    label: 'Battles Run',
+                    value: stats.battlesRun > 0
+                        ? stats.battlesRun.toString()
+                        : '—',
+                    icon: Icons.sports_kabaddi_rounded,
+                    color: AppTheme.accent,
+                  ),
+                ),
                 const SizedBox(width: 12),
-                Expanded(child: _ArenaStatCard(
-                  label: 'Best Algo', value: stats.bestAlgorithm ?? '—',
-                  icon: Icons.emoji_events_rounded,
-                  color: AppTheme.cyan)),
+                Expanded(
+                  child: _ArenaStatCard(
+                    label: 'Best Algo',
+                    value: stats.bestAlgorithm ?? '—',
+                    icon: Icons.emoji_events_rounded,
+                    color: AppTheme.cyan,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -303,43 +336,98 @@ class _AlgoInfo {
 }
 
 const _algorithmsByCategory = <int, List<_AlgoInfo>>{
-  0: [ // Pathfinding
-    _AlgoInfo(name: 'BFS', subtitle: 'Breadth-First Search',
-        difficulty: 'EASY', icon: Icons.account_tree_rounded,
-        color: AppTheme.success, route: '/bfs'),
-    _AlgoInfo(name: 'DFS', subtitle: 'Depth-First Search',
-        difficulty: 'EASY', icon: Icons.fork_right_rounded,
-        color: AppTheme.cyan, route: '/dfs'),
-    _AlgoInfo(name: 'A*', subtitle: 'Heuristic Pathfinder',
-        difficulty: 'MEDIUM', icon: Icons.star_rounded,
-        color: AppTheme.accent, route: '/astar'),
-    _AlgoInfo(name: 'Dijkstra', subtitle: 'Weighted Shortest Path',
-        difficulty: 'HARD', icon: Icons.hub_rounded,
-        color: AppTheme.warning, route: '/dijkstra'),
-    _AlgoInfo(name: 'Greedy BFS', subtitle: 'Speed-First Search',
-        difficulty: 'MEDIUM', icon: Icons.bolt_rounded,
-        color: AppTheme.accentLight, route: '/greedy'),
+  0: [
+    // Pathfinding
+    _AlgoInfo(
+      name: 'BFS',
+      subtitle: 'Breadth-First Search',
+      difficulty: 'EASY',
+      icon: Icons.account_tree_rounded,
+      color: AppTheme.success,
+      route: '/bfs',
+    ),
+    _AlgoInfo(
+      name: 'DFS',
+      subtitle: 'Depth-First Search',
+      difficulty: 'EASY',
+      icon: Icons.fork_right_rounded,
+      color: AppTheme.cyan,
+      route: '/dfs',
+    ),
+    _AlgoInfo(
+      name: 'A*',
+      subtitle: 'Heuristic Pathfinder',
+      difficulty: 'MEDIUM',
+      icon: Icons.star_rounded,
+      color: AppTheme.accent,
+      route: '/astar',
+    ),
+    _AlgoInfo(
+      name: 'Dijkstra',
+      subtitle: 'Weighted Shortest Path',
+      difficulty: 'HARD',
+      icon: Icons.hub_rounded,
+      color: AppTheme.warning,
+      route: '/dijkstra',
+    ),
+    _AlgoInfo(
+      name: 'Greedy BFS',
+      subtitle: 'Speed-First Search',
+      difficulty: 'MEDIUM',
+      icon: Icons.bolt_rounded,
+      color: AppTheme.accentLight,
+      route: '/greedy',
+    ),
   ],
-  1: [ // Puzzle
-    _AlgoInfo(name: '8-Puzzle', subtitle: 'Sliding Tile Solver',
-        difficulty: 'MEDIUM', icon: Icons.grid_view_rounded,
-        color: AppTheme.accent, route: '/eightpuzzle'),
-    _AlgoInfo(name: 'N-Queens', subtitle: 'Backtracking Solver',
-        difficulty: 'HARD', icon: Icons.change_history_rounded,
-        color: AppTheme.warning, route: '/nqueens'),
+  1: [
+    // Puzzle
+    _AlgoInfo(
+      name: '8-Puzzle',
+      subtitle: 'Sliding Tile Solver',
+      difficulty: 'MEDIUM',
+      icon: Icons.grid_view_rounded,
+      color: AppTheme.accent,
+      route: '/eightpuzzle',
+    ),
+    _AlgoInfo(
+      name: 'N-Queens',
+      subtitle: 'Backtracking Solver',
+      difficulty: 'HARD',
+      icon: Icons.change_history_rounded,
+      color: AppTheme.warning,
+      route: '/nqueens',
+    ),
   ],
-  2: [ // Search
-    _AlgoInfo(name: 'BFS', subtitle: 'Level-Order Traversal',
-        difficulty: 'EASY', icon: Icons.account_tree_rounded,
-        color: AppTheme.success, route: '/bfs'),
-    _AlgoInfo(name: 'A*', subtitle: 'Best-First Search',
-        difficulty: 'MEDIUM', icon: Icons.star_rounded,
-        color: AppTheme.accent, route: '/astar'),
+  2: [
+    // Search
+    _AlgoInfo(
+      name: 'BFS',
+      subtitle: 'Level-Order Traversal',
+      difficulty: 'EASY',
+      icon: Icons.account_tree_rounded,
+      color: AppTheme.success,
+      route: '/bfs',
+    ),
+    _AlgoInfo(
+      name: 'A*',
+      subtitle: 'Best-First Search',
+      difficulty: 'MEDIUM',
+      icon: Icons.star_rounded,
+      color: AppTheme.accent,
+      route: '/astar',
+    ),
   ],
-  3: [ // Maze
-    _AlgoInfo(name: 'Maze Gen', subtitle: 'Procedural Maze',
-        difficulty: 'MEDIUM', icon: Icons.route_rounded,
-        color: AppTheme.cyan, route: '/maze', isComingSoon: true),
+  3: [
+    // Maze
+    _AlgoInfo(
+      name: 'Maze Gen',
+      subtitle: 'Procedural Maze',
+      difficulty: 'MEDIUM',
+      icon: Icons.route_rounded,
+      color: AppTheme.cyan,
+      route: '/maze',
+      isComingSoon: true,
+    ),
   ],
 };
 
@@ -352,9 +440,9 @@ class _AlgoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final diff = algo.difficulty;
     final diffColor = switch (diff) {
-      'EASY'   => AppTheme.success,
-      'HARD'   => AppTheme.error,
-      _        => AppTheme.warning,
+      'EASY' => AppTheme.success,
+      'HARD' => AppTheme.error,
+      _ => AppTheme.warning,
     };
 
     return GestureDetector(
@@ -363,136 +451,141 @@ class _AlgoCard extends StatelessWidget {
           decoration: AppTheme.glassCard(radius: 16),
           child: Stack(
             children: [
-                // Background icon watermark
-                Positioned(
-                  right: -10, bottom: -10,
-                  child: Icon(algo.icon,
-                      size: 80.0,
-                      color: algo.color.withValues(alpha: 0.07)),
+              // Background icon watermark
+              Positioned(
+                right: -10,
+                bottom: -10,
+                child: Icon(
+                  algo.icon,
+                  size: 80.0,
+                  color: algo.color.withValues(alpha: 0.07),
                 ),
-                // Left accent bar
-                Positioned(
-                  left: 0, top: 0, bottom: 0,
-                  child: Container(
-                    width: 3.0,
-                    decoration: BoxDecoration(
-                      color: algo.color,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(16.0),
-                        bottomLeft: Radius.circular(16.0),
-                      ),
+              ),
+              // Left accent bar
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: Container(
+                  width: 3.0,
+                  decoration: BoxDecoration(
+                    color: algo.color,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(16.0),
+                      bottomLeft: Radius.circular(16.0),
                     ),
                   ),
                 ),
-                // Content
-                Padding(
-                  padding:
-                      const EdgeInsets.fromLTRB(16, 16, 12, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Icon badge
-                      Container(
-                        width: 42.0, height: 42.0,
-                        decoration: BoxDecoration(
-                          color: algo.color.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10.0),
-                          border: Border.all(
-                              color: algo.color.withValues(alpha: 0.30)),
-                        ),
-                        child: Icon(algo.icon,
-                            color: algo.color, size: 20),
-                      ),
-                      const Spacer(),
-                      // Difficulty badge
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 7.0, vertical: 3.0),
-                        decoration: BoxDecoration(
-                          color: diffColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4.0),
-                          border: Border.all(
-                              color: diffColor.withValues(alpha: 0.35)),
-                        ),
-                        child: Text(
-                          diff,
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.copyWith(
-                                color: diffColor,
-                                letterSpacing: 1.2,
-                              ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        algo.name,
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        algo.subtitle,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: AppTheme.textMuted),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                // Coming Soon Badge
-                if (algo.isComingSoon)
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              ),
+              // Content
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Icon badge
+                    Container(
+                      width: 42.0,
+                      height: 42.0,
                       decoration: BoxDecoration(
-                        color: AppTheme.accent.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(6),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.accent.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                          ),
-                        ],
+                        color: algo.color.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10.0),
+                        border: Border.all(
+                          color: algo.color.withValues(alpha: 0.30),
+                        ),
+                      ),
+                      child: Icon(algo.icon, color: algo.color, size: 20),
+                    ),
+                    const Spacer(),
+                    // Difficulty badge
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 7.0,
+                        vertical: 3.0,
+                      ),
+                      decoration: BoxDecoration(
+                        color: diffColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4.0),
+                        border: Border.all(
+                          color: diffColor.withValues(alpha: 0.35),
+                        ),
                       ),
                       child: Text(
-                        'ARRIVING SOON',
+                        diff,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white,
-                          fontSize: 8,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1,
+                          color: diffColor,
+                          letterSpacing: 1.2,
                         ),
                       ),
                     ),
-                  ),
-                // Tap ripple overlay
-                Positioned.fill(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(16.0),
-                      onTap: algo.isComingSoon
-                          ? () => _showComingSoonDialog(context, algo.name)
-                          : () => Navigator.pushNamed(context, algo.route),
-                      splashColor:
-                          algo.color.withValues(alpha: 0.12),
-                      highlightColor:
-                          algo.color.withValues(alpha: 0.06),
+                    const SizedBox(height: 6),
+                    Text(
+                      algo.name,
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      algo.subtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textMuted,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              // Coming Soon Badge
+              if (algo.isComingSoon)
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accent.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(6),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.accent.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      'ARRIVING SOON',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1,
+                      ),
                     ),
                   ),
                 ),
-              ],
-            ),
+              // Tap ripple overlay
+              Positioned.fill(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16.0),
+                    onTap: algo.isComingSoon
+                        ? () => _showComingSoonDialog(context, algo.name)
+                        : () => Navigator.pushNamed(context, algo.route),
+                    splashColor: algo.color.withValues(alpha: 0.12),
+                    highlightColor: algo.color.withValues(alpha: 0.06),
+                  ),
+                ),
+              ),
+            ],
           ),
-    ));
+        ),
+      ),
+    );
   }
 }
 
@@ -518,15 +611,20 @@ class _QuickStat extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(value,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: accent, fontWeight: FontWeight.w800)),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: accent,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelSmall
-                  ?.copyWith(letterSpacing: 1.5)),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(letterSpacing: 1.5),
+          ),
         ],
       ),
     );
@@ -541,17 +639,26 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(children: [
-      Icon(icon, size: 16.0, color: AppTheme.accent),
-      const SizedBox(width: 8),
-      Text(label,
+    return Row(
+      children: [
+        Icon(icon, size: 16.0, color: AppTheme.accent),
+        const SizedBox(width: 8),
+        Text(
+          label,
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: AppTheme.accentLight, letterSpacing: 2)),
-      const SizedBox(width: 8),
-      Expanded(
-          child: Container(height: 1.0,
-              color: Colors.white.withValues(alpha: 0.06))),
-    ]);
+            color: AppTheme.accentLight,
+            letterSpacing: 2,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Container(
+            height: 1.0,
+            color: Colors.white.withValues(alpha: 0.06),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -577,37 +684,34 @@ class _ArenaStatCard extends StatelessWidget {
         borderColor: color.withValues(alpha: 0.3),
       ),
       child: Row(
-            children: [
-              Container(
-                width: 38.0, height: 38.0,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(9.0),
-                  border: Border.all(color: color.withValues(alpha: 0.3)),
+        children: [
+          Container(
+            width: 38.0,
+            height: 38.0,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(9.0),
+              border: Border.all(color: color.withValues(alpha: 0.3)),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
                 ),
-                child: Icon(icon, color: color, size: 18),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(value,
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineSmall
-                            ?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: color,
-                            )),
-                    Text(label,
-                        style: Theme.of(context)
-                            .textTheme
-                            .labelSmall),
-                  ],
-                ),
-              ),
-            ],
+                Text(label, style: Theme.of(context).textTheme.labelSmall),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -640,38 +744,45 @@ class _BattlePromoBanner extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 48.0, height: 48.0,
+              width: 48.0,
+              height: 48.0,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12.0),
               ),
-              child: const Icon(Icons.sports_kabaddi_rounded,
-                  color: Colors.white, size: 24),
+              child: const Icon(
+                Icons.sports_kabaddi_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('ALGORITHM BATTLE',
-                      style: Theme.of(context)
-                          .textTheme
-                          .labelLarge
-                          ?.copyWith(
-                            color: AppTheme.accentLight,
-                            letterSpacing: 1.5,
-                          )),
+                  Text(
+                    'ALGORITHM BATTLE',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppTheme.accentLight,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('Compare algorithms head-to-head in real time',
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(color: Colors.white70)),
+                  Text(
+                    'Compare algorithms head-to-head in real time',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+                  ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded,
-                color: Colors.white54, size: 16),
+            const Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: Colors.white54,
+              size: 16,
+            ),
           ],
         ),
       ),
@@ -705,13 +816,27 @@ class _NodeGraphPainter extends CustomPainter {
   const _NodeGraphPainter();
 
   static final List<Offset> _nodes = [
-    Offset(0.1, 0.15), Offset(0.3, 0.05), Offset(0.55, 0.20),
-    Offset(0.75, 0.08), Offset(0.90, 0.30), Offset(0.20, 0.55),
-    Offset(0.45, 0.65), Offset(0.70, 0.50), Offset(0.85, 0.70),
+    Offset(0.1, 0.15),
+    Offset(0.3, 0.05),
+    Offset(0.55, 0.20),
+    Offset(0.75, 0.08),
+    Offset(0.90, 0.30),
+    Offset(0.20, 0.55),
+    Offset(0.45, 0.65),
+    Offset(0.70, 0.50),
+    Offset(0.85, 0.70),
   ];
   static final List<List<int>> _edges = [
-    [0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6],
-    [6, 7], [7, 8], [2, 6], [3, 7],
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 4],
+    [0, 5],
+    [5, 6],
+    [6, 7],
+    [7, 8],
+    [2, 6],
+    [3, 7],
   ];
 
   @override
@@ -719,10 +844,11 @@ class _NodeGraphPainter extends CustomPainter {
     final linePaint = Paint()
       ..color = AppTheme.accent.withValues(alpha: 1.0)
       ..strokeWidth = 1.0;
-    final nodePaint = Paint()
-      ..color = AppTheme.accent.withValues(alpha: 1.0);
+    final nodePaint = Paint()..color = AppTheme.accent.withValues(alpha: 1.0);
 
-    final pts = _nodes.map((n) => Offset(n.dx * size.width, n.dy * size.height)).toList();
+    final pts = _nodes
+        .map((n) => Offset(n.dx * size.width, n.dy * size.height))
+        .toList();
     for (final e in _edges) {
       canvas.drawLine(pts[e[0]], pts[e[1]], linePaint);
     }
@@ -764,7 +890,13 @@ void _showComingSoonDialog(BuildContext context, String feature) {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('EXCITING!', style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.bold)),
+          child: const Text(
+            'EXCITING!',
+            style: TextStyle(
+              color: AppTheme.accent,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
       ],
     ),

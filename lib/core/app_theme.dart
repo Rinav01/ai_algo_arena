@@ -11,52 +11,56 @@ import 'package:flutter/material.dart';
 /// ─────────────────────────────────────────────────────────────────────────────
 abstract class AppTheme {
   // ── Surface Hierarchy (tonal layering, no drop-shadows) ────────────────────
-  static const Color background         = Color(0xFF0E1322);
-  static const Color surfaceLowest      = Color(0xFF090E1C);
-  static const Color surfaceLow         = Color(0xFF161B2B);
-  static const Color surface            = Color(0xFF1A1F2F);
-  static const Color surfaceHigh        = Color(0xFF25293A);
-  static const Color surfaceHighest     = Color(0xFF2F3445);
-  static const Color surfaceVariant     = Color(0xFF2F3445);
-  static const Color surfaceBright      = Color(0xFF343949);
+  static const Color background = Color(0xFF0E1322);
+  static const Color surfaceLowest = Color(0xFF090E1C);
+  static const Color surfaceLow = Color(0xFF161B2B);
+  static const Color surface = Color(0xFF1A1F2F);
+  static const Color surfaceHigh = Color(0xFF25293A);
+  static const Color surfaceHighest = Color(0xFF2F3445);
+  static const Color surfaceVariant = Color(0xFF2F3445);
+  static const Color surfaceBright = Color(0xFF343949);
 
   // ── Primary palette ────────────────────────────────────────────────────────
   /// Electric violet — gradient start / CTA fill
-  static const Color accent             = Color(0xFF8B5CF6);
+  static const Color accent = Color(0xFF8B5CF6);
+
   /// Deeper violet — gradient end / container background
-  static const Color accentContainer    = Color(0xFF571BC1);
+  static const Color accentContainer = Color(0xFF571BC1);
+
   /// Lavender — on-secondary text, chips, labeled stats
-  static const Color accentLight        = Color(0xFFD0BCFF);
+  static const Color accentLight = Color(0xFFD0BCFF);
 
   // ── Tertiary / Active elements ─────────────────────────────────────────────
   /// Cyan — path cells, health bars, "lit" indicator active states
-  static const Color cyan               = Color(0xFF00DBE9);
-  static const Color cyanContainer      = Color(0xFF001214);
-  static const Color cyanLight          = Color(0xFF7DF4FF);
+  static const Color cyan = Color(0xFF00DBE9);
+  static const Color cyanContainer = Color(0xFF001214);
+  static const Color cyanLight = Color(0xFF7DF4FF);
 
   // ── Text ───────────────────────────────────────────────────────────────────
-  static const Color onBackground       = Color(0xFFDEE1F7);
-  static const Color onSurface         = Color(0xFFDEE1F7);
-  static const Color textSecondary      = Color(0xFFC7C6CD);
-  static const Color textMuted          = Color(0xFF909097);
-  static const Color outline            = Color(0xFF909097);
-  static const Color outlineVariant     = Color(0xFF46464C);
+  static const Color onBackground = Color(0xFFDEE1F7);
+  static const Color onSurface = Color(0xFFDEE1F7);
+  static const Color textSecondary = Color(0xFFC7C6CD);
+  static const Color textMuted = Color(0xFF909097);
+  static const Color outline = Color(0xFF909097);
+  static const Color outlineVariant = Color(0xFF46464C);
 
   // ── Semantic ───────────────────────────────────────────────────────────────
-  static const Color success            = Color(0xFF10B981);
-  static const Color warning            = Color(0xFFF59E0B);
-  static const Color error              = Color(0xFFFFB4AB);
-  static const Color errorContainer     = Color(0xFF93000A);
+  static const Color success = Color(0xFF10B981);
+  static const Color warning = Color(0xFFF59E0B);
+  static const Color error = Color(0xFFFFB4AB);
+  static const Color errorContainer = Color(0xFF93000A);
 
   // ── Grid cell colors ───────────────────────────────────────────────────────
-  static const Color cellStart          = Color(0xFF10B981); // emerald — start
-  static const Color cellGoal           = Color(0xFFEF4444); // red — goal
-  static const Color cellWall           = Color(0xFF1E2A3A); // dark surface
-  static const Color cellExplored       = Color(0xFF571BC1); // violet — visited
-  static const Color cellPath           = Color(0xFF00DBE9); // cyan — path
-  static const Color cellFrontier       = Color(0xFF8B5CF6); // lavender — queue
-  static const Color cellWeight         = Color(0xFF166534); // deep green — heavy terrain (forest)
-  static const Color cellWeightBorder   = Color(0xFF14532D); 
+  static const Color cellStart = Color(0xFF10B981); // emerald — start
+  static const Color cellGoal = Color(0xFFEF4444); // red — goal
+  static const Color cellWall = Color(0xFF1E2A3A); // dark surface
+  static const Color cellExplored = Color(0xFF571BC1); // violet — visited
+  static const Color cellPath = Color(0xFF00DBE9); // cyan — path
+  static const Color cellFrontier = Color(0xFF8B5CF6); // lavender — queue
+  static const Color cellWeight = Color(
+    0xFF166534,
+  ); // deep green — heavy terrain (forest)
+  static const Color cellWeightBorder = Color(0xFF14532D);
 
   // ── Glassmorphism helpers ──────────────────────────────────────────────────
 
@@ -94,10 +98,10 @@ abstract class AppTheme {
 
   /// Glass card with violet accent glow.
   static BoxDecoration glassCardAccent({double radius = 16}) => glassCard(
-        radius: radius,
-        borderColor: accent.withValues(alpha: 0.35),
-        glowColor: accent,
-      );
+    radius: radius,
+    borderColor: accent.withValues(alpha: 0.35),
+    glowColor: accent,
+  );
 
   /// "Ghost border" — outline_variant at 15% opacity (accessibility fallback)
   static Border get ghostBorder =>
@@ -112,45 +116,37 @@ abstract class AppTheme {
 
   /// Subtle ambient glow decoration for floating panels
   static BoxDecoration ambientPanel({double radius = 20}) => BoxDecoration(
-        color: surfaceVariant.withValues(alpha: 0.60),
-        borderRadius: BorderRadius.circular(radius),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x66000000),
-            blurRadius: 40,
-            spreadRadius: 0,
-          ),
-        ],
-      );
+    color: surfaceVariant.withValues(alpha: 0.60),
+    borderRadius: BorderRadius.circular(radius),
+    boxShadow: const [
+      BoxShadow(color: Color(0x66000000), blurRadius: 40, spreadRadius: 0),
+    ],
+  );
 
   // ── Button styles ──────────────────────────────────────────────────────────
 
   /// Ghost glass button — outlined with ghost border
   static ButtonStyle ghostButton({Color? color}) => OutlinedButton.styleFrom(
-        foregroundColor: color ?? accent,
-        side: BorderSide(color: (color ?? accent).withValues(alpha: 0.7)),
-        backgroundColor: surfaceVariant.withValues(alpha: 0.20),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.0),
-        ),
-        padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      );
+    foregroundColor: color ?? accent,
+    side: BorderSide(color: (color ?? accent).withValues(alpha: 0.7)),
+    backgroundColor: surfaceVariant.withValues(alpha: 0.20),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+    padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+  );
 
   /// Gradient CTA button wrapper — use inside a Stack/Container
   static BoxDecoration get primaryButtonDecoration => BoxDecoration(
-        gradient: ctaGradient,
-        borderRadius: BorderRadius.circular(12.0),
-      );
+    gradient: ctaGradient,
+    borderRadius: BorderRadius.circular(12.0),
+  );
 
   static ButtonStyle primaryButton() => ElevatedButton.styleFrom(
-        backgroundColor: accentContainer,
-        foregroundColor: const Color(0xFF23005C),
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.0),
-        ),
-        padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
-      );
+    backgroundColor: accentContainer,
+    foregroundColor: const Color(0xFF23005C),
+    elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+    padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
+  );
 
   // ── Flutter ThemeData ──────────────────────────────────────────────────────
   static ThemeData themeData() {
@@ -356,7 +352,9 @@ abstract class AppTheme {
           color: onBackground,
           fontFamily: 'Manrope',
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12.0),
+        ),
         behavior: SnackBarBehavior.floating,
       ),
     );

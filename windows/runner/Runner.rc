@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "ai_algo_app" "\0"
+            VALUE "FileDescription", "Algo Arena" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "ai_algo_app" "\0"
+            VALUE "InternalName", "algo_arena" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "ai_algo_app.exe" "\0"
-            VALUE "ProductName", "ai_algo_app" "\0"
+            VALUE "OriginalFilename", "algo_arena.exe" "\0"
+            VALUE "ProductName", "Algo Arena" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

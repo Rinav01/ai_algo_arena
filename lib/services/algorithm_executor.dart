@@ -3,10 +3,10 @@ import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-import 'package:ai_algo_app/core/grid_problem.dart';
-import 'package:ai_algo_app/core/problem_definition.dart';
-import 'package:ai_algo_app/core/search_algorithms.dart';
-import 'package:ai_algo_app/models/app_settings.dart';
+import 'package:algo_arena/core/grid_problem.dart';
+import 'package:algo_arena/core/problem_definition.dart';
+import 'package:algo_arena/core/search_algorithms.dart';
+import 'package:algo_arena/models/app_settings.dart';
 
 /// Messaging for real-time streaming from isolates (Batched for performance)
 class _StreamMessage<State> {
@@ -32,9 +32,10 @@ class _StreamRequest {
 Future<void> _streamInIsolate(_StreamRequest request) async {
   try {
     final problem = GridProblem.fromSnapshot(request.snapshot);
-    
+
     // Instantiate the algorithm inside the isolate to avoid non-sendable object issues
-    final SearchAlgorithm<GridCoordinate> algorithm = switch (request.algorithmId) {
+    final SearchAlgorithm<GridCoordinate> algorithm = switch (request
+        .algorithmId) {
       'Breadth-First Search' => BFSAlgorithm<GridCoordinate>(),
       'Depth-First Search' => DFSAlgorithm<GridCoordinate>(),
       'Dijkstra\'s Algorithm' => DijkstraAlgorithm<GridCoordinate>(),
@@ -42,18 +43,20 @@ Future<void> _streamInIsolate(_StreamRequest request) async {
       'Greedy Best-First Search' => GreedyBestFirstAlgorithm<GridCoordinate>(),
       _ => throw Exception('Unknown algorithm ID: ${request.algorithmId}'),
     };
-        
+
     final List<AlgorithmStep<GridCoordinate>> buffer = [];
     const int batchSize = 100;
 
     for (final step in algorithm.solve(problem)) {
       buffer.add(step);
       if (buffer.length >= batchSize) {
-        request.sendPort.send(_StreamMessage<GridCoordinate>.batch(List.from(buffer)));
+        request.sendPort.send(
+          _StreamMessage<GridCoordinate>.batch(List.from(buffer)),
+        );
         buffer.clear();
       }
     }
-    
+
     if (buffer.isNotEmpty) {
       request.sendPort.send(_StreamMessage<GridCoordinate>.batch(buffer));
     }
@@ -69,11 +72,11 @@ class AlgorithmExecutor<State> with ChangeNotifier {
   final SearchAlgorithm<State> algorithm;
   final Problem<State>? _problem;
   final Map<String, dynamic>? _problemSnapshot;
-  
+
   Duration _stepDelay;
 
   final _stepController = StreamController<AlgorithmStep<State>>.broadcast();
-  
+
   List<AlgorithmStep<State>>? _fullHistory;
   int _currentIndex = 0;
   Timer? _playbackTimer;
@@ -81,7 +84,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
   bool _isPaused = false;
   bool _isStopped = false;
   bool _isComputing = false;
-  
+
   AlgorithmStep<State>? _lastStep;
 
   // Cumulative state tracked during playback for UI performance
@@ -91,7 +94,11 @@ class AlgorithmExecutor<State> with ChangeNotifier {
   int _frontierSize = 0;
 
   // Result caching: Stores (History, Final Explored Set, Final Path)
-  static final Map<String, (List<AlgorithmStep<dynamic>>, Set<dynamic>, List<dynamic>)> _resultCache = {};
+  static final Map<
+    String,
+    (List<AlgorithmStep<dynamic>>, Set<dynamic>, List<dynamic>)
+  >
+  _resultCache = {};
   static const int _maxCacheSize = 50;
 
   /// Stream of algorithm steps played back over time
@@ -102,7 +109,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
 
   /// Get cumulative explored set
   Set<State> get exploredSet => _exploredSet;
-  
+
   /// Get current path as a set for O(1) lookup
   Set<State> get pathSet => _pathSet;
 
@@ -116,7 +123,11 @@ class AlgorithmExecutor<State> with ChangeNotifier {
   bool get isPaused => _isPaused;
   bool get isStopped => _isStopped;
   bool get isComputing => _isComputing;
-  bool get isRunning => _fullHistory != null && !_isPaused && !_isStopped && _currentIndex < _fullHistory!.length;
+  bool get isRunning =>
+      _fullHistory != null &&
+      !_isPaused &&
+      !_isStopped &&
+      _currentIndex < _fullHistory!.length;
   AlgorithmStep<State>? get lastStep => _lastStep;
 
   /// Generate a cache key for the current problem and algorithm
@@ -136,7 +147,10 @@ class AlgorithmExecutor<State> with ChangeNotifier {
   }) : _problem = problem,
        _problemSnapshot = problemSnapshot,
        _stepDelay = Duration(milliseconds: stepDelayMs ?? 50) {
-    assert(_problem != null || _problemSnapshot != null, 'Either problem or problemSnapshot must be provided');
+    assert(
+      _problem != null || _problemSnapshot != null,
+      'Either problem or problemSnapshot must be provided',
+    );
   }
 
   /// Start execution: compute via isolate, then start playback
@@ -149,7 +163,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
     _currentIndex = 0;
     _exploredSet.clear();
     _currentPath = [];
-    
+
     try {
       final cacheKey = _cacheKey;
       if (_resultCache.containsKey(cacheKey)) {
@@ -165,7 +179,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
         // 1. Offload the search to a background isolate and stream results
         _fullHistory = [];
         final receivePort = ReceivePort();
-        
+
         final request = _StreamRequest(
           receivePort.sendPort,
           algorithm.name,
@@ -178,7 +192,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
         final completer = Completer<void>();
         receivePort.listen((message) {
           final streamMsg = message as _StreamMessage<State>;
-          
+
           if (streamMsg.error != null) {
             _stepController.addError(streamMsg.error!);
             receivePort.close();
@@ -187,22 +201,28 @@ class AlgorithmExecutor<State> with ChangeNotifier {
             _isComputing = false;
             notifyListeners();
             receivePort.close();
-            
+
             // Cache the finished result
             if (_fullHistory != null && _fullHistory!.isNotEmpty) {
               final finalStep = _fullHistory!.last;
-              final finalExplored = _fullHistory!.expand((s) => s.newlyExplored).toSet();
-              
+              final finalExplored = _fullHistory!
+                  .expand((s) => s.newlyExplored)
+                  .toSet();
+
               if (_resultCache.length >= _maxCacheSize) {
                 _resultCache.remove(_resultCache.keys.first);
               }
-              _resultCache[cacheKey] = (_fullHistory!, finalExplored, finalStep.path);
+              _resultCache[cacheKey] = (
+                _fullHistory!,
+                finalExplored,
+                finalStep.path,
+              );
             }
-            
+
             completer.complete();
           } else if (streamMsg.batch != null) {
             _fullHistory!.addAll(streamMsg.batch!);
-            
+
             // Start playback immediately if not yet started
             if (_playbackTimer == null && !_isStopped && !_isPaused) {
               _startPlayback();
@@ -216,21 +236,27 @@ class AlgorithmExecutor<State> with ChangeNotifier {
         // 2. Fallback: Compute locally for non-snapshottable problems (e.g. Puzzles)
         // These are typically fast enough to run on the main thread for the visualization depths used
         _fullHistory = algorithm.solve(_problem).toList();
-        
+
         // Cache the finished result
         if (_fullHistory!.isNotEmpty) {
           final finalStep = _fullHistory!.last;
-          final finalExplored = _fullHistory!.expand((s) => s.newlyExplored).toSet();
-          
+          final finalExplored = _fullHistory!
+              .expand((s) => s.newlyExplored)
+              .toSet();
+
           if (_resultCache.length >= _maxCacheSize) {
             _resultCache.remove(_resultCache.keys.first);
           }
-          _resultCache[cacheKey] = (_fullHistory!, finalExplored, finalStep.path);
+          _resultCache[cacheKey] = (
+            _fullHistory!,
+            finalExplored,
+            finalStep.path,
+          );
         }
       }
-      
+
       _isComputing = false;
-      
+
       // 2. Start timeline playback if not already running
       if (!_isPaused && !_isStopped && _playbackTimer == null) {
         _startPlayback();
@@ -249,7 +275,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
 
   void _startPlayback() {
     _playbackTimer?.cancel();
-    
+
     if (_stepDelay.inMilliseconds == 0) {
       if (_fullHistory != null && _fullHistory!.isNotEmpty) {
         // Explored and Path already handled in start() for efficiency
@@ -262,7 +288,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
       _finishPlayback();
       return;
     }
-    
+
     // Throttling Logic: If delay is too short, we process multiple steps per tick
     final minDelay = const Duration(milliseconds: 16);
     final Duration timerDuration;
@@ -270,7 +296,8 @@ class AlgorithmExecutor<State> with ChangeNotifier {
 
     if (_stepDelay < minDelay) {
       timerDuration = minDelay;
-      stepsPerTick = (minDelay.inMicroseconds / _stepDelay.inMicroseconds).ceil();
+      stepsPerTick = (minDelay.inMicroseconds / _stepDelay.inMicroseconds)
+          .ceil();
     } else {
       timerDuration = _stepDelay;
       stepsPerTick = 1;
@@ -281,12 +308,12 @@ class AlgorithmExecutor<State> with ChangeNotifier {
         timer.cancel();
         return;
       }
-      
+
       if (_fullHistory == null || _currentIndex >= _fullHistory!.length) {
         _finishPlayback();
         return;
       }
-      
+
       // Batch process steps for performance
       for (int i = 0; i < stepsPerTick; i++) {
         if (_currentIndex >= _fullHistory!.length) break;
@@ -297,17 +324,18 @@ class AlgorithmExecutor<State> with ChangeNotifier {
         _pathSet.clear();
         _pathSet.addAll(_currentPath);
         _frontierSize = _lastStep!.frontierSize ?? 0;
-        
+
         // Notify UI on the last step of the batch
-        if (i == stepsPerTick - 1 || _currentIndex == _fullHistory!.length - 1) {
+        if (i == stepsPerTick - 1 ||
+            _currentIndex == _fullHistory!.length - 1) {
           _stepController.add(_lastStep!);
           _handleHaptics();
           notifyListeners();
         }
-        
+
         _currentIndex++;
       }
-      
+
       if (_currentIndex >= _fullHistory!.length) {
         _finishPlayback();
       }
@@ -316,7 +344,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
 
   void _handleHaptics() {
     if (_lastStep == null) return;
-    
+
     // Get settings from snapshot or problem
     AppSettings settings = const AppSettings();
     if (_problemSnapshot != null && _problemSnapshot.containsKey('settings')) {
@@ -330,10 +358,10 @@ class AlgorithmExecutor<State> with ChangeNotifier {
     }
 
     if (settings.collisionVibration && _lastStep!.isGoalReached) {
-       HapticFeedback.mediumImpact();
+      HapticFeedback.mediumImpact();
     }
   }
-  
+
   void _finishPlayback() {
     _playbackTimer?.cancel();
     _isStopped = true;
@@ -358,7 +386,9 @@ class AlgorithmExecutor<State> with ChangeNotifier {
 
   /// Step once (requires being paused)
   void stepOnce() {
-    if (_isPaused && _fullHistory != null && _currentIndex < _fullHistory!.length) {
+    if (_isPaused &&
+        _fullHistory != null &&
+        _currentIndex < _fullHistory!.length) {
       _lastStep = _fullHistory![_currentIndex];
       _exploredSet.addAll(_lastStep!.newlyExplored);
       _currentPath = _lastStep!.path;
@@ -452,7 +482,7 @@ class BattleExecutor {
 
 /// Advanced executor with speed control
 class AdvancedAlgorithmExecutor<State> extends AlgorithmExecutor<State> {
-  double _speed = 1.0; 
+  double _speed = 1.0;
   final Duration _baseStepDelay;
 
   AdvancedAlgorithmExecutor({
@@ -471,10 +501,10 @@ class AdvancedAlgorithmExecutor<State> extends AlgorithmExecutor<State> {
       _stepDelay = Duration.zero;
     } else {
       _stepDelay = Duration(
-        microseconds: (_baseStepDelay.inMicroseconds / _speed).round()
+        microseconds: (_baseStepDelay.inMicroseconds / _speed).round(),
       );
     }
-    
+
     // Restart timer with new speed if running
     if (isRunning && !isPaused) {
       _startPlayback();

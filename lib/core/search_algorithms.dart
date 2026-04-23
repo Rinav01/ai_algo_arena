@@ -1,11 +1,10 @@
 import 'dart:collection';
 import 'package:collection/collection.dart';
 
-import 'package:ai_algo_app/core/problem_definition.dart';
+import 'package:algo_arena/core/problem_definition.dart';
 
 /// Generic BFS algorithm that works with any Problem
 class BFSAlgorithm<State> extends SearchAlgorithm<State> {
-
   BFSAlgorithm();
 
   @override
@@ -98,7 +97,6 @@ class BFSAlgorithm<State> extends SearchAlgorithm<State> {
 
 /// Generic DFS algorithm that works with any Problem
 class DFSAlgorithm<State> extends SearchAlgorithm<State> {
-
   DFSAlgorithm();
 
   @override
@@ -189,7 +187,6 @@ class DFSAlgorithm<State> extends SearchAlgorithm<State> {
 
 /// Generic A* algorithm that works with any Problem
 class AStarAlgorithm<State> extends SearchAlgorithm<State> {
-
   AStarAlgorithm();
 
   @override
@@ -215,7 +212,7 @@ class AStarAlgorithm<State> extends SearchAlgorithm<State> {
       final fb = fScore[b] ?? double.infinity;
       return fa.compareTo(fb);
     });
-    
+
     openQueue.add(startState);
     final inOpen = <State>{startState};
 
@@ -271,7 +268,7 @@ class AStarAlgorithm<State> extends SearchAlgorithm<State> {
           gScore[neighbor] = tentativeGScore;
           fScore[neighbor] = tentativeGScore + problem.heuristic(neighbor);
 
-          // Lazy update: Add the node again. The priority queue will 
+          // Lazy update: Add the node again. The priority queue will
           // pop the cheapest instance first, and subsequent duplicate pops
           // will be ignored by the `visited.contains(current)` check above.
           openQueue.add(neighbor);
@@ -309,7 +306,6 @@ class AStarAlgorithm<State> extends SearchAlgorithm<State> {
 
 /// Dijkstra's algorithm - weighted version of BFS
 class DijkstraAlgorithm<State> extends SearchAlgorithm<State> {
-
   DijkstraAlgorithm();
 
   @override
@@ -387,7 +383,7 @@ class DijkstraAlgorithm<State> extends SearchAlgorithm<State> {
             newDistance < distances[neighbor]!) {
           distances[neighbor] = newDistance;
           parent[neighbor] = current;
-          
+
           // Lazy update pattern for priority queue
           openQueue.add(neighbor);
           inOpen.add(neighbor);
@@ -405,7 +401,7 @@ class DijkstraAlgorithm<State> extends SearchAlgorithm<State> {
       isGoalReached: false,
     );
   }
-  }
+}
 
 List<State> _reconstructPath<State>(
   Map<State, State> parent,
@@ -428,15 +424,11 @@ class StateNode<State> {
   final double f;
   final double g;
 
-  StateNode({
-    required this.state,
-    required this.f,
-    required this.g,
-  });
+  StateNode({required this.state, required this.f, required this.g});
 }
 
 /// Greedy Best-First Search (GBFS)
-/// Prioritizes speed by only considering heuristic estimates, 
+/// Prioritizes speed by only considering heuristic estimates,
 /// though it doesn't guarantee the shortest path.
 class GreedyBestFirstAlgorithm<State> extends SearchAlgorithm<State> {
   @override
@@ -457,11 +449,13 @@ class GreedyBestFirstAlgorithm<State> extends SearchAlgorithm<State> {
       (a, b) => a.f.compareTo(b.f),
     );
 
-    openSet.add(StateNode<State>(
-      state: startState,
-      f: problem.heuristic(startState),
-      g: 0,
-    ));
+    openSet.add(
+      StateNode<State>(
+        state: startState,
+        f: problem.heuristic(startState),
+        g: 0,
+      ),
+    );
 
     while (openSet.isNotEmpty) {
       final StateNode<State> currentNode = openSet.removeFirst();
@@ -493,7 +487,8 @@ class GreedyBestFirstAlgorithm<State> extends SearchAlgorithm<State> {
         currentState: current,
         path: path,
         stepCount: stepCount,
-        message: 'Greedy evaluating ${problem.stateToString(current)} (h=${currentNode.f.toStringAsFixed(1)})',
+        message:
+            'Greedy evaluating ${problem.stateToString(current)} (h=${currentNode.f.toStringAsFixed(1)})',
         isGoalReached: false,
         frontierSize: openSet.length,
       );
@@ -501,11 +496,13 @@ class GreedyBestFirstAlgorithm<State> extends SearchAlgorithm<State> {
       for (final neighbor in problem.getNeighbors(current)) {
         if (!visited.contains(neighbor)) {
           parent[neighbor] = current;
-          openSet.add(StateNode<State>(
-            state: neighbor,
-            f: problem.heuristic(neighbor),
-            g: 0, // Ignored in GBFS
-          ));
+          openSet.add(
+            StateNode<State>(
+              state: neighbor,
+              f: problem.heuristic(neighbor),
+              g: 0, // Ignored in GBFS
+            ),
+          );
         }
       }
     }
@@ -517,6 +514,5 @@ class GreedyBestFirstAlgorithm<State> extends SearchAlgorithm<State> {
       message: 'No path found.',
       isGoalReached: false,
     );
-    
   }
 }

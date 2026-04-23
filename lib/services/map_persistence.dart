@@ -1,8 +1,7 @@
 import 'dart:convert';
-import 'package:ai_algo_app/core/grid_problem.dart';
+import 'package:algo_arena/core/grid_problem.dart';
 
-import 'package:ai_algo_app/models/grid_node.dart';
-
+import 'package:algo_arena/models/grid_node.dart';
 
 class MapPersistence {
   static String exportMap({

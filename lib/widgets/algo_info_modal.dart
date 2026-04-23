@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:ai_algo_app/core/app_theme.dart';
-import 'package:ai_algo_app/models/algo_info.dart';
-import 'package:ai_algo_app/widgets/concept_visualizer.dart';
+import 'package:algo_arena/core/app_theme.dart';
+import 'package:algo_arena/models/algo_info.dart';
+import 'package:algo_arena/widgets/concept_visualizer.dart';
 
 class AlgoInfoModal extends StatelessWidget {
   final AlgoInfo? info;
@@ -116,10 +116,14 @@ class AlgoInfoModal extends StatelessWidget {
     );
   }
 
-  Widget _buildTabBar(BuildContext context, List<String> labels, {required bool isScrollable}) {
+  Widget _buildTabBar(
+    BuildContext context,
+    List<String> labels, {
+    required bool isScrollable,
+  }) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmall = screenWidth < 400;
-    
+
     // Dynamic styling based on media query
     final horizontalMargin = screenWidth * 0.05; // 5% margin
     final fontSize = isSmall ? 10.0 : 12.0;
@@ -165,7 +169,7 @@ class AlgoInfoModal extends StatelessWidget {
         unselectedLabelColor: AppTheme.textMuted,
         labelPadding: EdgeInsets.symmetric(horizontal: labelPadding),
         labelStyle: TextStyle(
-          fontWeight: FontWeight.bold, 
+          fontWeight: FontWeight.bold,
           fontSize: fontSize,
           letterSpacing: 0.5,
         ),

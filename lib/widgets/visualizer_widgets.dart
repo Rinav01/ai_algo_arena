@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:ai_algo_app/core/app_theme.dart';
-import 'package:ai_algo_app/widgets/animated_number_display.dart';
+import 'package:algo_arena/core/app_theme.dart';
+import 'package:algo_arena/widgets/animated_number_display.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:ai_algo_app/models/grid_node.dart';
-import 'package:ai_algo_app/models/algo_info.dart';
-import 'package:ai_algo_app/widgets/algo_info_modal.dart';
+import 'package:algo_arena/models/grid_node.dart';
+import 'package:algo_arena/models/algo_info.dart';
+import 'package:algo_arena/widgets/algo_info_modal.dart';
+
 /// Reusable glassmorphism stat card used in visualizers.
 class GlassStatCard extends StatelessWidget {
-  const GlassStatCard({
-    super.key,
-    required this.label,
-    required this.value,
-  });
+  const GlassStatCard({super.key, required this.label, required this.value});
 
   final String label;
   final dynamic value;
@@ -23,61 +20,62 @@ class GlassStatCard extends StatelessWidget {
         decoration: AppTheme.glassCard(radius: 12),
         child: Row(
           children: [
-              // Left accent bar — separate child so borderRadius still works
-              Container(
-                width: 3.0,
-                decoration: BoxDecoration(
-                  color: AppTheme.accent,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(12.0),
-                    bottomLeft: Radius.circular(12.0),
-                  ),
+            // Left accent bar — separate child so borderRadius still works
+            Container(
+              width: 3.0,
+              decoration: BoxDecoration(
+                color: AppTheme.accent,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(12.0),
+                  bottomLeft: Radius.circular(12.0),
                 ),
               ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(11, 14, 12, 14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        label,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppTheme.textSecondary,
-                              letterSpacing: 1.2,
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(11, 14, 12, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppTheme.textSecondary,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    value is int
+                        ? AnimatedNumberDisplay(
+                            value: value as int,
+                            duration: const Duration(milliseconds: 600),
+                            curve: Curves.easeOutCubic,
+                            textStyle: TextStyle(
+                              fontSize: 22.0,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.onBackground,
+                              fontFamily: 'Inter',
                             ),
-                      ),
-                      const SizedBox(height: 6),
-                      value is int ? AnimatedNumberDisplay(
-                        value: value as int,
-                        duration: const Duration(milliseconds: 600),
-                        curve: Curves.easeOutCubic,
-                        textStyle: TextStyle(
-                          fontSize: 22.0,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.onBackground,
-                          fontFamily: 'Inter',
-                        ),
-                      ) : Text(
-                        value.toString(),
-                        style: TextStyle(
-                          fontSize: 18.0,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.onBackground,
-                          fontFamily: 'Inter',
-                        ),
-                      ),
-                    ],
-                  ),
+                          )
+                        : Text(
+                            value.toString(),
+                            style: TextStyle(
+                              fontSize: 18.0,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.onBackground,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
     );
   }
 }
-
 
 /// Status banner pill with colored dot indicator.
 class StatusBanner extends StatelessWidget {
@@ -107,8 +105,8 @@ class StatusBanner extends StatelessWidget {
         borderColor: isSolved
             ? AppTheme.success.withValues(alpha: 0.45)
             : isSolving
-                ? AppTheme.warning.withValues(alpha: 0.45)
-                : Colors.white.withValues(alpha: 0.10),
+            ? AppTheme.warning.withValues(alpha: 0.45)
+            : Colors.white.withValues(alpha: 0.10),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -133,12 +131,12 @@ class StatusBanner extends StatelessWidget {
             child: Text(
               message,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: isSolved
-                        ? AppTheme.success
-                        : isSolving
-                            ? AppTheme.warning
-                            : AppTheme.textSecondary,
-                  ),
+                color: isSolved
+                    ? AppTheme.success
+                    : isSolving
+                    ? AppTheme.warning
+                    : AppTheme.textSecondary,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -165,19 +163,21 @@ class GridLegend extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       decoration: AppTheme.glassCard(radius: 12),
       child: Wrap(
-            spacing: 16,
-            runSpacing: 10,
-            alignment: WrapAlignment.center,
-            children: [
-              _LegendDot(color: AppTheme.cellStart, label: 'Start'),
-              _LegendDot(color: AppTheme.cellGoal, label: 'Goal'),
-              _LegendDot(color: AppTheme.cellWall.withValues(alpha: 1), label: 'Wall'),
-              _LegendDot(color: AppTheme.cellWeight, label: 'Weight'),
-              _LegendDot(color: exploredColor, label: 'Explored'),
-              _LegendDot(color: pathColor, label: 'Path'),
-            ],
-      
+        spacing: 16,
+        runSpacing: 10,
+        alignment: WrapAlignment.center,
+        children: [
+          _LegendDot(color: AppTheme.cellStart, label: 'Start'),
+          _LegendDot(color: AppTheme.cellGoal, label: 'Goal'),
+          _LegendDot(
+            color: AppTheme.cellWall.withValues(alpha: 1),
+            label: 'Wall',
           ),
+          _LegendDot(color: AppTheme.cellWeight, label: 'Weight'),
+          _LegendDot(color: exploredColor, label: 'Explored'),
+          _LegendDot(color: pathColor, label: 'Path'),
+        ],
+      ),
     );
   }
 }
@@ -206,8 +206,6 @@ class _LegendDot extends StatelessWidget {
     );
   }
 }
-
-
 
 /// Visualizer header with back button and title.
 class VisualizerHeader extends StatelessWidget {
@@ -252,14 +250,11 @@ class VisualizerHeader extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppTheme.accent,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(color: AppTheme.accent),
               ),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
+              Text(subtitle, style: Theme.of(context).textTheme.labelMedium),
             ],
           ),
         ),
@@ -276,8 +271,11 @@ class VisualizerHeader extends StatelessWidget {
               width: 36.0,
               height: 36.0,
               decoration: AppTheme.glassCard(radius: 10).copyWith(
-                  color: AppTheme.accent.withValues(alpha: 0.1),
-                  border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3))),
+                color: AppTheme.accent.withValues(alpha: 0.1),
+                border: Border.all(
+                  color: AppTheme.accent.withValues(alpha: 0.3),
+                ),
+              ),
               child: Icon(
                 Icons.info_outline_rounded,
                 size: 18.0,
@@ -311,9 +309,9 @@ class SpeedControl extends StatelessWidget {
         Text(
           'SPEED: ${speed.toStringAsFixed(1)}x',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: AppTheme.textSecondary,
-                letterSpacing: 1.5,
-              ),
+            color: AppTheme.textSecondary,
+            letterSpacing: 1.5,
+          ),
         ),
         const SizedBox(height: 8),
         Slider(
@@ -369,7 +367,9 @@ class VisualizerControls extends StatelessWidget {
             Expanded(
               flex: 4,
               child: _GhostBtn(
-                icon: isSolving ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                icon: isSolving
+                    ? Icons.pause_rounded
+                    : Icons.play_arrow_rounded,
                 label: isSolving ? 'Pause' : 'Resume',
                 enabled: stepCount > 0,
                 onTap: onPauseResume,
@@ -425,12 +425,16 @@ class _CtaButton extends StatelessWidget {
     return ElevatedButton.icon(
       onPressed: enabled ? onTap : null,
       style: ElevatedButton.styleFrom(
-        backgroundColor: primary ? (accentColor ?? AppTheme.accent) : AppTheme.surfaceHigh,
+        backgroundColor: primary
+            ? (accentColor ?? AppTheme.accent)
+            : AppTheme.surfaceHigh,
         foregroundColor: Colors.white,
         disabledBackgroundColor: AppTheme.surfaceHighest.withValues(alpha: 0.5),
         disabledForegroundColor: AppTheme.textSecondary,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
         padding: EdgeInsets.symmetric(vertical: 13.0),
         side: primary
             ? null
@@ -476,7 +480,9 @@ class _GhostBtn extends StatelessWidget {
               : AppTheme.outline.withValues(alpha: 0.4),
         ),
         backgroundColor: Colors.white.withValues(alpha: 0.03),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
         padding: EdgeInsets.symmetric(vertical: 13.0),
         disabledForegroundColor: AppTheme.textSecondary.withValues(alpha: 0.4),
       ),
@@ -492,6 +498,7 @@ class _GhostBtn extends StatelessWidget {
     );
   }
 }
+
 class ToolSelector extends StatelessWidget {
   const ToolSelector({
     super.key,
@@ -500,7 +507,8 @@ class ToolSelector extends StatelessWidget {
     this.isSolving = false,
   });
 
-  final dynamic selectedTool; // PaintTool but using dynamic to avoid import circularity if needed
+  final dynamic
+  selectedTool; // PaintTool but using dynamic to avoid import circularity if needed
   final Function(dynamic) onToolSelected;
   final bool isSolving;
 
@@ -578,16 +586,24 @@ class _ToolBtn extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
         decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.03),
+          color: isSelected
+              ? color.withValues(alpha: 0.15)
+              : Colors.white.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(10.0),
           border: Border.all(
-            color: isSelected ? color.withValues(alpha: 0.6) : Colors.white.withValues(alpha: 0.08),
+            color: isSelected
+                ? color.withValues(alpha: 0.6)
+                : Colors.white.withValues(alpha: 0.08),
             width: isSelected ? 1.5 : 1,
           ),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 14.0, color: isSelected ? color : AppTheme.textSecondary),
+            Icon(
+              icon,
+              size: 14.0,
+              color: isSelected ? color : AppTheme.textSecondary,
+            ),
             const SizedBox(width: 6),
             Text(
               label,
@@ -676,9 +692,9 @@ class PerformanceChart extends StatelessWidget {
               Text(
                 'COMPUTATIONAL TREND',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppTheme.accentLight,
-                      letterSpacing: 1.5,
-                    ),
+                  color: AppTheme.accentLight,
+                  letterSpacing: 1.5,
+                ),
               ),
               Icon(Icons.query_stats_rounded, color: accentColor, size: 16.0),
             ],
@@ -697,15 +713,22 @@ class PerformanceChart extends StatelessWidget {
                 ),
                 titlesData: FlTitlesData(
                   show: true,
-                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 30,
                       getTitlesWidget: (val, meta) => Text(
                         val.toInt().toString(),
-                        style: TextStyle(color: AppTheme.textMuted, fontSize: 10.0),
+                        style: TextStyle(
+                          color: AppTheme.textMuted,
+                          fontSize: 10.0,
+                        ),
                       ),
                     ),
                   ),
@@ -716,7 +739,10 @@ class PerformanceChart extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 8.0),
                         child: Text(
                           val.toInt().toString(),
-                          style: TextStyle(color: AppTheme.textMuted, fontSize: 10.0),
+                          style: TextStyle(
+                            color: AppTheme.textMuted,
+                            fontSize: 10.0,
+                          ),
                         ),
                       ),
                     ),

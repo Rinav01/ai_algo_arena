@@ -1,11 +1,11 @@
-# 🌌 AI Algorithm Arena: High-Performance AI Visualizer
+# 🌌 Algo Arena: High-Performance AI Visualizer
 
 [![Flutter](https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/dart-%230175C2.svg?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Platform: Cross-Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Windows-blueviolet?style=for-the-badge)]()
 
-**Algorithm Arena** is a premium, engineering-grade visualization platform for AI search algorithms. Built with a focus on high-fidelity performance analysis, it enables real-time benchmarking, interactive pathfinding exploration, and side-by-side algorithm "battles" using a multi-isolate background execution engine.
+**Algo Arena** is a premium, engineering-grade visualization platform for AI search algorithms. Built with a focus on high-fidelity performance analysis, it enables real-time benchmarking, interactive pathfinding exploration, and side-by-side algorithm "battles" using a multi-isolate background execution engine.
 
 ---
 
@@ -62,6 +62,31 @@ graph TD
     ALGB -- "Batched Messaging (100 steps/msg)" --> SC
     SC -- "State Update" --> UI
 ```
+
+---
+
+## 📂 Codebase Anatomy
+
+A detailed map of the project's architecture and file responsibilities. For a more exhaustive technical report, see the [Project Guide](file:///d:/Flutter%20Projects/Personal/ai_algo/PROJECT_GUIDE.md).
+
+### 📁 core/ (Logic & Definitions)
+- **[problem_definition.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/core/problem_definition.dart)**: Abstract foundation for all Problems and Search Algorithms.
+- **[search_algorithms.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/core/search_algorithms.dart)**: Pure Dart implementations of BFS, DFS, Dijkstra, A*, and Greedy BFS.
+- **[grid_problem.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/core/grid_problem.dart)**: Maps 2D grid logic to the abstract problem-solving domain.
+
+### 📁 services/ (Business Logic)
+- **[algorithm_executor.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/services/algorithm_executor.dart)**: Orchestrates asynchronous, step-by-step solver progression.
+- **[algorithm_recommender.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/services/algorithm_recommender.dart)**: Suggests the optimal algorithm based on map complexity and density.
+- **[maze_generator.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/services/maze_generator.dart)**: Procedural generation using Prim's and Recursive Division.
+
+### 📁 state/ (State Management)
+- **[grid_controller.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/state/grid_controller.dart)**: Central manager for grid manipulations and user interactions.
+- **[settings_provider.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/state/settings_provider.dart)**: Riverpod provider for managing global app configurations.
+
+### 📁 widgets/ (UI Components)
+- **[grid_visualizer_canvas.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/widgets/grid_visualizer_canvas.dart)**: Interactive canvas hosting the high-performance grid painter.
+- **[battle_results_panel.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/widgets/battle_results_panel.dart)**: Benchmarking overlay for side-by-side performance comparison.
+
 
 ---
 
@@ -126,8 +151,10 @@ Users can paint complex environments to test algorithm robustness.
 | **Grid Persistence** | ✅ Implemented | High |
 | **Maze Generation** | ✅ Implemented | High |
 | **Battle Arena** | ✅ Implemented | High |
+| **8-Puzzle & N-Queens** | ✅ Implemented | High |
+| **AI Recommendation Engine** | ✅ Implemented | Medium |
+| **Procedural Maze Editor** | ✅ Implemented | Medium |
 | **Leaderboards (Ranks)** | 🚀 Arriving Soon | Medium |
-| **Procedural Maze Customizer** | 🚀 Arriving Soon | Medium |
 | **Bidirectional Search** | 📅 Backlog | Low |
 
 ---

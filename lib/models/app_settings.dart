@@ -34,13 +34,13 @@ class AppSettings {
   }
 
   Map<String, dynamic> toJson() => {
-        'neonGlowIntensity': neonGlowIntensity,
-        'gridTransparency': gridTransparency,
-        'allowDiagonalMoves': allowDiagonalMoves,
-        'heuristicWeight': heuristicWeight,
-        'collisionVibration': collisionVibration,
-        'executionPulse': executionPulse,
-      };
+    'neonGlowIntensity': neonGlowIntensity,
+    'gridTransparency': gridTransparency,
+    'allowDiagonalMoves': allowDiagonalMoves,
+    'heuristicWeight': heuristicWeight,
+    'collisionVibration': collisionVibration,
+    'executionPulse': executionPulse,
+  };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
     return AppSettings(

@@ -59,27 +59,34 @@ class NQueensSolver {
     final domains = List.generate(n, (_) => List.generate(n, (i) => i));
 
     await _backtrack(board, 0, domains);
-    
+
     if (!_isStopped) {
-      _controller.add(NQueensStep(
-        board: List.from(board),
-        currentRow: n,
-        steps: _steps,
-        backtracks: _backtracks,
-        isSolved: board.every((c) => c != -1),
-      ));
+      _controller.add(
+        NQueensStep(
+          board: List.from(board),
+          currentRow: n,
+          steps: _steps,
+          backtracks: _backtracks,
+          isSolved: board.every((c) => c != -1),
+        ),
+      );
     }
-    
+
     await _controller.close();
   }
 
-  Future<bool> _backtrack(List<int> board, int queensPlaced, List<List<int>> domains) async {
+  Future<bool> _backtrack(
+    List<int> board,
+    int queensPlaced,
+    List<List<int>> domains,
+  ) async {
     if (_isStopped) return false;
     if (queensPlaced == n) return true;
 
     // Find next row to assign
     int row = -1;
-    if (mode == NQueensSolverMode.backtrackingMRV || mode == NQueensSolverMode.forwardChecking) {
+    if (mode == NQueensSolverMode.backtrackingMRV ||
+        mode == NQueensSolverMode.forwardChecking) {
       int minDomainSize = n + 1;
       for (int i = 0; i < n; i++) {
         if (board[i] == -1) {
@@ -114,7 +121,7 @@ class NQueensSolver {
     }
 
     final currentDomain = List<int>.from(domains[row]);
-    
+
     for (final col in currentDomain) {
       if (_isStopped) return false;
 
@@ -122,13 +129,15 @@ class NQueensSolver {
       board[row] = col;
 
       // Emit step
-      _controller.add(NQueensStep(
-        board: List.from(board),
-        currentRow: row,
-        steps: _steps,
-        backtracks: _backtracks,
-        lastColumnTried: col,
-      ));
+      _controller.add(
+        NQueensStep(
+          board: List.from(board),
+          currentRow: row,
+          steps: _steps,
+          backtracks: _backtracks,
+          lastColumnTried: col,
+        ),
+      );
 
       await Future.delayed(stepDelay);
 
@@ -157,15 +166,17 @@ class NQueensSolver {
       // Backtrack
       _backtracks++;
       board[row] = -1;
-      _controller.add(NQueensStep(
-        board: List.from(board),
-        currentRow: row,
-        steps: _steps,
-        backtracks: _backtracks,
-        isBacktracking: true,
-      ));
+      _controller.add(
+        NQueensStep(
+          board: List.from(board),
+          currentRow: row,
+          steps: _steps,
+          backtracks: _backtracks,
+          isBacktracking: true,
+        ),
+      );
       await Future.delayed(stepDelay);
-      
+
       if (_isPaused) {
         _pauseCompleter = Completer<void>();
         await _pauseCompleter!.future;
@@ -178,7 +189,7 @@ class NQueensSolver {
   bool _isSafe(List<int> board, int row, int col) {
     for (int i = 0; i < n; i++) {
       if (i == row || board[i] == -1) continue;
-      
+
       int otherCol = board[i];
       if (otherCol == col) return false; // same column
       if ((row - i).abs() == (col - otherCol).abs()) return false; // diagonal
@@ -186,15 +197,22 @@ class NQueensSolver {
     return true;
   }
 
-  List<List<int>> _forwardCheck(List<int> board, int row, int col, List<List<int>> currentDomains) {
-    List<List<int>> newDomains = currentDomains.map((d) => List<int>.from(d)).toList();
-    
+  List<List<int>> _forwardCheck(
+    List<int> board,
+    int row,
+    int col,
+    List<List<int>> currentDomains,
+  ) {
+    List<List<int>> newDomains = currentDomains
+        .map((d) => List<int>.from(d))
+        .toList();
+
     for (int r = row + 1; r < n; r++) {
-      newDomains[r].removeWhere((c) => 
-        c == col || (r - row).abs() == (c - col).abs()
+      newDomains[r].removeWhere(
+        (c) => c == col || (r - row).abs() == (c - col).abs(),
       );
     }
-    
+
     return newDomains;
   }
 

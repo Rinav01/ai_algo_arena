@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:ai_algo_app/painters/grid_painter.dart';
-import 'package:ai_algo_app/state/grid_controller.dart';
-import 'package:ai_algo_app/widgets/control_panel.dart';
-import 'package:ai_algo_app/widgets/stat_card.dart';
+import 'package:algo_arena/painters/grid_painter.dart';
+import 'package:algo_arena/state/grid_controller.dart';
+import 'package:algo_arena/widgets/control_panel.dart';
+import 'package:algo_arena/widgets/stat_card.dart';
 
 class VisualizerScreen extends StatefulWidget {
   const VisualizerScreen({super.key});

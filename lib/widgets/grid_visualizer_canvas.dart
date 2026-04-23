@@ -1,13 +1,13 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ai_algo_app/core/app_theme.dart';
-import 'package:ai_algo_app/core/grid_problem.dart';
-import 'package:ai_algo_app/models/grid_node.dart';
-import 'package:ai_algo_app/models/app_settings.dart';
-import 'package:ai_algo_app/services/algorithm_executor.dart';
-import 'package:ai_algo_app/state/grid_controller.dart';
-import 'package:ai_algo_app/state/settings_provider.dart';
+import 'package:algo_arena/core/app_theme.dart';
+import 'package:algo_arena/core/grid_problem.dart';
+import 'package:algo_arena/models/grid_node.dart';
+import 'package:algo_arena/models/app_settings.dart';
+import 'package:algo_arena/services/algorithm_executor.dart';
+import 'package:algo_arena/state/grid_controller.dart';
+import 'package:algo_arena/state/settings_provider.dart';
 
 class GridVisualizerCanvas extends ConsumerStatefulWidget {
   final GridController controller;
@@ -30,14 +30,15 @@ class GridVisualizerCanvas extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<GridVisualizerCanvas> createState() => _GridVisualizerCanvasState();
+  ConsumerState<GridVisualizerCanvas> createState() =>
+      _GridVisualizerCanvasState();
 }
 
 class _GridVisualizerCanvasState extends ConsumerState<GridVisualizerCanvas>
     with SingleTickerProviderStateMixin {
   ui.Picture? _staticGridPicture;
   AppSettings? _lastSettings;
-  
+
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -46,7 +47,7 @@ class _GridVisualizerCanvasState extends ConsumerState<GridVisualizerCanvas>
     super.initState();
     widget.controller.addListener(_onGridChanged);
     widget.executor?.addListener(_onExecutorUpdate);
-    
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -134,9 +135,11 @@ class _GridVisualizerCanvasState extends ConsumerState<GridVisualizerCanvas>
     final cellHeight = size.height / widget.controller.rows;
     final col = (localPosition.dx / cellWidth).floor();
     final row = (localPosition.dy / cellHeight).floor();
-    
-    if (row >= 0 && row < widget.controller.rows && 
-        col >= 0 && col < widget.controller.columns) {
+
+    if (row >= 0 &&
+        row < widget.controller.rows &&
+        col >= 0 &&
+        col < widget.controller.columns) {
       return (row, col);
     }
     return null;
@@ -145,22 +148,25 @@ class _GridVisualizerCanvasState extends ConsumerState<GridVisualizerCanvas>
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
-    
+
     // Invalidate if transparency changes
     if (_lastSettings?.gridTransparency != settings.gridTransparency) {
-       _invalidateStaticPicture();
-       _lastSettings = settings;
+      _invalidateStaticPicture();
+      _lastSettings = settings;
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
-        
+
         return GestureDetector(
-          onPanStart: (details) => _handlePointerDown(details.localPosition, size),
-          onPanUpdate: (details) => _handlePointerUpdate(details.localPosition, size),
+          onPanStart: (details) =>
+              _handlePointerDown(details.localPosition, size),
+          onPanUpdate: (details) =>
+              _handlePointerUpdate(details.localPosition, size),
           onPanEnd: (_) => _handlePointerUp(),
-          onTapDown: (details) => _handlePointerDown(details.localPosition, size),
+          onTapDown: (details) =>
+              _handlePointerDown(details.localPosition, size),
           child: AnimatedBuilder(
             animation: _pulseAnimation,
             builder: (context, child) {
@@ -228,7 +234,12 @@ class _GridPainter extends CustomPainter {
     _drawCurrentNode(canvas, cellWidth, cellHeight);
   }
 
-  void _drawStaticGrid(Canvas canvas, Size size, double cellWidth, double cellHeight) {
+  void _drawStaticGrid(
+    Canvas canvas,
+    Size size,
+    double cellWidth,
+    double cellHeight,
+  ) {
     final paint = Paint()
       ..style = PaintingStyle.fill
       ..strokeWidth = 1.0;
@@ -242,58 +253,83 @@ class _GridPainter extends CustomPainter {
       for (int c = 0; c < controller.columns; c++) {
         final node = controller.grid[r][c];
         final rect = Rect.fromLTWH(
-          c * cellWidth + 0.5, 
-          r * cellHeight + 0.5, 
-          cellWidth - 1, 
-          cellHeight - 1
+          c * cellWidth + 0.5,
+          r * cellHeight + 0.5,
+          cellWidth - 1,
+          cellHeight - 1,
         );
 
         if (node.type == NodeType.wall) {
           paint.color = AppTheme.cellWall;
-          canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(2)), paint);
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(rect, const Radius.circular(2)),
+            paint,
+          );
         } else if (node.type == NodeType.start) {
           paint.color = AppTheme.cellStart;
-          canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(4)), paint);
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(rect, const Radius.circular(4)),
+            paint,
+          );
         } else if (node.type == NodeType.goal) {
           paint.color = AppTheme.cellGoal;
-          canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(4)), paint);
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(rect, const Radius.circular(4)),
+            paint,
+          );
         } else if (node.type == NodeType.weight) {
           paint.color = AppTheme.cellWeight;
-          canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(2)), paint);
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(rect, const Radius.circular(2)),
+            paint,
+          );
         }
       }
     }
-    
+
     // Grid Lines (Subtle)
     final linePaint = Paint()
-      ..color = Colors.white.withValues(alpha: settings.gridTransparency * 0.1) // Sensitivity to settings
+      ..color = Colors.white
+          .withValues(
+            alpha: settings.gridTransparency * 0.1,
+          ) // Sensitivity to settings
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.5;
-      
+
     for (int i = 0; i <= controller.columns; i++) {
-      canvas.drawLine(Offset(i * cellWidth, 0), Offset(i * cellWidth, size.height), linePaint);
+      canvas.drawLine(
+        Offset(i * cellWidth, 0),
+        Offset(i * cellWidth, size.height),
+        linePaint,
+      );
     }
     for (int i = 0; i <= controller.rows; i++) {
-      canvas.drawLine(Offset(0, i * cellHeight), Offset(size.width, i * cellHeight), linePaint);
+      canvas.drawLine(
+        Offset(0, i * cellHeight),
+        Offset(size.width, i * cellHeight),
+        linePaint,
+      );
     }
   }
 
   void _drawExploredStates(Canvas canvas, double cellWidth, double cellHeight) {
     if (executor == null || executor!.exploredSet.isEmpty) return;
-    
+
     final paint = Paint()
       ..color = accentColor.withValues(alpha: 0.4)
       ..style = PaintingStyle.fill;
-      
+
     final path = Path();
     for (final state in executor!.exploredSet) {
-      if (controller.grid[state.row][state.column].type != NodeType.empty) continue;
-      
+      if (controller.grid[state.row][state.column].type != NodeType.empty) {
+        continue;
+      }
+
       final rect = Rect.fromLTWH(
-        state.column * cellWidth + 0.5, 
-        state.row * cellHeight + 0.5, 
-        cellWidth - 1, 
-        cellHeight - 1
+        state.column * cellWidth + 0.5,
+        state.row * cellHeight + 0.5,
+        cellWidth - 1,
+        cellHeight - 1,
       );
       path.addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(2)));
     }
@@ -302,31 +338,31 @@ class _GridPainter extends CustomPainter {
 
   void _drawPath(Canvas canvas, double cellWidth, double cellHeight) {
     if (executor == null || executor!.pathSet.isEmpty) return;
-    
+
     final paint = Paint()
       ..color = AppTheme.cyan
       ..style = PaintingStyle.fill;
-      
+
     final shadowPaint = Paint()
       ..color = AppTheme.cyan.withValues(alpha: 0.3)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
 
     final path = Path();
     for (final state in executor!.pathSet) {
-      if (controller.grid[state.row][state.column].type == NodeType.start || 
+      if (controller.grid[state.row][state.column].type == NodeType.start ||
           controller.grid[state.row][state.column].type == NodeType.goal) {
         continue;
       }
-          
+
       final rect = Rect.fromLTWH(
-        state.column * cellWidth + 0.5, 
-        state.row * cellHeight + 0.5, 
-        cellWidth - 1, 
-        cellHeight - 1
+        state.column * cellWidth + 0.5,
+        state.row * cellHeight + 0.5,
+        cellWidth - 1,
+        cellHeight - 1,
       );
       path.addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(2)));
     }
-    
+
     // Draw shadow path once (for the whole path)
     canvas.drawPath(path, shadowPaint);
     // Draw solid path once
@@ -336,33 +372,36 @@ class _GridPainter extends CustomPainter {
   void _drawCurrentNode(Canvas canvas, double cellWidth, double cellHeight) {
     final current = executor?.lastStep?.currentState;
     if (current == null) return;
-    
+
     final paint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
-      
+
     // Sensitivity to settings.neonGlowIntensity
     final glowValue = pulseValue * settings.neonGlowIntensity * 2.0;
-    
+
     final pulsePaint = Paint()
       ..color = accentColor.withValues(alpha: 0.8)
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, glowValue.clamp(0.1, 20.0));
-      
+      ..maskFilter = MaskFilter.blur(
+        BlurStyle.normal,
+        glowValue.clamp(0.1, 20.0),
+      );
+
     final center = Offset(
       current.column * cellWidth + cellWidth / 2,
-      current.row * cellHeight + cellHeight / 2
+      current.row * cellHeight + cellHeight / 2,
     );
-    
+
     canvas.drawCircle(center, cellWidth / 3, pulsePaint);
     canvas.drawCircle(center, 2.0, paint);
   }
 
   @override
   bool shouldRepaint(covariant _GridPainter oldDelegate) {
-    return oldDelegate.pulseValue != pulseValue || 
-           oldDelegate.staticPicture != staticPicture ||
-           oldDelegate.executor?.lastStep != executor?.lastStep ||
-           oldDelegate.controller != controller ||
-           oldDelegate.settings != settings;
+    return oldDelegate.pulseValue != pulseValue ||
+        oldDelegate.staticPicture != staticPicture ||
+        oldDelegate.executor?.lastStep != executor?.lastStep ||
+        oldDelegate.controller != controller ||
+        oldDelegate.settings != settings;
   }
 }

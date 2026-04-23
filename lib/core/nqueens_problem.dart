@@ -42,7 +42,7 @@ class NQueensUtils {
   /// Check if queen at (row, col) is safe given the current board
   static bool isSafe(List<int> board, int row, int col) {
     int n = board.length;
-    
+
     // Check column
     for (int i = 0; i < n; i++) {
       if (i != row && board[i] == col) return false;

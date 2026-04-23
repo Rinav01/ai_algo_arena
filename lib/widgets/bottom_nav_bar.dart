@@ -1,7 +1,6 @@
 import 'dart:math' as math;
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:ai_algo_app/core/app_theme.dart';
+import 'package:algo_arena/core/app_theme.dart';
 
 /// Glassmorphism bottom navigation bar — Neural Arena design.
 class ArenaBottomNavBar extends StatelessWidget {
@@ -19,10 +18,7 @@ class ArenaBottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: Container(
-        constraints: BoxConstraints(
-          minHeight: 64.0,
-          maxHeight: 120.0,
-        ),
+        constraints: BoxConstraints(minHeight: 64.0, maxHeight: 120.0),
         decoration: BoxDecoration(
           color: AppTheme.surfaceVariant.withValues(alpha: 0.96),
           border: Border(
@@ -36,32 +32,31 @@ class ArenaBottomNavBar extends StatelessWidget {
             ),
           ],
         ),
-          child: SafeArea(
-            top: false,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(_items.length, (i) {
-                final item = _items[i];
-                final isActive = i == currentIndex;
-                return _NavItem(
-                  icon: item.icon,
-                  label: item.label,
-                  isActive: isActive,
-                  onTap: () {
-                    if (item.label == 'Ranks') {
-                      _showComingSoonDialog(context, 'Leaderboards');
-                      return;
-                    }
-                    if (!isActive) {
-                      Navigator.pushNamed(
-                          context, item.route);
-                    }
-                  },
-                );
-              }),
-            ),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(_items.length, (i) {
+              final item = _items[i];
+              final isActive = i == currentIndex;
+              return _NavItem(
+                icon: item.icon,
+                label: item.label,
+                isActive: isActive,
+                onTap: () {
+                  if (item.label == 'Ranks') {
+                    _showComingSoonDialog(context, 'Leaderboards');
+                    return;
+                  }
+                  if (!isActive) {
+                    Navigator.pushNamed(context, item.route);
+                  }
+                },
+              );
+            }),
           ),
         ),
+      ),
     );
   }
 }
@@ -111,18 +106,18 @@ class _NavItem extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: isActive ? AppTheme.accentLight : AppTheme.textMuted,
-                            fontSize: math.min(10.0, 14.0),
-                            letterSpacing: 0.5,
-                          ),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: isActive
+                          ? AppTheme.accentLight
+                          : AppTheme.textMuted,
+                      fontSize: math.min(10.0, 14.0),
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
@@ -131,7 +126,10 @@ class _NavItem extends StatelessWidget {
                     top: -4,
                     right: -12,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.accent,
                         borderRadius: BorderRadius.circular(4),
@@ -184,7 +182,13 @@ void _showComingSoonDialog(BuildContext context, String feature) {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('EXCITING!', style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.bold)),
+          child: const Text(
+            'EXCITING!',
+            style: TextStyle(
+              color: AppTheme.accent,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
       ],
     ),

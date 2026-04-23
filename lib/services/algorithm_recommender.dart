@@ -44,12 +44,16 @@ class AlgorithmRecommender {
     final gridSize = problem.gridSize;
     final isLargeGrid = total > 500;
     final isHighlyObstructed = obstacleDensity > 0.4;
-    
+
     // Check if the grid has varied weights (costs > 1.0)
     bool hasWeights = false;
     for (int r = 0; r < problem.rows; r++) {
       for (int c = 0; c < problem.cols; c++) {
-        if (problem.moveCost(GridCoordinate(row: 0, column: 0), GridCoordinate(row: r, column: c)) > 1.0) {
+        if (problem.moveCost(
+              GridCoordinate(row: 0, column: 0),
+              GridCoordinate(row: r, column: c),
+            ) >
+            1.0) {
           hasWeights = true;
           break;
         }
@@ -61,7 +65,8 @@ class AlgorithmRecommender {
     if (hasWeights) {
       return RecommendationResult(
         algorithm: RecommendedAlgorithm.aStar,
-        reason: 'Varied cell costs detected. A* ensures the cheapest path while using heuristics to minimize exploration.',
+        reason:
+            'Varied cell costs detected. A* ensures the cheapest path while using heuristics to minimize exploration.',
         confidence: 0.99,
         considerations: [
           'Guarantees optimal path in weighted environments',
@@ -74,7 +79,8 @@ class AlgorithmRecommender {
     if (isLargeGrid || isHighlyObstructed) {
       return RecommendationResult(
         algorithm: RecommendedAlgorithm.aStar,
-        reason: 'Large or complex map detected. A* avoids the "flood-fill" overhead of BFS, staying focused on the goal.',
+        reason:
+            'Large or complex map detected. A* avoids the "flood-fill" overhead of BFS, staying focused on the goal.',
         confidence: 0.95,
         considerations: [
           'Avoids unnecessary exploration of areas facing away from the target',
@@ -87,7 +93,8 @@ class AlgorithmRecommender {
     if (gridSize == GridSize.small && obstacleDensity < 0.2) {
       return RecommendationResult(
         algorithm: RecommendedAlgorithm.bfs,
-        reason: 'Small, simple grid. BFS is the perfect choice for visualizing how a shortest path is found layer-by-layer.',
+        reason:
+            'Small, simple grid. BFS is the perfect choice for visualizing how a shortest path is found layer-by-layer.',
         confidence: 0.80,
         considerations: [
           'Simple and intuitive visualization',
@@ -100,7 +107,8 @@ class AlgorithmRecommender {
     // Fallback: A* for everything else
     return RecommendationResult(
       algorithm: RecommendedAlgorithm.aStar,
-      reason: 'General optimization: A* provides the best balance of speed and optimality for this configuration.',
+      reason:
+          'General optimization: A* provides the best balance of speed and optimality for this configuration.',
       confidence: 0.90,
       considerations: [
         'Minimal memory footprint',
@@ -167,7 +175,7 @@ class AlgorithmRecommender {
     switch (algorithm) {
       case RecommendedAlgorithm.aStar:
         // A* is the baseline for high efficiency
-        return 0.95; 
+        return 0.95;
 
       case RecommendedAlgorithm.bfs:
         // BFS is highly inefficient due to uniform expansion (visits many nodes)

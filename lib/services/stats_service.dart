@@ -31,18 +31,18 @@ class ArenaStats {
   }
 
   Map<String, dynamic> toJson() => {
-        'battlesRun': battlesRun,
-        'winCounts': winCounts,
-        'winOrder': winOrder,
-      };
+    'battlesRun': battlesRun,
+    'winCounts': winCounts,
+    'winOrder': winOrder,
+  };
 
   factory ArenaStats.fromJson(Map<String, dynamic> json) {
     final winCounts = Map<String, int>.from(json['winCounts'] ?? {});
     final winOrder = List<String>.from(json['winOrder'] ?? []);
-    
+
     String? best;
     int maxWins = 0;
-    
+
     // Tie-breaking: first to reach the count.
     // We iterate through winOrder to find who has the current maxWins.
     // The first one we find with the max wins in the order count reached is the "Senior" leader.
@@ -64,10 +64,11 @@ class ArenaStats {
 }
 
 /// provider for the persistent stats
-final arenaStatsProvider = StateNotifierProvider<ArenaStatsNotifier, ArenaStats>((ref) {
-  final prefs = ref.watch(sharedPrefsProvider);
-  return ArenaStatsNotifier(prefs);
-});
+final arenaStatsProvider =
+    StateNotifierProvider<ArenaStatsNotifier, ArenaStats>((ref) {
+      final prefs = ref.watch(sharedPrefsProvider);
+      return ArenaStatsNotifier(prefs);
+    });
 
 /// Shared Preferences provider (initalized in main)
 final sharedPrefsProvider = Provider<SharedPreferences>((ref) {
@@ -100,16 +101,16 @@ class ArenaStatsNotifier extends StateNotifier<ArenaStats> {
 
     if (winnerName != null) {
       newWinCounts[winnerName] = (newWinCounts[winnerName] ?? 0) + 1;
-      
+
       // If this algo is not in the winOrder yet, add it.
       // Note: This winOrder logic simple tracks the "existence" of the algo in terms of wins.
       // For true "reached count first" tie-breaking, we need to know when someone surpasses someone else.
       if (!newWinOrder.contains(winnerName)) {
         newWinOrder.add(winnerName);
       } else {
-         // To strictly follow "one that reaches the count first":
-         // If A has 2 wins and B has 1. B gets a 2nd win. A is still the leader.
-         // My loop in fromJson handles this because it picks the first one it finds with maxWins.
+        // To strictly follow "one that reaches the count first":
+        // If A has 2 wins and B has 1. B gets a 2nd win. A is still the leader.
+        // My loop in fromJson handles this because it picks the first one it finds with maxWins.
       }
     }
 

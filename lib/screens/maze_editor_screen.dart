@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:ai_algo_app/models/grid_node.dart';
-import 'package:ai_algo_app/state/grid_controller.dart';
-import 'package:ai_algo_app/core/grid_problem.dart';
-import 'package:ai_algo_app/core/search_algorithms.dart';
-import 'package:ai_algo_app/services/algorithm_executor.dart';
-import 'package:ai_algo_app/core/problem_definition.dart';
-import 'package:ai_algo_app/core/app_theme.dart';
-import 'package:ai_algo_app/services/maze_generator.dart';
+import 'package:algo_arena/models/grid_node.dart';
+import 'package:algo_arena/state/grid_controller.dart';
+import 'package:algo_arena/core/grid_problem.dart';
+import 'package:algo_arena/core/search_algorithms.dart';
+import 'package:algo_arena/services/algorithm_executor.dart';
+import 'package:algo_arena/core/problem_definition.dart';
+import 'package:algo_arena/core/app_theme.dart';
+import 'package:algo_arena/services/maze_generator.dart';
 
-import 'package:ai_algo_app/widgets/grid_visualizer_canvas.dart';
+import 'package:algo_arena/widgets/grid_visualizer_canvas.dart';
 
 class MazeEditorScreen extends StatefulWidget {
   const MazeEditorScreen({super.key});
@@ -39,100 +39,100 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: Column(
-            children: [
-              // Header
-              Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.arrow_back),
-                        ),
-                        const SizedBox(width: 8),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Arena Architect',
-                              style: TextStyle(
-                                fontSize: 20.0,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              'Editor Mode',
-                              style: TextStyle(
-                                fontSize: 12.0,
-                                color: Colors.grey[400],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: _saveArena,
-                      icon: const Icon(Icons.save),
-                      label: const Text('Save'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFFA500),
-                        foregroundColor: Colors.black,
+          children: [
+            // Header
+            Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              // Tabs
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                child: Row(
-                  children: [
-                    _buildTab('Grid Editor', true),
-                    const SizedBox(width: 16),
-                    _buildTab('Constraints', false),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Grid Editor
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(16.0),
-                  child: AnimatedBuilder(
-                    animation: _controller,
-                    builder: (context, _) {
-                      return Column(
+                      const SizedBox(width: 8),
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Grid Canvas
-                          Center(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: const Color(0xFFD4A574),
-                                  width: 2.0,
-                                ),
-                                borderRadius: BorderRadius.circular(16.0),
-                              ),
-                              child: _buildGrid(),
+                          Text(
+                            'Arena Architect',
+                            style: TextStyle(
+                              fontSize: 20.0,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 24),
-                          // Toolbar
-                          _buildToolbar(context),
+                          Text(
+                            'Editor Mode',
+                            style: TextStyle(
+                              fontSize: 12.0,
+                              color: Colors.grey[400],
+                            ),
+                          ),
                         ],
-                      );
-                    },
+                      ),
+                    ],
                   ),
+                  ElevatedButton.icon(
+                    onPressed: _saveArena,
+                    icon: const Icon(Icons.save),
+                    label: const Text('Save'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFFA500),
+                      foregroundColor: Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Tabs
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children: [
+                  _buildTab('Grid Editor', true),
+                  const SizedBox(width: 16),
+                  _buildTab('Constraints', false),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Grid Editor
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(16.0),
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, _) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Grid Canvas
+                        Center(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: const Color(0xFFD4A574),
+                                width: 2.0,
+                              ),
+                              borderRadius: BorderRadius.circular(16.0),
+                            ),
+                            child: _buildGrid(),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        // Toolbar
+                        _buildToolbar(context),
+                      ],
+                    );
+                  },
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
+      ),
     );
   }
 
@@ -167,7 +167,6 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
       ),
     );
   }
-
 
   Widget _buildToolbar(BuildContext context) {
     return Column(
@@ -397,8 +396,8 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
       _executor = AlgorithmExecutor<GridCoordinate>(
         algorithm: algo,
         problem: widget.problem,
-      stepDelayMs: _stepDelay.inMilliseconds,
-    );
+        stepDelayMs: _stepDelay.inMilliseconds,
+      );
     }
 
     setState(() {
@@ -462,8 +461,8 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
 
   Future<void> _stepOnce() async {
     _executor ??= AlgorithmExecutor<GridCoordinate>(
-        algorithm: AStarAlgorithm<GridCoordinate>(),
-        problem: widget.problem,
+      algorithm: AStarAlgorithm<GridCoordinate>(),
+      problem: widget.problem,
       stepDelayMs: _stepDelay.inMilliseconds,
     );
 
@@ -525,11 +524,20 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
       } else {
         path.add(coord);
       }
-      
+
       // If the path touches the goal, we can say it's manually connected
-      isSolved = path.any((c) => c.row == widget.problem.goalState.row && c.column == widget.problem.goalState.column) &&
-                 path.any((c) => c.row == widget.problem.initialState.row && c.column == widget.problem.initialState.column);
-      
+      isSolved =
+          path.any(
+            (c) =>
+                c.row == widget.problem.goalState.row &&
+                c.column == widget.problem.goalState.column,
+          ) &&
+          path.any(
+            (c) =>
+                c.row == widget.problem.initialState.row &&
+                c.column == widget.problem.initialState.column,
+          );
+
       stepCount = 0;
       explored.clear();
     });
@@ -604,7 +612,9 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
       children: [
         Text(
           'Select Algorithm',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.white),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(color: Colors.white),
         ),
         const SizedBox(height: 8),
         SingleChildScrollView(
@@ -646,7 +656,9 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
       children: [
         Text(
           'Execution Speed: ${_executionSpeed.toStringAsFixed(1)}x',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.white),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(color: Colors.white),
         ),
         const SizedBox(height: 8),
         Slider(
@@ -688,7 +700,9 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
           onPressed: isSolving
               ? null
               : () {
-                  _startSolving(autoRun: true).then((_) => setModalState(() {}));
+                  _startSolving(
+                    autoRun: true,
+                  ).then((_) => setModalState(() {}));
                 },
           icon: const Icon(Icons.play_arrow),
           label: const Text('Solve'),

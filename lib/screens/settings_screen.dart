@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ai_algo_app/core/app_theme.dart';
-import 'package:ai_algo_app/widgets/bottom_nav_bar.dart';
-import 'package:ai_algo_app/state/settings_provider.dart';
-import 'package:ai_algo_app/services/stats_service.dart';
+import 'package:algo_arena/core/app_theme.dart';
+import 'package:algo_arena/widgets/bottom_nav_bar.dart';
+import 'package:algo_arena/state/settings_provider.dart';
+import 'package:algo_arena/services/stats_service.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -62,8 +62,12 @@ class SettingsScreen extends ConsumerWidget {
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                         Text('${settings.heuristicWeight.toStringAsFixed(1)}x', 
-                          style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.bold)
+                        Text(
+                          '${settings.heuristicWeight.toStringAsFixed(1)}x',
+                          style: const TextStyle(
+                            color: AppTheme.accent,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(width: 8),
                         SizedBox(
@@ -102,7 +106,10 @@ class SettingsScreen extends ConsumerWidget {
                     title: 'Clear Battle History',
                     subtitle: 'Reset all comparison winners and records',
                     trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.error),
+                      icon: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: AppTheme.error,
+                      ),
                       onPressed: () => _confirmResetStats(context, ref),
                     ),
                   ),
@@ -222,7 +229,9 @@ class SettingsScreen extends ConsumerWidget {
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.surfaceHigh,
         title: const Text('Clear History?'),
-        content: const Text('This will permanently delete all battle statistics and records.'),
+        content: const Text(
+          'This will permanently delete all battle statistics and records.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

@@ -1,17 +1,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:ai_algo_app/core/app_theme.dart';
-import 'package:ai_algo_app/models/algo_info.dart';
+import 'package:algo_arena/core/app_theme.dart';
+import 'package:algo_arena/models/algo_info.dart';
 
 class ConceptVisualizer extends StatefulWidget {
   final ConceptType type;
   final double size;
 
-  const ConceptVisualizer({
-    super.key,
-    required this.type,
-    this.size = 120,
-  });
+  const ConceptVisualizer({super.key, required this.type, this.size = 120});
 
   @override
   State<ConceptVisualizer> createState() => _ConceptVisualizerState();
@@ -63,7 +59,7 @@ class _EnhancedConceptPainter extends CustomPainter {
   final Animation<double> animation;
 
   _EnhancedConceptPainter({required this.type, required this.animation})
-      : super(repaint: animation);
+    : super(repaint: animation);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -221,7 +217,9 @@ class _EnhancedConceptPainter extends CustomPainter {
       Offset p1 = points[visiblePoints];
       Offset p2 = points[visiblePoints + 1];
       path.lineTo(
-          p1.dx + (p2.dx - p1.dx) * partial, p1.dy + (p2.dy - p1.dy) * partial);
+        p1.dx + (p2.dx - p1.dx) * partial,
+        p1.dy + (p2.dy - p1.dy) * partial,
+      );
     }
 
     canvas.drawPath(path, paint);
@@ -229,7 +227,10 @@ class _EnhancedConceptPainter extends CustomPainter {
     // Draw current head
     paint.style = PaintingStyle.fill;
     canvas.drawCircle(
-        points[visiblePoints], 4, paint..color = AppTheme.accentLight);
+      points[visiblePoints],
+      4,
+      paint..color = AppTheme.accentLight,
+    );
   }
 
   void _drawGreedy(Canvas canvas, Size size, Offset center) {
@@ -291,10 +292,12 @@ class _EnhancedConceptPainter extends CustomPainter {
 
     for (double i = 0; i <= t; i += 0.05) {
       double it = i;
-      double x = math.pow(1 - it, 2) * start.dx +
+      double x =
+          math.pow(1 - it, 2) * start.dx +
           2 * (1 - it) * it * control.dx +
           math.pow(it, 2) * target.dx;
-      double y = math.pow(1 - it, 2) * start.dy +
+      double y =
+          math.pow(1 - it, 2) * start.dy +
           2 * (1 - it) * it * control.dy +
           math.pow(it, 2) * target.dy;
       path.lineTo(x, y);
@@ -305,11 +308,12 @@ class _EnhancedConceptPainter extends CustomPainter {
     // Pulse rings at start (Dijkstra influence)
     double r = (animation.value * 30) % 30;
     canvas.drawCircle(
-        start,
-        r,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..color = AppTheme.success.withValues(alpha: (1 - r / 30) * 0.3));
+      start,
+      r,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..color = AppTheme.success.withValues(alpha: (1 - r / 30) * 0.3),
+    );
 
     canvas.drawCircle(target, 5, Paint()..color = AppTheme.error); // Target
   }
@@ -322,9 +326,15 @@ class _EnhancedConceptPainter extends CustomPainter {
 
     for (int i = 0; i <= 4; i++) {
       canvas.drawLine(
-          Offset(i * cellSize, 0), Offset(i * cellSize, size.height), gridPaint);
+        Offset(i * cellSize, 0),
+        Offset(i * cellSize, size.height),
+        gridPaint,
+      );
       canvas.drawLine(
-          Offset(0, i * cellSize), Offset(size.width, i * cellSize), gridPaint);
+        Offset(0, i * cellSize),
+        Offset(size.width, i * cellSize),
+        gridPaint,
+      );
     }
 
     double t = animation.value;
@@ -346,17 +356,23 @@ class _EnhancedConceptPainter extends CustomPainter {
 
     for (var pos in frames[step]) {
       Offset drawPos = Offset(
-          pos.dx * cellSize + cellSize / 2, pos.dy * cellSize + cellSize / 2);
+        pos.dx * cellSize + cellSize / 2,
+        pos.dy * cellSize + cellSize / 2,
+      );
       queenPaint.color = AppTheme.success;
       canvas.drawCircle(drawPos, cellSize * 0.3, queenPaint);
     }
 
     if (step == 1 || step == 4) {
       int lastIdx = frames[step].length - 1;
-      Offset p1 = Offset(frames[step][lastIdx - 1].dx * cellSize + cellSize / 2,
-          frames[step][lastIdx - 1].dy * cellSize + cellSize / 2);
-      Offset p2 = Offset(frames[step][lastIdx].dx * cellSize + cellSize / 2,
-          frames[step][lastIdx].dy * cellSize + cellSize / 2);
+      Offset p1 = Offset(
+        frames[step][lastIdx - 1].dx * cellSize + cellSize / 2,
+        frames[step][lastIdx - 1].dy * cellSize + cellSize / 2,
+      );
+      Offset p2 = Offset(
+        frames[step][lastIdx].dx * cellSize + cellSize / 2,
+        frames[step][lastIdx].dy * cellSize + cellSize / 2,
+      );
       canvas.drawLine(p1, p2, conflictPaint);
     }
   }
@@ -372,19 +388,32 @@ class _EnhancedConceptPainter extends CustomPainter {
       ..color = Colors.white.withValues(alpha: 0.1);
     for (int i = 0; i <= 4; i++) {
       canvas.drawLine(
-          Offset(i * cellSize, 0), Offset(i * cellSize, size.height), gridPaint);
+        Offset(i * cellSize, 0),
+        Offset(i * cellSize, size.height),
+        gridPaint,
+      );
       canvas.drawLine(
-          Offset(0, i * cellSize), Offset(size.width, i * cellSize), gridPaint);
+        Offset(0, i * cellSize),
+        Offset(size.width, i * cellSize),
+        gridPaint,
+      );
     }
 
     // Sequence of placements showing Jumping rows (not 0,1,2,3)
-    final order = [const Offset(2, 0), const Offset(0, 1), const Offset(3, 2), const Offset(1, 3)];
+    final order = [
+      const Offset(2, 0),
+      const Offset(0, 1),
+      const Offset(3, 2),
+      const Offset(1, 3),
+    ];
     final queenPaint = Paint()..color = AppTheme.accent;
 
     for (int i = 0; i <= step; i++) {
       Offset pos = order[i];
       Offset drawPos = Offset(
-          pos.dx * cellSize + cellSize / 2, pos.dy * cellSize + cellSize / 2);
+        pos.dx * cellSize + cellSize / 2,
+        pos.dy * cellSize + cellSize / 2,
+      );
       canvas.drawCircle(drawPos, cellSize * 0.3, queenPaint);
     }
   }
@@ -395,22 +424,58 @@ class _EnhancedConceptPainter extends CustomPainter {
     final t = animation.value;
 
     final paint = Paint()..style = PaintingStyle.fill;
-    
+
     // Draw queen at (1,0)
-    canvas.drawCircle(Offset(1 * cellSize + cellSize/2, 0 * cellSize + cellSize/2), cellSize * 0.3, paint..color = AppTheme.success);
+    canvas.drawCircle(
+      Offset(1 * cellSize + cellSize / 2, 0 * cellSize + cellSize / 2),
+      cellSize * 0.3,
+      paint..color = AppTheme.success,
+    );
 
     // Fade out blocked cells (column 1, diagonals)
     double intensity = (math.sin(t * math.pi * 2) * 0.5 + 0.5) * 0.4;
     paint.color = AppTheme.error.withValues(alpha: intensity);
-    
+
     // Column 1
     for (int r = 1; r < 4; r++) {
-      canvas.drawRect(Rect.fromLTWH(1 * cellSize + 2, r * cellSize + 2, cellSize - 4, cellSize - 4), paint);
+      canvas.drawRect(
+        Rect.fromLTWH(
+          1 * cellSize + 2,
+          r * cellSize + 2,
+          cellSize - 4,
+          cellSize - 4,
+        ),
+        paint,
+      );
     }
     // Diagonals
-    canvas.drawRect(Rect.fromLTWH(0 * cellSize + 2, 1 * cellSize + 2, cellSize - 4, cellSize - 4), paint);
-    canvas.drawRect(Rect.fromLTWH(2 * cellSize + 2, 1 * cellSize + 2, cellSize - 4, cellSize - 4), paint);
-    canvas.drawRect(Rect.fromLTWH(3 * cellSize + 2, 2 * cellSize + 2, cellSize - 4, cellSize - 4), paint);
+    canvas.drawRect(
+      Rect.fromLTWH(
+        0 * cellSize + 2,
+        1 * cellSize + 2,
+        cellSize - 4,
+        cellSize - 4,
+      ),
+      paint,
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(
+        2 * cellSize + 2,
+        1 * cellSize + 2,
+        cellSize - 4,
+        cellSize - 4,
+      ),
+      paint,
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(
+        3 * cellSize + 2,
+        2 * cellSize + 2,
+        cellSize - 4,
+        cellSize - 4,
+      ),
+      paint,
+    );
   }
 
   void _drawPuzzleBFS(Canvas canvas, Size size, Offset center) {
@@ -423,13 +488,21 @@ class _EnhancedConceptPainter extends CustomPainter {
       if (i == 4) continue; // Hole in center
       int r = i % 3;
       int c = i ~/ 3;
-      
+
       double shift = math.sin(t * 30 + i) * 2;
       double x = r * cellSize + 4 + shift;
       double y = c * cellSize + 4 - shift;
-      
-      paint.color = AppTheme.accent.withValues(alpha: 0.1 + (math.sin(t * 20 + i) * 0.1));
-      canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x, y, cellSize - 8, cellSize - 8), const Radius.circular(4)), paint);
+
+      paint.color = AppTheme.accent.withValues(
+        alpha: 0.1 + (math.sin(t * 20 + i) * 0.1),
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x, y, cellSize - 8, cellSize - 8),
+          const Radius.circular(4),
+        ),
+        paint,
+      );
     }
   }
 
@@ -443,20 +516,33 @@ class _EnhancedConceptPainter extends CustomPainter {
       int r = i % 3;
       int c = i ~/ 3;
       Offset pos = Offset(r * cellSize, c * cellSize);
-      
+
       // Animate movement of one tile
       if (i == 7) {
-         double move = (math.sin(t * math.pi) * 0.5 + 0.5).clamp(0, 1) * cellSize;
-         pos = Offset(pos.dx, pos.dy - move);
+        double move =
+            (math.sin(t * math.pi) * 0.5 + 0.5).clamp(0, 1) * cellSize;
+        pos = Offset(pos.dx, pos.dy - move);
       }
 
       paint.color = AppTheme.accent.withValues(alpha: 0.2);
-      canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(pos.dx + 4, pos.dy + 4, cellSize - 8, cellSize - 8), const Radius.circular(4)), paint);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(pos.dx + 4, pos.dy + 4, cellSize - 8, cellSize - 8),
+          const Radius.circular(4),
+        ),
+        paint,
+      );
 
       // Cost pulse line (heuristic influence)
       if (i == 7) {
-        paint.color = AppTheme.success.withValues(alpha: (math.sin(t * 10) * 0.5 + 0.5) * 0.5);
-        canvas.drawCircle(Offset(pos.dx + cellSize/2, pos.dy + cellSize/2), 6, paint);
+        paint.color = AppTheme.success.withValues(
+          alpha: (math.sin(t * 10) * 0.5 + 0.5) * 0.5,
+        );
+        canvas.drawCircle(
+          Offset(pos.dx + cellSize / 2, pos.dy + cellSize / 2),
+          6,
+          paint,
+        );
       }
     }
   }
@@ -468,13 +554,32 @@ class _EnhancedConceptPainter extends CustomPainter {
     // One tile charging toward a specific target slot
     final targetPos = Offset(cellSize * 2, cellSize * 2);
     final startPos = Offset(0, 0);
-    
-    final paint = Paint()..style = PaintingStyle.fill..color = AppTheme.error.withValues(alpha: 0.2);
-    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(targetPos.dx + 4, targetPos.dy + 4, cellSize - 8, cellSize - 8), const Radius.circular(4)), paint);
+
+    final paint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = AppTheme.error.withValues(alpha: 0.2);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          targetPos.dx + 4,
+          targetPos.dy + 4,
+          cellSize - 8,
+          cellSize - 8,
+        ),
+        const Radius.circular(4),
+      ),
+      paint,
+    );
 
     Offset pos = Offset.lerp(startPos, targetPos, (t * 2 % 1.0))!;
     paint.color = AppTheme.accentLight;
-    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(pos.dx + 4, pos.dy + 4, cellSize - 8, cellSize - 8), const Radius.circular(4)), paint);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(pos.dx + 4, pos.dy + 4, cellSize - 8, cellSize - 8),
+        const Radius.circular(4),
+      ),
+      paint,
+    );
   }
 
   void _drawBattle(Canvas canvas, Size size, Offset center) {
@@ -483,7 +588,12 @@ class _EnhancedConceptPainter extends CustomPainter {
   }
 
   void paintDynamicLine(
-      Canvas canvas, Size size, double yFactor, Color color, double t) {
+    Canvas canvas,
+    Size size,
+    double yFactor,
+    Color color,
+    double t,
+  ) {
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.0
@@ -496,14 +606,20 @@ class _EnhancedConceptPainter extends CustomPainter {
     path.moveTo(size.width * 0.1, size.height * yFactor);
     for (double i = 0.1; i <= progress * 0.8 + 0.1; i += 0.05) {
       path.lineTo(
-          size.width * i, size.height * yFactor + math.sin(i * 10 + t * 5) * 5);
+        size.width * i,
+        size.height * yFactor + math.sin(i * 10 + t * 5) * 5,
+      );
     }
     canvas.drawPath(path, paint);
     canvas.drawCircle(
-        Offset(size.width * (progress * 0.8 + 0.1),
-            size.height * yFactor + math.sin((progress * 0.8 + 0.1) * 10 + t * 5) * 5),
-        4,
-        paint..style = PaintingStyle.fill);
+      Offset(
+        size.width * (progress * 0.8 + 0.1),
+        size.height * yFactor +
+            math.sin((progress * 0.8 + 0.1) * 10 + t * 5) * 5,
+      ),
+      4,
+      paint..style = PaintingStyle.fill,
+    );
   }
 
   @override

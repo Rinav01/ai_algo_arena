@@ -1,6 +1,6 @@
 {
-    "name": "ai_algo_app",
-    "short_name": "ai_algo_app",
+    "name": "Algo Arena",
+    "short_name": "Algo Arena",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

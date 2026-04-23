@@ -2,8 +2,10 @@
 class AlgorithmStep<State> {
   /// The states added to the explored set in this specific step
   final List<State> newlyExplored;
+
   /// The current state being evaluated
   final State? currentState;
+
   /// The best path found so far
   final List<State> path;
   final int stepCount;
@@ -40,7 +42,7 @@ class AlgorithmStep<State> {
       message: message ?? this.message,
       timestamp: timestamp ?? this.timestamp,
       isGoalReached: isGoalReached ?? this.isGoalReached,
-      frontierSize: frontierSize ?? this.frontierSize,
+      frontierSize: frontierSize ?? frontierSize,
     );
   }
 }

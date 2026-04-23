@@ -1,5 +1,5 @@
 import 'dart:math' as math;
-import 'package:ai_algo_app/core/problem_definition.dart';
+import 'package:algo_arena/core/problem_definition.dart';
 import 'package:collection/collection.dart';
 
 /// 8-Puzzle state: [0,1,2,3,4,5,6,7,8] where 0 = empty
@@ -123,12 +123,12 @@ class EightPuzzleProblem extends Problem<PuzzleState> {
         // Current position
         final curR = i ~/ 3;
         final curC = i % 3;
-        
+
         // Target position for value 'v' (assuming goal [1,2,3,4,5,6,7,8,0])
         final targetIdx = value - 1;
         final tarR = targetIdx ~/ 3;
         final tarC = targetIdx % 3;
-        
+
         distance += (curR - tarR).abs() + (curC - tarC).abs();
       }
     }
@@ -165,12 +165,14 @@ class EightPuzzleProblem extends Problem<PuzzleState> {
 
     for (int i = 0; i < times; i++) {
       final neighbors = EightPuzzleProblem()._getNeighborsForState(state);
-      
+
       // Filter out immediate backtracking if possible for a better scramble
-      final validNeighbors = neighbors.where((n) => n != previousState).toList();
-      
+      final validNeighbors = neighbors
+          .where((n) => n != previousState)
+          .toList();
+
       previousState = state;
-      
+
       if (validNeighbors.isNotEmpty) {
         state = validNeighbors[random.nextInt(validNeighbors.length)];
       } else {
@@ -178,7 +180,7 @@ class EightPuzzleProblem extends Problem<PuzzleState> {
       }
     }
 
-    // Since we generate via legal moves from the goal state, 
+    // Since we generate via legal moves from the goal state,
     // it is mathematically guaranteed to be solvable!
     return state;
   }

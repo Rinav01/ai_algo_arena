@@ -1,13 +1,13 @@
-import 'package:ai_algo_app/widgets/visualizer_widgets.dart';
+import 'package:algo_arena/widgets/visualizer_widgets.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:ai_algo_app/core/app_theme.dart';
-import 'package:ai_algo_app/core/eightpuzzle_problem.dart';
-import 'package:ai_algo_app/core/search_algorithms.dart';
-import 'package:ai_algo_app/services/algorithm_executor.dart';
-import 'package:ai_algo_app/core/problem_definition.dart';
+import 'package:algo_arena/core/app_theme.dart';
+import 'package:algo_arena/core/eightpuzzle_problem.dart';
+import 'package:algo_arena/core/search_algorithms.dart';
+import 'package:algo_arena/services/algorithm_executor.dart';
+import 'package:algo_arena/core/problem_definition.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:ai_algo_app/models/algo_info.dart';
+import 'package:algo_arena/models/algo_info.dart';
 
 class EightPuzzleVisualizerScreen extends StatefulWidget {
   const EightPuzzleVisualizerScreen({super.key});
@@ -36,11 +36,7 @@ class _EightPuzzleVisualizerScreenState
   bool isSolved = false;
   final List<String> algorithms = ['BFS', 'A*', 'Greedy'];
   String selectedDifficulty = 'Medium';
-  final Map<String, int> difficulties = {
-    'Easy': 10,
-    'Medium': 25,
-    'Hard': 50,
-  };
+  final Map<String, int> difficulties = {'Easy': 10, 'Medium': 25, 'Hard': 50};
   String selectedAlgorithm = 'A*';
   double executionSpeed = 2.0;
   String _statusMessage = 'Ready to solve';
@@ -496,7 +492,6 @@ class _EightPuzzleVisualizerScreenState
     super.dispose();
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -544,14 +539,17 @@ class _EightPuzzleVisualizerScreenState
               const SizedBox(height: 14),
 
               Center(
-                child: StatusBanner(
-                  message: _statusMessage,
-                  isSolved: isSolved,
-                  isSolving: isSolving,
-                ).animate(target: isSolved ? 1 : 0).shimmer(
-                  duration: 3.seconds,
-                  color: AppTheme.success.withValues(alpha: 0.15),
-                ),
+                child:
+                    StatusBanner(
+                          message: _statusMessage,
+                          isSolved: isSolved,
+                          isSolving: isSolving,
+                        )
+                        .animate(target: isSolved ? 1 : 0)
+                        .shimmer(
+                          duration: 3.seconds,
+                          color: AppTheme.success.withValues(alpha: 0.15),
+                        ),
               ),
               const SizedBox(height: 16),
 
@@ -567,10 +565,7 @@ class _EightPuzzleVisualizerScreenState
                           value: selectedDifficulty,
                           isExpanded: true,
                           dropdownColor: AppTheme.surfaceHighest,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13.0,
-                          ),
+                          style: TextStyle(color: Colors.white, fontSize: 13.0),
                           items: difficulties.keys
                               .map(
                                 (d) =>
@@ -722,62 +717,69 @@ class _EightPuzzleVisualizerScreenState
                   height: tileSize,
                   child: GestureDetector(
                     onTap: isInteractive ? () => _handleTileTap(pos) : null,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isSolved
-                            ? AppTheme.success.withValues(alpha: 0.08)
-                            : AppTheme.surfaceHigh,
-                        borderRadius: BorderRadius.circular(
-                          isInteractive ? 12.0 : 6.0,
-                        ),
-                        border: Border.all(
-                          color: isSolved
-                              ? AppTheme.success.withValues(alpha: 0.4)
-                              : Colors.white.withValues(alpha: 0.1),
-                          width: 1.0,
-                        ),
-                        boxShadow: isSolved
-                            ? [
-                                BoxShadow(
-                                  color: AppTheme.success.withValues(alpha: 0.15),
-                                  blurRadius: 15.0,
-                                  spreadRadius: -2.0,
-                                )
-                              ]
-                            : null,
-                      ),
-                      child: Center(
-                        child: Text(
-                          '$tileValue',
-                          style: isInteractive
-                              ? Theme.of(
-                                  context,
-                                ).textTheme.headlineMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                )
-                              : Theme.of(
-                                  context,
-                                ).textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                    child:
+                        Container(
+                              decoration: BoxDecoration(
+                                color: isSolved
+                                    ? AppTheme.success.withValues(alpha: 0.08)
+                                    : AppTheme.surfaceHigh,
+                                borderRadius: BorderRadius.circular(
+                                  isInteractive ? 12.0 : 6.0,
                                 ),
-                        ),
-                      ),
-                    ).animate(target: isSolved ? 1 : 0).shimmer(
-                      duration: 3.seconds,
-                      color: AppTheme.success.withValues(alpha: 0.2),
-                    ).moveY(
-                      begin: 0,
-                      end: -4,
-                      duration: 1200.ms,
-                      curve: Curves.easeInOutSine,
-                    ).scale(
-                      begin: const Offset(1, 1),
-                      end: const Offset(1.02, 1.02),
-                      duration: 1200.ms,
-                      curve: Curves.easeInOutSine,
-                    ),
+                                border: Border.all(
+                                  color: isSolved
+                                      ? AppTheme.success.withValues(alpha: 0.4)
+                                      : Colors.white.withValues(alpha: 0.1),
+                                  width: 1.0,
+                                ),
+                                boxShadow: isSolved
+                                    ? [
+                                        BoxShadow(
+                                          color: AppTheme.success.withValues(
+                                            alpha: 0.15,
+                                          ),
+                                          blurRadius: 15.0,
+                                          spreadRadius: -2.0,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '$tileValue',
+                                  style: isInteractive
+                                      ? Theme.of(
+                                          context,
+                                        ).textTheme.headlineMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        )
+                                      : Theme.of(
+                                          context,
+                                        ).textTheme.bodyMedium?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                ),
+                              ),
+                            )
+                            .animate(target: isSolved ? 1 : 0)
+                            .shimmer(
+                              duration: 3.seconds,
+                              color: AppTheme.success.withValues(alpha: 0.2),
+                            )
+                            .moveY(
+                              begin: 0,
+                              end: -4,
+                              duration: 1200.ms,
+                              curve: Curves.easeInOutSine,
+                            )
+                            .scale(
+                              begin: const Offset(1, 1),
+                              end: const Offset(1.02, 1.02),
+                              duration: 1200.ms,
+                              curve: Curves.easeInOutSine,
+                            ),
                   ),
                 );
               }),

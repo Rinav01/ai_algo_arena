@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ai_algo_app/models/app_settings.dart';
-import 'package:ai_algo_app/services/stats_service.dart';
+import 'package:algo_arena/models/app_settings.dart';
+import 'package:algo_arena/services/stats_service.dart';
 
 final settingsProvider = NotifierProvider<SettingsNotifier, AppSettings>(() {
   return SettingsNotifier();

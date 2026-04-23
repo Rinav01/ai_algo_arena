@@ -2,20 +2,20 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:ai_algo_app/core/app_theme.dart';
-import 'package:ai_algo_app/core/grid_problem.dart';
-import 'package:ai_algo_app/core/problem_definition.dart';
-import 'package:ai_algo_app/core/search_algorithms.dart';
-import 'package:ai_algo_app/models/grid_node.dart';
-import 'package:ai_algo_app/services/algorithm_executor.dart';
-import 'package:ai_algo_app/services/battle_analyzer.dart';
-import 'package:ai_algo_app/state/grid_controller.dart';
-import 'package:ai_algo_app/services/stats_service.dart';
-import 'package:ai_algo_app/widgets/grid_visualizer_canvas.dart';
-import 'package:ai_algo_app/widgets/visualizer_widgets.dart';
-import 'package:ai_algo_app/state/settings_provider.dart';
-import 'package:ai_algo_app/models/algo_info.dart';
-import 'package:ai_algo_app/services/maze_generator.dart';
+import 'package:algo_arena/core/app_theme.dart';
+import 'package:algo_arena/core/grid_problem.dart';
+import 'package:algo_arena/core/problem_definition.dart';
+import 'package:algo_arena/core/search_algorithms.dart';
+import 'package:algo_arena/models/grid_node.dart';
+import 'package:algo_arena/services/algorithm_executor.dart';
+import 'package:algo_arena/services/battle_analyzer.dart';
+import 'package:algo_arena/state/grid_controller.dart';
+import 'package:algo_arena/services/stats_service.dart';
+import 'package:algo_arena/widgets/grid_visualizer_canvas.dart';
+import 'package:algo_arena/widgets/visualizer_widgets.dart';
+import 'package:algo_arena/state/settings_provider.dart';
+import 'package:algo_arena/models/algo_info.dart';
+import 'package:algo_arena/services/maze_generator.dart';
 
 class AlgorithmBattleScreen extends ConsumerStatefulWidget {
   final List<List<GridNode>>? initialGrid;
@@ -30,7 +30,8 @@ class AlgorithmBattleScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<AlgorithmBattleScreen> createState() => _AlgorithmBattleScreenState();
+  ConsumerState<AlgorithmBattleScreen> createState() =>
+      _AlgorithmBattleScreenState();
 }
 
 class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
@@ -196,22 +197,27 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
       if (mounted) {
         String? winnerAlgo;
         if (_metricsA != null && _metricsB != null) {
-          final result = BattleResult(algorithm1: _metricsA!, algorithm2: _metricsB!);
+          final result = BattleResult(
+            algorithm1: _metricsA!,
+            algorithm2: _metricsB!,
+          );
           winnerAlgo = result.winner.algorithmName;
-          
+
           setState(() {
             _winnerId = (winnerAlgo == _algoAId) ? 'A' : 'B';
             _showVictoryAnimation = true;
           });
 
           await Future.delayed(const Duration(seconds: 4));
-          
+
           if (mounted) {
             setState(() => _showVictoryAnimation = false);
             _showBattleAnalytics(result);
           }
         }
-        ref.read(arenaStatsProvider.notifier).recordBattleCompletion(winnerAlgo);
+        ref
+            .read(arenaStatsProvider.notifier)
+            .recordBattleCompletion(winnerAlgo);
       }
     } finally {
       if (mounted) {
@@ -295,7 +301,8 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
                         ignoring: _isRunning,
                         child: ToolSelector(
                           selectedTool: _controller.selectedTool,
-                          onToolSelected: (tool) => _controller.setTool(tool as PaintTool),
+                          onToolSelected: (tool) =>
+                              _controller.setTool(tool as PaintTool),
                           isSolving: _isRunning,
                         ),
                       ),
@@ -401,7 +408,7 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
                 ],
               ),
             ),
-            
+
             // Victory Overlay
             if (_showVictoryAnimation && _winnerId != null)
               Positioned.fill(
@@ -422,31 +429,41 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
                                 Icon(
                                   Icons.emoji_events_rounded,
                                   size: 80,
-                                  color: _winnerId == 'A' ? AppTheme.accent : AppTheme.error,
+                                  color: _winnerId == 'A'
+                                      ? AppTheme.accent
+                                      : AppTheme.error,
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
                                   '${_winnerId == 'A' ? _algoAId : _algoBId} WINS!',
                                   textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 2,
-                                    shadows: [
-                                      Shadow(
-                                        color: (_winnerId == 'A' ? AppTheme.accent : AppTheme.error).withValues(alpha: 0.5),
-                                        blurRadius: 20,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineMedium
+                                      ?.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 2,
+                                        shadows: [
+                                          Shadow(
+                                            color:
+                                                (_winnerId == 'A'
+                                                        ? AppTheme.accent
+                                                        : AppTheme.error)
+                                                    .withValues(alpha: 0.5),
+                                            blurRadius: 20,
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
                                   'SUPERIOR PERFORMANCE',
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: Colors.white60,
-                                    letterSpacing: 4,
-                                  ),
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(
+                                        color: Colors.white60,
+                                        letterSpacing: 4,
+                                      ),
                                 ),
                               ],
                             ),
@@ -555,17 +572,22 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
               ),
               if (isWinner)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8.0,
+                    vertical: 2.0,
+                  ),
                   decoration: BoxDecoration(
                     color: color,
                     borderRadius: BorderRadius.circular(4.0),
-                    boxShadow: isWinningNow ? [
-                      BoxShadow(
-                        color: color.withValues(alpha: 0.6),
-                        blurRadius: 12,
-                        spreadRadius: 2,
-                      )
-                    ] : null,
+                    boxShadow: isWinningNow
+                        ? [
+                            BoxShadow(
+                              color: color.withValues(alpha: 0.6),
+                              blurRadius: 12,
+                              spreadRadius: 2,
+                            ),
+                          ]
+                        : null,
                   ),
                   child: Text(
                     isWinningNow ? 'VICTORY' : 'WINNER',
@@ -593,7 +615,9 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
                   boxShadow: isWinner
                       ? [
                           BoxShadow(
-                            color: color.withValues(alpha: isWinningNow ? 0.5 : 0.3),
+                            color: color.withValues(
+                              alpha: isWinningNow ? 0.5 : 0.3,
+                            ),
                             blurRadius: isWinningNow ? 40 : 30,
                             spreadRadius: isWinningNow ? 10 : 6,
                           ),
@@ -647,10 +671,7 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
       child = Tooltip(message: tooltip, child: child);
     }
 
-    return GestureDetector(
-      onTap: onTap,
-      child: child,
-    );
+    return GestureDetector(onTap: onTap, child: child);
   }
 }
 
@@ -715,31 +736,40 @@ class _BattleAnalyticsSheet extends StatelessWidget {
           const SizedBox(height: 32),
           Text(
             'KEY INSIGHTS',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(letterSpacing: 2),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(letterSpacing: 2),
           ),
           const SizedBox(height: 12),
-          ...result.getAnalysisInsights().map((insight) => Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.03),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
-                children: [
-                  Icon(insight.icon, size: 16, color: AppTheme.accentLight),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      insight.text,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ...result.getAnalysisInsights().map(
+            (insight) => Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(insight.icon, size: 16, color: AppTheme.accentLight),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        insight.text,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          )),
+          ),
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
@@ -754,7 +784,13 @@ class _BattleAnalyticsSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildMetricRow(BuildContext context, String label, String valA, String valB, bool isAWinner) {
+  Widget _buildMetricRow(
+    BuildContext context,
+    String label,
+    String valA,
+    String valB,
+    bool isAWinner,
+  ) {
     return Column(
       children: [
         Text(label, style: Theme.of(context).textTheme.labelSmall),
@@ -817,7 +853,9 @@ class _MetricPill extends StatelessWidget {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: isBetter ? Colors.white : Colors.white.withValues(alpha: 0.5),
+              color: isBetter
+                  ? Colors.white
+                  : Colors.white.withValues(alpha: 0.5),
             ),
           ),
           Text(

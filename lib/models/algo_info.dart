@@ -10,7 +10,7 @@ enum ConceptType {
   puzzleBFS, // New: Brute force shuffle
   puzzleAStar, // New: A* heuristic numbers
   puzzleGreedy, // New: Greedy jump
-  battleConcept
+  battleConcept,
 }
 
 class AlgoInfo {
@@ -99,7 +99,6 @@ class AlgoInfo {
   };
 
   static const Map<String, AlgoInfo> nQueens = {
-    
     'Backtracking': AlgoInfo(
       title: 'N-Queens: Backtracking',
       description:
