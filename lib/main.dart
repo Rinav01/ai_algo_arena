@@ -10,11 +10,15 @@ import 'screens/algorithm_battle_screen.dart';
 import 'screens/eightpuzzle_visualizer_screen.dart';
 import 'screens/nqueens_visualizer_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/replay_screen.dart';
+import 'screens/history_screen.dart';
 import 'services/stats_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   final prefs = await SharedPreferences.getInstance();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -101,6 +105,8 @@ class AlgoArenaApp extends StatelessWidget {
         '/eightpuzzle': (_) => const EightPuzzleVisualizerScreen(),
         '/nqueens': (_) => const NQueensVisualizerScreen(),
         '/settings': (_) => const SettingsScreen(),
+        '/replay': (_) => const ReplayScreen(),
+        '/history': (_) => const HistoryScreen(),
       },
       // Named routes that need parameters use onGenerateRoute
       onGenerateRoute: (settings) {

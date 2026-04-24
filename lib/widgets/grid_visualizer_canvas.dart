@@ -1,4 +1,5 @@
 import 'dart:ui' as ui;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:algo_arena/core/app_theme.dart';
@@ -12,8 +13,11 @@ import 'package:algo_arena/state/settings_provider.dart';
 class GridVisualizerCanvas extends ConsumerStatefulWidget {
   final GridController controller;
   final AlgorithmExecutor<GridCoordinate>? executor;
+  final List<GridCoordinate>? exploredNodes;
+  final List<GridCoordinate>? pathNodes;
   final Color? accentColor;
   final bool isInteractive;
+  final bool showHeuristics;
   final void Function(int row, int col)? onPointerDown;
   final void Function(int row, int col)? onPointerUpdate;
   final void Function()? onPointerUp;
@@ -27,6 +31,9 @@ class GridVisualizerCanvas extends ConsumerStatefulWidget {
     this.onPointerDown,
     this.onPointerUpdate,
     this.onPointerUp,
+    this.exploredNodes,
+    this.pathNodes,
+    this.showHeuristics = false,
   });
 
   @override
@@ -68,6 +75,9 @@ class _GridVisualizerCanvasState extends ConsumerState<GridVisualizerCanvas>
     if (oldWidget.executor != widget.executor) {
       oldWidget.executor?.removeListener(_onExecutorUpdate);
       widget.executor?.addListener(_onExecutorUpdate);
+    }
+    if (oldWidget.showHeuristics != widget.showHeuristics) {
+      _invalidateStaticPicture();
     }
   }
 
@@ -175,10 +185,13 @@ class _GridVisualizerCanvasState extends ConsumerState<GridVisualizerCanvas>
                 painter: _GridPainter(
                   controller: widget.controller,
                   executor: widget.executor,
+                  exploredNodes: widget.exploredNodes,
+                  pathNodes: widget.pathNodes,
                   accentColor: widget.accentColor ?? AppTheme.accent,
                   pulseValue: _pulseAnimation.value,
                   staticPicture: _staticGridPicture,
                   settings: settings,
+                  showHeuristics: widget.showHeuristics,
                   onPictureCreated: (picture) {
                     _staticGridPicture = picture;
                   },
@@ -195,19 +208,25 @@ class _GridVisualizerCanvasState extends ConsumerState<GridVisualizerCanvas>
 class _GridPainter extends CustomPainter {
   final GridController controller;
   final AlgorithmExecutor<GridCoordinate>? executor;
+  final List<GridCoordinate>? exploredNodes;
+  final List<GridCoordinate>? pathNodes;
   final Color accentColor;
   final double pulseValue;
   final ui.Picture? staticPicture;
   final AppSettings settings;
+  final bool showHeuristics;
   final Function(ui.Picture) onPictureCreated;
 
   _GridPainter({
     required this.controller,
     required this.executor,
+    this.exploredNodes,
+    this.pathNodes,
     required this.accentColor,
     required this.pulseValue,
     required this.staticPicture,
     required this.settings,
+    required this.showHeuristics,
     required this.onPictureCreated,
   });
 
@@ -258,6 +277,22 @@ class _GridPainter extends CustomPainter {
           cellWidth - 1,
           cellHeight - 1,
         );
+
+        if (showHeuristics && node.type == NodeType.empty) {
+          // Calculate heuristic (Manhattan distance to goal)
+          final goal = controller.goal;
+          if (goal != null) {
+            final distance = (r - goal.row).abs() + (c - goal.column).abs();
+            final maxPossible = controller.rows + controller.columns;
+            
+            // Curve adjusted for more broad visibility and higher peak intensity
+            final intensity = math.pow(1.0 - (distance / maxPossible), 1.5).clamp(0.0, 1.0);
+            
+            // Maximum alpha for a very strong "Force Field" effect
+            paint.color = AppTheme.accent.withValues(alpha: intensity.toDouble() * 0.7);
+            canvas.drawRect(rect, paint);
+          }
+        }
 
         if (node.type == NodeType.wall) {
           paint.color = AppTheme.cellWall;
@@ -313,14 +348,15 @@ class _GridPainter extends CustomPainter {
   }
 
   void _drawExploredStates(Canvas canvas, double cellWidth, double cellHeight) {
-    if (executor == null || executor!.exploredSet.isEmpty) return;
+    final explored = exploredNodes ?? executor?.exploredSet;
+    if (explored == null || explored.isEmpty) return;
 
     final paint = Paint()
       ..color = accentColor.withValues(alpha: 0.4)
       ..style = PaintingStyle.fill;
 
     final path = Path();
-    for (final state in executor!.exploredSet) {
+    for (final state in explored) {
       if (controller.grid[state.row][state.column].type != NodeType.empty) {
         continue;
       }
@@ -337,7 +373,8 @@ class _GridPainter extends CustomPainter {
   }
 
   void _drawPath(Canvas canvas, double cellWidth, double cellHeight) {
-    if (executor == null || executor!.pathSet.isEmpty) return;
+    final pathNodesList = pathNodes ?? executor?.pathSet;
+    if (pathNodesList == null || pathNodesList.isEmpty) return;
 
     final paint = Paint()
       ..color = AppTheme.cyan
@@ -348,7 +385,7 @@ class _GridPainter extends CustomPainter {
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
 
     final path = Path();
-    for (final state in executor!.pathSet) {
+    for (final state in pathNodesList) {
       if (controller.grid[state.row][state.column].type == NodeType.start ||
           controller.grid[state.row][state.column].type == NodeType.goal) {
         continue;

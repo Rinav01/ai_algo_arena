@@ -228,6 +228,65 @@ class GridController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void loadFromSnapshot(Map<String, dynamic> snapshot) {
+    _rows = snapshot['rows'] as int;
+    _columns = snapshot['columns'] as int;
+
+    // Handle both Uint8List (from local) and List<int> (from JSON)
+    final typesRaw = snapshot['types'];
+    final Uint8List types = typesRaw is Uint8List
+        ? typesRaw
+        : Uint8List.fromList((typesRaw as List).cast<int>());
+
+    final weightsRaw = snapshot['weights'];
+    final Float32List weights = weightsRaw is Float32List
+        ? weightsRaw
+        : Float32List.fromList((weightsRaw as List).cast<num>().map((e) => e.toDouble()).toList());
+
+    final startRaw = snapshot['start'];
+    if (startRaw is Map) {
+      _start = (row: startRaw['row'] as int, column: startRaw['column'] as int);
+    } else {
+      // Handle record from local snapshot
+      try {
+        _start = (row: (startRaw as dynamic).row as int, column: startRaw.column as int);
+      } catch(_) {
+         _start = (row: 0, column: 0);
+      }
+    }
+
+    final goalRaw = snapshot['goal'];
+    if (goalRaw != null) {
+      if (goalRaw is Map) {
+        _goal = (row: goalRaw['row'] as int, column: goalRaw['column'] as int);
+      } else {
+        try {
+          _goal = (row: (goalRaw as dynamic).row as int, column: goalRaw.column as int);
+        } catch(_) {
+          _goal = null;
+        }
+      }
+    } else {
+      _goal = null;
+    }
+
+    _grid = List.generate(_rows, (r) {
+      return List.generate(_columns, (c) {
+        final index = r * _columns + c;
+        final typeIndex = types[index];
+        final weight = weights[index];
+        return GridNode(
+          row: r,
+          column: c,
+          type: NodeType.values[typeIndex],
+          weight: weight,
+        );
+      });
+    });
+
+    notifyListeners();
+  }
+
   void loadFromGrid(List<List<GridNode>> newGrid) {
     _rows = newGrid.length;
     _columns = newGrid[0].length;

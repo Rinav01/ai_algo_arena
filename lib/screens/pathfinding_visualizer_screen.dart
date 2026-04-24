@@ -18,6 +18,9 @@ import 'package:algo_arena/state/grid_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:algo_arena/state/settings_provider.dart';
 import 'package:algo_arena/models/algo_info.dart';
+import 'package:algo_arena/services/api_service.dart';
+import 'package:algo_arena/screens/history_screen.dart';
+import 'dart:typed_data';
 
 class PathfindingVisualizerScreen extends ConsumerStatefulWidget {
   final String algorithmId;
@@ -203,6 +206,7 @@ class _PathfindingVisualizerScreenState
               _isSolving = false;
               _pulseController.stop();
             });
+            _autoSaveRun();
           }
         },
       );
@@ -214,6 +218,57 @@ class _PathfindingVisualizerScreenState
           _statusMessage = 'Error: $e';
         });
       }
+    }
+  }
+
+  Map<String, dynamic>? _sanitizeSnapshot(Map<String, dynamic>? snapshot) {
+    if (snapshot == null) return null;
+    final sanitized = Map<String, dynamic>.from(snapshot);
+    if (sanitized['types'] is Uint8List) {
+      sanitized['types'] = (sanitized['types'] as Uint8List).toList();
+    }
+    if (sanitized['weights'] is Float32List) {
+      sanitized['weights'] = (sanitized['weights'] as Float32List).toList();
+    }
+
+    // Convert Records to Maps for JSON serialization
+    if (sanitized['start'] != null) {
+      final s = sanitized['start'];
+      sanitized['start'] = {'row': s.row, 'column': s.column};
+    }
+    if (sanitized['goal'] != null) {
+      final g = sanitized['goal'];
+      sanitized['goal'] = {'row': g.row, 'column': g.column};
+    }
+
+    return sanitized;
+  }
+
+  Future<void> _autoSaveRun() async {
+    if (_executor == null) return;
+    
+    debugPrint('Auto-save triggered for ${widget.algorithmId}');
+    try {
+      final runData = {
+        'algorithm': widget.algorithmId,
+        'steps': _executor!.history
+            ?.map((AlgorithmStep<dynamic> s) => s.toJson((coord) => (coord as GridCoordinate).toJson()))
+            .toList(),
+        'snapshot': _sanitizeSnapshot(_executor!.problemSnapshot),
+        'durationMs': _executor!.executionTime.inMilliseconds,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      debugPrint('Sending run data to: ${ApiService.baseUrl}/runs');
+      await ApiService().saveRun(runData);
+      debugPrint('Run auto-saved successfully');
+
+      // Invalidate the runs provider so history refreshes
+      if (mounted) {
+        ref.invalidate(runsProvider);
+      }
+    } catch (e) {
+      debugPrint('Error auto-saving run: $e');
     }
   }
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -16,6 +17,8 @@ import 'package:algo_arena/widgets/visualizer_widgets.dart';
 import 'package:algo_arena/state/settings_provider.dart';
 import 'package:algo_arena/models/algo_info.dart';
 import 'package:algo_arena/services/maze_generator.dart';
+import 'package:algo_arena/services/api_service.dart';
+import 'package:algo_arena/screens/history_screen.dart';
 
 class AlgorithmBattleScreen extends ConsumerStatefulWidget {
   final List<List<GridNode>>? initialGrid;
@@ -152,6 +155,8 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
                 executionTime: stopwatchA.elapsed,
                 pathCost: _executorA!.currentPath.length.toDouble(),
                 foundPath: finalStep.isGoalReached,
+                history: _executorA!.history ?? [],
+                problemSnapshot: snapshot,
               );
             });
           }
@@ -181,6 +186,8 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
                 executionTime: stopwatchB.elapsed,
                 pathCost: _executorB!.currentPath.length.toDouble(),
                 foundPath: finalStep.isGoalReached,
+                history: _executorB!.history ?? [],
+                problemSnapshot: snapshot,
               );
             });
           }
@@ -192,7 +199,9 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
       );
 
       await Future.wait([_executorA!.start(), _executorB!.start()]);
+      debugPrint('Battle stream completed. Processing results...');
       await Future.wait([completerA.future, completerB.future]);
+      debugPrint('Both completers finished.');
 
       if (mounted) {
         String? winnerAlgo;
@@ -202,6 +211,9 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
             algorithm2: _metricsB!,
           );
           winnerAlgo = result.winner.algorithmName;
+
+          debugPrint('Determined winner: $winnerAlgo. Calling auto-save.');
+          _autoSaveRun(result);
 
           setState(() {
             _winnerId = (winnerAlgo == _algoAId) ? 'A' : 'B';
@@ -226,12 +238,74 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
     }
   }
 
+  Map<String, dynamic>? _sanitizeSnapshot(Map<String, dynamic>? snapshot) {
+    if (snapshot == null) return null;
+    final sanitized = Map<String, dynamic>.from(snapshot);
+    if (sanitized['types'] is Uint8List) {
+      sanitized['types'] = (sanitized['types'] as Uint8List).toList();
+    }
+    if (sanitized['weights'] is Float32List) {
+      sanitized['weights'] = (sanitized['weights'] as Float32List).toList();
+    }
+    
+    // Convert Records to Maps for JSON serialization
+    if (sanitized['start'] != null) {
+      final s = sanitized['start'];
+      sanitized['start'] = {'row': s.row, 'column': s.column};
+    }
+    if (sanitized['goal'] != null) {
+      final g = sanitized['goal'];
+      sanitized['goal'] = {'row': g.row, 'column': g.column};
+    }
+    
+    return sanitized;
+  }
+
+  Future<void> _autoSaveRun(BattleResult result) async {
+    debugPrint('Auto-saving battle results as a unified record...');
+    try {
+      final runData = {
+        'algorithm': '${result.algorithm1.algorithmName} vs ${result.algorithm2.algorithmName}',
+        'isBattle': true,
+        'snapshot': _sanitizeSnapshot(result.algorithm1.problemSnapshot),
+        'competitors': [
+          _formatMetrics(result.algorithm1),
+          _formatMetrics(result.algorithm2),
+        ],
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      debugPrint('Sending unified battle data to: ${ApiService.baseUrl}/runs');
+      await ApiService().saveRun(runData);
+      debugPrint('Battle saved successfully');
+      
+      if (mounted) {
+        ref.invalidate(runsProvider);
+      }
+    } catch (e) {
+      debugPrint('CRITICAL: Error auto-saving battle run: $e');
+    }
+  }
+
+  Map<String, dynamic> _formatMetrics(AlgorithmMetrics metrics) {
+    return {
+      'name': metrics.algorithmName,
+      'steps': metrics.history
+          .map((AlgorithmStep<dynamic> s) => s.toJson((coord) => (coord as GridCoordinate).toJson()))
+          .toList(),
+      'durationMs': metrics.executionTime.inMilliseconds,
+    };
+  }
+
   void _showBattleAnalytics(BattleResult result) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => _BattleAnalyticsSheet(result: result),
+      builder: (context) => _BattleAnalyticsSheet(
+        result: result,
+        onSave: () => _autoSaveRun(result),
+      ),
     );
   }
 
@@ -677,8 +751,9 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
 
 class _BattleAnalyticsSheet extends StatelessWidget {
   final BattleResult result;
+  final VoidCallback? onSave;
 
-  const _BattleAnalyticsSheet({required this.result});
+  const _BattleAnalyticsSheet({required this.result, this.onSave});
 
   @override
   Widget build(BuildContext context) {
@@ -771,13 +846,25 @@ class _BattleAnalyticsSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: AppTheme.primaryButton(),
-              child: const Text('DISMISS'),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: onSave,
+                  icon: const Icon(Icons.save_rounded),
+                  label: const Text('SAVE REPLAY'),
+                  style: AppTheme.secondaryButton(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: AppTheme.primaryButton(),
+                  child: const Text('DISMISS'),
+                ),
+              ),
+            ],
           ),
         ],
       ),

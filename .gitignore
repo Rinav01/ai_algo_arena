@@ -14,7 +14,7 @@ PROJECT_GUIDE.md
 .svn/
 .swiftpm/
 migrate_working_dir/
-
+.env
 # IntelliJ related
 *.iml
 *.ipr

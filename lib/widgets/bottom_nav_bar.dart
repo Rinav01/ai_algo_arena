@@ -10,6 +10,7 @@ class ArenaBottomNavBar extends StatelessWidget {
   static const _items = [
     (icon: Icons.home_rounded, label: 'Home', route: '/home'),
     (icon: Icons.sports_kabaddi_rounded, label: 'Battle', route: '/battle'),
+    (icon: Icons.history_rounded, label: 'History', route: '/history'),
     (icon: Icons.leaderboard_rounded, label: 'Ranks', route: '/home'),
     (icon: Icons.settings_rounded, label: 'Settings', route: '/settings'),
   ];

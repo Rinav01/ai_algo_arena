@@ -21,6 +21,16 @@ class GridCoordinate {
 
   @override
   String toString() => 'GridCoordinate($row, $column)';
+
+  Map<String, dynamic> toJson() => {
+    'row': row,
+    'column': column,
+  };
+
+  factory GridCoordinate.fromJson(Map<String, dynamic> json) => GridCoordinate(
+    row: json['row'] as int,
+    column: json['column'] as int,
+  );
 }
 
 // Grid problem implementation

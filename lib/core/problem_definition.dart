@@ -45,6 +45,30 @@ class AlgorithmStep<State> {
       frontierSize: frontierSize ?? frontierSize,
     );
   }
+
+  Map<String, dynamic> toJson(dynamic Function(State) stateSerializer) => {
+    'newlyExplored': newlyExplored.map((s) => stateSerializer(s)).toList(),
+    'currentState': currentState != null ? stateSerializer(currentState as State) : null,
+    'path': path.map((s) => stateSerializer(s)).toList(),
+    'stepCount': stepCount,
+    'message': message,
+    'timestamp': timestamp.toIso8601String(),
+    'isGoalReached': isGoalReached,
+    'frontierSize': frontierSize,
+  };
+
+  factory AlgorithmStep.fromJson(Map<String, dynamic> json, State Function(dynamic) stateDeserializer) {
+    return AlgorithmStep<State>(
+      newlyExplored: (json['newlyExplored'] as List).map((s) => stateDeserializer(s)).toList(),
+      currentState: json['currentState'] != null ? stateDeserializer(json['currentState']) : null,
+      path: (json['path'] as List).map((s) => stateDeserializer(s)).toList(),
+      stepCount: json['stepCount'],
+      message: json['message'],
+      timestamp: DateTime.parse(json['timestamp']),
+      isGoalReached: json['isGoalReached'] ?? false,
+      frontierSize: json['frontierSize'],
+    );
+  }
 }
 
 // Generic algorithm result

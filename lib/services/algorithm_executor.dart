@@ -78,6 +78,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
   final _stepController = StreamController<AlgorithmStep<State>>.broadcast();
 
   List<AlgorithmStep<State>>? _fullHistory;
+  Duration _executionTime = Duration.zero;
   int _currentIndex = 0;
   Timer? _playbackTimer;
 
@@ -128,6 +129,9 @@ class AlgorithmExecutor<State> with ChangeNotifier {
       !_isPaused &&
       !_isStopped &&
       _currentIndex < _fullHistory!.length;
+ 
+  Map<String, dynamic>? get problemSnapshot => _problemSnapshot;
+  Duration get executionTime => _executionTime;
   AlgorithmStep<State>? get lastStep => _lastStep;
 
   /// Generate a cache key for the current problem and algorithm
@@ -178,60 +182,88 @@ class AlgorithmExecutor<State> with ChangeNotifier {
       } else if (_problemSnapshot != null) {
         // 1. Offload the search to a background isolate and stream results
         _fullHistory = [];
-        final receivePort = ReceivePort();
 
-        final request = _StreamRequest(
-          receivePort.sendPort,
-          algorithm.name,
-          _problemSnapshot,
-        );
-
-        await Isolate.spawn(_streamInIsolate, request);
-
-        // Listen to the stream and collect history while playback happens
-        final completer = Completer<void>();
-        receivePort.listen((message) {
-          final streamMsg = message as _StreamMessage<State>;
-
-          if (streamMsg.error != null) {
-            _stepController.addError(streamMsg.error!);
-            receivePort.close();
-            completer.complete();
-          } else if (streamMsg.isDone) {
-            _isComputing = false;
-            notifyListeners();
-            receivePort.close();
-
-            // Cache the finished result
-            if (_fullHistory != null && _fullHistory!.isNotEmpty) {
-              final finalStep = _fullHistory!.last;
-              final finalExplored = _fullHistory!
-                  .expand((s) => s.newlyExplored)
-                  .toSet();
-
-              if (_resultCache.length >= _maxCacheSize) {
-                _resultCache.remove(_resultCache.keys.first);
-              }
-              _resultCache[cacheKey] = (
-                _fullHistory!,
-                finalExplored,
-                finalStep.path,
-              );
-            }
-
-            completer.complete();
-          } else if (streamMsg.batch != null) {
-            _fullHistory!.addAll(streamMsg.batch!);
-
-            // Start playback immediately if not yet started
-            if (_playbackTimer == null && !_isStopped && !_isPaused) {
-              _startPlayback();
-            }
+        if (kIsWeb) {
+          // Web doesn't support Isolates, run directly
+          final problem = GridProblem.fromSnapshot(_problemSnapshot!);
+          for (final step in algorithm.solve(problem as Problem<State>)) {
+            _fullHistory!.add(step);
           }
-        });
+          _isComputing = false;
+          notifyListeners();
+          
+          // Cache the finished result
+          if (_fullHistory!.isNotEmpty) {
+            final finalStep = _fullHistory!.last;
+            final finalExplored = _fullHistory!
+                .expand((s) => s.newlyExplored)
+                .toSet();
 
-        // Wait for the computation to fully finish
-        await completer.future;
+            if (_resultCache.length >= _maxCacheSize) {
+              _resultCache.remove(_resultCache.keys.first);
+            }
+            _resultCache[cacheKey] = (
+              _fullHistory!,
+              finalExplored,
+              finalStep.path,
+            );
+          }
+        } else {
+          final receivePort = ReceivePort();
+
+          final request = _StreamRequest(
+            receivePort.sendPort,
+            algorithm.name,
+            _problemSnapshot,
+          );
+
+          await Isolate.spawn(_streamInIsolate, request);
+
+          // Listen to the stream and collect history while playback happens
+          final completer = Completer<void>();
+          receivePort.listen((message) {
+            final streamMsg = message as _StreamMessage<State>;
+
+            if (streamMsg.error != null) {
+              _stepController.addError(streamMsg.error!);
+              receivePort.close();
+              completer.complete();
+            } else if (streamMsg.isDone) {
+              _isComputing = false;
+              notifyListeners();
+              receivePort.close();
+
+              // Cache the finished result
+              if (_fullHistory != null && _fullHistory!.isNotEmpty) {
+                final finalStep = _fullHistory!.last;
+                final finalExplored = _fullHistory!
+                    .expand((s) => s.newlyExplored)
+                    .toSet();
+
+                if (_resultCache.length >= _maxCacheSize) {
+                  _resultCache.remove(_resultCache.keys.first);
+                }
+                _resultCache[cacheKey] = (
+                  _fullHistory!,
+                  finalExplored,
+                  finalStep.path,
+                );
+              }
+
+              completer.complete();
+            } else if (streamMsg.batch != null) {
+              _fullHistory!.addAll(streamMsg.batch!);
+
+              // Start playback immediately if not yet started
+              if (_playbackTimer == null && !_isStopped && !_isPaused) {
+                _startPlayback();
+              }
+            }
+          });
+
+          // Wait for the computation to fully finish
+          await completer.future;
+        }
       } else if (_problem != null) {
         // 2. Fallback: Compute locally for non-snapshottable problems (e.g. Puzzles)
         // These are typically fast enough to run on the main thread for the visualization depths used

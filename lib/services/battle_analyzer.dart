@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:algo_arena/core/problem_definition.dart';
 
 /// Types of analytical insights
 enum InsightType { info, success, winner, parity }
@@ -22,6 +23,9 @@ class AlgorithmMetrics {
   final double pathCost;
   final bool foundPath;
 
+  final List<AlgorithmStep<dynamic>> history;
+  final Map<String, dynamic>? problemSnapshot;
+
   AlgorithmMetrics({
     required this.algorithmName,
     required this.exploredStates,
@@ -30,6 +34,8 @@ class AlgorithmMetrics {
     required this.executionTime,
     required this.pathCost,
     required this.foundPath,
+    this.history = const [],
+    this.problemSnapshot,
   });
 
   /// Path length / nodes explored ratio (lower is better)

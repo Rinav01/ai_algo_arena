@@ -148,6 +148,15 @@ abstract class AppTheme {
     padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
   );
 
+  static ButtonStyle secondaryButton() => ElevatedButton.styleFrom(
+    backgroundColor: surfaceVariant,
+    foregroundColor: accentLight,
+    elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+    side: BorderSide(color: accent.withValues(alpha: 0.3)),
+    padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0),
+  );
+
   // ── Flutter ThemeData ──────────────────────────────────────────────────────
   static ThemeData themeData() {
     const textColor = onBackground;
