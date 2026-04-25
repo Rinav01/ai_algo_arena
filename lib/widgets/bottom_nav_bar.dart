@@ -11,7 +11,7 @@ class ArenaBottomNavBar extends StatelessWidget {
     (icon: Icons.home_rounded, label: 'Home', route: '/home'),
     (icon: Icons.sports_kabaddi_rounded, label: 'Battle', route: '/battle'),
     (icon: Icons.history_rounded, label: 'History', route: '/history'),
-    (icon: Icons.leaderboard_rounded, label: 'Ranks', route: '/home'),
+    (icon: Icons.leaderboard_rounded, label: 'Analytics', route: '/analytics'),
     (icon: Icons.settings_rounded, label: 'Settings', route: '/settings'),
   ];
 
@@ -45,10 +45,6 @@ class ArenaBottomNavBar extends StatelessWidget {
                 label: item.label,
                 isActive: isActive,
                 onTap: () {
-                  if (item.label == 'Ranks') {
-                    _showComingSoonDialog(context, 'Leaderboards');
-                    return;
-                  }
                   if (!isActive) {
                     Navigator.pushNamed(context, item.route);
                   }
@@ -122,29 +118,6 @@ class _NavItem extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (label == 'Ranks')
-                  Positioned(
-                    top: -4,
-                    right: -12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accent,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        'SOON',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 6,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ],

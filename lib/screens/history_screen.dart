@@ -14,12 +14,23 @@ final runsProvider = FutureProvider<List<dynamic>>((ref) async {
   return runs;
 });
 
+enum SortMode { latest, time, efficiency }
+enum FilterType { all, single, battle }
+enum GridSize { all, small, medium, large }
+
+final sortModeProvider = StateProvider<SortMode>((ref) => SortMode.latest);
+final filterTypeProvider = StateProvider<FilterType>((ref) => FilterType.all);
+final filterGridSizeProvider = StateProvider<GridSize>((ref) => GridSize.all);
+
 class HistoryScreen extends ConsumerWidget {
   const HistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final runsAsync = ref.watch(runsProvider);
+    final sortMode = ref.watch(sortModeProvider);
+    final filterType = ref.watch(filterTypeProvider);
+    final gridSize = ref.watch(filterGridSizeProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -33,9 +44,13 @@ class HistoryScreen extends ConsumerWidget {
               parent: BouncingScrollPhysics(),
             ),
             slivers: [
-              _buildHeader(context),
+              _buildHeader(context, runsAsync),
+              _buildControlBar(context, ref),
               runsAsync.when(
-                data: (runs) => _buildRunsList(context, runs, ref),
+                data: (runs) {
+                  final processedRuns = _getProcessedRuns(runs, sortMode, filterType, gridSize);
+                  return _buildRunsList(context, processedRuns, ref);
+                },
                 loading: () => const SliverFillRemaining(
                   child: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
                 ),
@@ -79,10 +94,10 @@ class HistoryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, AsyncValue<List<dynamic>> runsAsync) {
     return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 40, 20, 24),
+        padding: const EdgeInsets.fromLTRB(20, 40, 20, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -101,10 +116,221 @@ class HistoryScreen extends ConsumerWidget {
                 color: Colors.white,
               ),
             ),
+            const SizedBox(height: 24),
+            runsAsync.when(
+              data: (runs) => _buildSummarySection(context, runs),
+              loading: () => const SizedBox(height: 80),
+              error: (_, __) => const SizedBox(),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildSummarySection(BuildContext context, List<dynamic> runs) {
+    if (runs.isEmpty) return const SizedBox();
+
+    final totalRuns = runs.length;
+    
+    // Most used algo
+    final algoCounts = <String, int>{};
+    int totalSteps = 0;
+    for (var r in runs) {
+      final name = r['algorithm'] ?? 'Unknown';
+      algoCounts[name] = (algoCounts[name] ?? 0) + 1;
+      
+      final meta = r['metadata'] as Map<String, dynamic>?;
+      totalSteps += (meta?['steps'] as num? ?? 0).toInt();
+    }
+    
+    final avgSteps = totalRuns > 0 ? totalSteps / totalRuns : 0.0;
+    final mostUsed = algoCounts.entries.isEmpty 
+        ? 'N/A' 
+        : algoCounts.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+
+    return Row(
+      children: [
+        _buildSummaryItem(context, 'Total Runs', totalRuns.toString()),
+        const SizedBox(width: 12),
+        _buildSummaryItem(context, 'Avg. Steps', avgSteps.toStringAsFixed(0)),
+        const SizedBox(width: 12),
+        _buildSummaryItem(context, 'Most Used', mostUsed),
+      ],
+    );
+  }
+
+  Widget _buildSummaryItem(BuildContext context, String label, String value) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.03),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label.toUpperCase(),
+              style: TextStyle(
+                color: AppTheme.accentLight.withOpacity(0.6),
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildControlBar(BuildContext context, WidgetRef ref) {
+    final sortMode = ref.watch(sortModeProvider);
+    
+    return SliverToBoxAdapter(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildSortChip(ref, SortMode.latest, 'Latest'),
+                    _buildSortChip(ref, SortMode.time, 'Fastest'),
+                    _buildSortChip(ref, SortMode.efficiency, 'Efficiency'),
+                  ],
+                ),
+              ),
+            ),
+            Container(
+              height: 24,
+              width: 1,
+              color: Colors.white.withOpacity(0.1),
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+            IconButton(
+              icon: const Icon(Icons.tune_rounded, color: AppTheme.accentLight, size: 20),
+              onPressed: () => _showFilterSheet(context, ref),
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSortChip(WidgetRef ref, SortMode mode, String label) {
+    final currentMode = ref.watch(sortModeProvider);
+    final isSelected = currentMode == mode;
+
+    return GestureDetector(
+      onTap: () => ref.read(sortModeProvider.notifier).state = mode,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        margin: const EdgeInsets.only(right: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.accent.withOpacity(0.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? AppTheme.accent.withOpacity(0.5) : Colors.transparent,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showFilterSheet(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _FilterSheet(ref: ref),
+    );
+  }
+
+  List<dynamic> _getProcessedRuns(
+    List<dynamic> runs,
+    SortMode sortMode,
+    FilterType filterType,
+    GridSize gridSizeFilter,
+  ) {
+    var processed = List<dynamic>.from(runs);
+
+    // Filter by Type
+    if (filterType != FilterType.all) {
+      processed = processed.where((r) {
+        final isBattle = r['type'] == 'battle';
+        return filterType == FilterType.battle ? isBattle : !isBattle;
+      }).toList();
+    }
+
+    // Filter by Grid Size
+    if (gridSizeFilter != GridSize.all) {
+      processed = processed.where((r) {
+        final meta = r['metadata'] as Map<String, dynamic>?;
+        final size = (meta?['gridSize'] as String?) ?? '';
+        if (size.contains('x')) {
+          final parts = size.split('x');
+          final area = (int.tryParse(parts[0]) ?? 0) * (int.tryParse(parts[1]) ?? 0);
+          if (gridSizeFilter == GridSize.small) return area < 225; // 15x15
+          if (gridSizeFilter == GridSize.medium) return area >= 225 && area <= 900; // 30x30
+          if (gridSizeFilter == GridSize.large) return area > 900;
+        }
+        return false;
+      }).toList();
+    }
+
+    // Sort
+    processed.sort((a, b) {
+      final metaA = a['metadata'] as Map<String, dynamic>?;
+      final metaB = b['metadata'] as Map<String, dynamic>?;
+
+      switch (sortMode) {
+        case SortMode.latest:
+          final dateA = DateTime.parse(a['timestamp'] ?? DateTime.now().toIso8601String());
+          final dateB = DateTime.parse(b['timestamp'] ?? DateTime.now().toIso8601String());
+          return dateB.compareTo(dateA);
+        case SortMode.time:
+          final timeA = (metaA?['durationMs'] as num? ?? 999999).toInt();
+          final timeB = (metaB?['durationMs'] as num? ?? 999999).toInt();
+          return timeA.compareTo(timeB);
+        case SortMode.efficiency:
+          final stepsA = (metaA?['steps'] as num? ?? 999999).toInt();
+          final stepsB = (metaB?['steps'] as num? ?? 999999).toInt();
+          return stepsA.compareTo(stepsB);
+      }
+    });
+
+    return processed;
   }
 
   Widget _buildRunsList(BuildContext context, List<dynamic> runs, WidgetRef ref) {
@@ -115,11 +341,11 @@ class HistoryScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.history_toggle_off_rounded, size: 64, color: Colors.white.withOpacity(0.2)),
+              Icon(Icons.history_toggle_off_rounded, size: 64, color: Colors.white.withValues(alpha: 0.2)),
               const SizedBox(height: 16),
               Text(
                 'No runs found yet',
-                style: TextStyle(color: Colors.white.withOpacity(0.5)),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
               ),
             ],
           ),
@@ -148,79 +374,213 @@ class _RunCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isBattle = run['isBattle'] == true;
+    final isBattle = run['isBattle'] == true || run['type'] == 'battle';
     final algo = run['algorithm'] ?? 'Unknown';
     final timestamp = run['timestamp'] ?? '';
-    final stepsRaw = run['steps'];
-    final int steps = stepsRaw is List ? stepsRaw.length : (stepsRaw ?? 0);
-    final duration = run['durationMs'] ?? 0;
+    final metadata = run['metadata'] as Map<String, dynamic>?;
+    final density = (metadata?['obstacleDensity'] as num?)?.toDouble();
+
+    final competitors = run['competitors'] as List<dynamic>?;
+    int steps = 0;
+    int duration = 0;
+
+    // Extract metrics
+    if (isBattle && competitors != null && competitors.isNotEmpty) {
+      // For battles, identify the winner and show their metrics
+      String? winnerName = (run['metadata'] as Map?)?['winner'];
+      var winnerComp = competitors.firstWhere(
+        (c) => c['isWinner'] == true || (winnerName != null && c['name'] == winnerName), 
+        orElse: () => competitors.first
+      );
+      
+      duration = (winnerComp['durationMs'] as num? ?? 0).toInt();
+      final compSteps = winnerComp['steps'];
+      if (compSteps is List) {
+        steps = compSteps.length;
+      } else {
+        steps = (winnerComp['totalSteps'] as num? ?? 0).toInt();
+      }
+    } else {
+      // For single runs or fallback
+      duration = (run['durationMs'] as num? ?? 0).toInt();
+      final stepsRaw = run['steps'];
+      if (stepsRaw is List) {
+        steps = stepsRaw.length;
+      } else {
+        steps = (run['totalSteps'] as num? ?? 0).toInt();
+      }
+    }
+
+    // Extract competitive insights for battles
+    int deltaSteps = 0;
+    int deltaTime = 0;
+    if (isBattle && competitors != null && competitors.length >= 2) {
+      final winnerName = (run['metadata'] as Map?)?['winner'];
+      final winnerComp = competitors.firstWhere(
+        (c) => c['isWinner'] == true || (winnerName != null && c['name'] == winnerName), 
+        orElse: () => competitors.first
+      );
+      final loserComp = competitors.firstWhere((c) => c != winnerComp, orElse: () => competitors.last);
+      
+      final winnerS = (winnerComp['steps'] is List) ? (winnerComp['steps'] as List).length : (winnerComp['totalSteps'] as num? ?? 0).toInt();
+      final loserS = (loserComp['steps'] is List) ? (loserComp['steps'] as List).length : (loserComp['totalSteps'] as num? ?? 0).toInt();
+      
+      deltaSteps = (loserS - winnerS);
+      deltaTime = ((loserComp['durationMs'] as num? ?? 0).toInt()) - ((winnerComp['durationMs'] as num? ?? 0).toInt());
+    }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Container(
-        decoration: AppTheme.glassCard(radius: 16),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.03),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.05)),
+        ),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
           onTap: () => Navigator.pushNamed(context, '/replay', arguments: run),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+          child: IntrinsicHeight(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Left Accent Bar (Asymmetry)
                 Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: (isBattle ? AppTheme.error : AppTheme.accent).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: (isBattle ? AppTheme.error : AppTheme.accent).withOpacity(0.2)),
-                  ),
-                  child: Icon(
-                    isBattle ? Icons.compare_arrows_rounded : Icons.play_circle_outline_rounded, 
-                    color: isBattle ? AppTheme.error : AppTheme.accent,
+                  width: 6,
+                  color: isBattle ? AppTheme.error : AppTheme.accent,
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              isBattle ? Icons.bolt_rounded : Icons.psychology_rounded,
+                              size: 16,
+                              color: isBattle ? AppTheme.error : AppTheme.accent,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              isBattle ? 'BATTLE ARENA' : 'SOLO EXECUTION',
+                              style: TextStyle(
+                                color: (isBattle ? AppTheme.error : AppTheme.accent).withOpacity(0.7),
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.5,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              _formatDate(timestamp),
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.3),
+                                fontSize: 10,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          isBattle ? '$algo' : algo,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (isBattle && deltaSteps > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.accent.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppTheme.accent.withOpacity(0.2)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.stars_rounded, color: AppTheme.accent, size: 14),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Won by $deltaSteps steps • ${deltaTime}ms faster',
+                                  style: const TextStyle(
+                                    color: AppTheme.accentLight,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        Row(
+                          children: [
+                            _buildMetric(context, Icons.grid_view_rounded, '$steps', 'Nodes'),
+                            const SizedBox(width: 20),
+                            _buildMetric(context, Icons.timer_outlined, '${duration}ms', 'Duration'),
+                            if (density != null) ...[
+                              const SizedBox(width: 20),
+                              _buildMetric(context, Icons.grain_rounded, '${(density * 100).toInt()}%', 'Density'),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
+                // Action Area
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.02),
+                    border: Border(left: BorderSide(color: Colors.white.withOpacity(0.05))),
+                  ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        isBattle ? 'BATTLE: $algo' : algo,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      IconButton(
+                        icon: const Icon(Icons.play_arrow_rounded, color: AppTheme.accentLight),
+                        onPressed: () => Navigator.pushNamed(context, '/replay', arguments: run),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _formatDate(timestamp),
-                        style: Theme.of(context).textTheme.labelSmall,
+                      IconButton(
+                        icon: Icon(Icons.delete_outline_rounded, color: AppTheme.error.withOpacity(0.5), size: 20),
+                        onPressed: () => _confirmDelete(context, ref),
                       ),
                     ],
                   ),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '$steps steps',
-                      style: const TextStyle(color: AppTheme.cyan, fontWeight: FontWeight.w600),
-                    ),
-                    Text(
-                      '${duration}ms',
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 16),
-                // Delete Button
-                IconButton(
-                  icon: Icon(Icons.delete_outline_rounded, color: AppTheme.error.withOpacity(0.6), size: 20),
-                  onPressed: () => _confirmDelete(context, ref),
-                ),
-                const Icon(Icons.chevron_right_rounded, color: Colors.white24),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildMetric(BuildContext context, IconData icon, String value, String label) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 12, color: Colors.white.withOpacity(0.4)),
+            const SizedBox(width: 4),
+            Text(
+              value,
+              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        Text(
+          label.toUpperCase(),
+          style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 9, fontWeight: FontWeight.bold),
+        ),
+      ],
     );
   }
 
@@ -269,4 +629,112 @@ class _RunCard extends ConsumerWidget {
       return isoString;
     }
   }
+}
+
+class _FilterSheet extends ConsumerWidget {
+  final WidgetRef ref;
+  const _FilterSheet({required this.ref});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentType = ref.watch(filterTypeProvider);
+    final currentGridSize = ref.watch(filterGridSizeProvider);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.background.withOpacity(0.95),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 40),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'ADVANCED FILTERS',
+            style: TextStyle(
+              color: AppTheme.accentLight,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 24),
+          _buildFilterSection(
+            'Algorithm Type',
+            [
+              _FilterOption(FilterType.all, 'All', currentType == FilterType.all),
+              _FilterOption(FilterType.single, 'Single', currentType == FilterType.single),
+              _FilterOption(FilterType.battle, 'Battle', currentType == FilterType.battle),
+            ],
+            (val) => ref.read(filterTypeProvider.notifier).state = val as FilterType,
+          ),
+          const SizedBox(height: 24),
+          _buildFilterSection(
+            'Grid Scale',
+            [
+              _FilterOption(GridSize.all, 'All Sizes', currentGridSize == GridSize.all),
+              _FilterOption(GridSize.small, 'Small', currentGridSize == GridSize.small),
+              _FilterOption(GridSize.medium, 'Medium', currentGridSize == GridSize.medium),
+              _FilterOption(GridSize.large, 'Large', currentGridSize == GridSize.large),
+            ],
+            (val) => ref.read(filterGridSizeProvider.notifier).state = val as GridSize,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterSection(String label, List<_FilterOption> options, Function(dynamic) onSelected) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w500),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          children: options.map((opt) {
+            return ChoiceChip(
+              label: Text(opt.label),
+              selected: opt.isSelected,
+              onSelected: (selected) {
+                if (selected) onSelected(opt.value);
+              },
+              backgroundColor: Colors.white.withOpacity(0.05),
+              selectedColor: AppTheme.accent.withOpacity(0.3),
+              labelStyle: TextStyle(
+                color: opt.isSelected ? Colors.white : Colors.white60,
+                fontSize: 13,
+              ),
+              side: BorderSide(
+                color: opt.isSelected ? AppTheme.accent.withOpacity(0.5) : Colors.white.withOpacity(0.1),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _FilterOption {
+  final dynamic value;
+  final String label;
+  final bool isSelected;
+  _FilterOption(this.value, this.label, this.isSelected);
 }

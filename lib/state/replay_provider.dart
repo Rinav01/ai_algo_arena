@@ -73,15 +73,33 @@ class ReplayNotifier extends StateNotifier<ReplayState> {
   }
 
   void _startPlayback() {
-    final intervalMs = (500 / state.speed).round();
-    _timer = Timer.periodic(Duration(milliseconds: intervalMs), (timer) {
-      if (state.currentStep < state.totalSteps) {
-        state = state.copyWith(currentStep: state.currentStep + 1);
-      } else {
-        _stopPlayback();
-        state = state.copyWith(isPlaying: false);
-      }
-    });
+    // Standard step interval at 1x is 500ms
+    final targetIntervalMs = (500 / state.speed).round();
+    
+    if (targetIntervalMs >= 32) {
+      // Normal speed: Tick every step
+      _timer = Timer.periodic(Duration(milliseconds: targetIntervalMs), (timer) {
+        if (state.currentStep < state.totalSteps) {
+          state = state.copyWith(currentStep: state.currentStep + 1);
+        } else {
+          _stopPlayback();
+          state = state.copyWith(isPlaying: false);
+        }
+      });
+    } else {
+      // High speed: Tick at 32ms and skip steps to maintain speed
+      _timer = Timer.periodic(const Duration(milliseconds: 32), (timer) {
+        final stepsToSkip = (32 / targetIntervalMs).round();
+        final nextStep = (state.currentStep + stepsToSkip).clamp(0, state.totalSteps);
+        
+        state = state.copyWith(currentStep: nextStep);
+        
+        if (nextStep >= state.totalSteps) {
+          _stopPlayback();
+          state = state.copyWith(isPlaying: false);
+        }
+      });
+    }
   }
 
   void _stopPlayback() {

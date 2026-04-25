@@ -14,7 +14,9 @@ class GridVisualizerCanvas extends ConsumerStatefulWidget {
   final GridController controller;
   final AlgorithmExecutor<GridCoordinate>? executor;
   final List<GridCoordinate>? exploredNodes;
+  final int? exploredCount;
   final List<GridCoordinate>? pathNodes;
+  final int? pathCount;
   final Color? accentColor;
   final bool isInteractive;
   final bool showHeuristics;
@@ -32,7 +34,9 @@ class GridVisualizerCanvas extends ConsumerStatefulWidget {
     this.onPointerUpdate,
     this.onPointerUp,
     this.exploredNodes,
+    this.exploredCount,
     this.pathNodes,
+    this.pathCount,
     this.showHeuristics = false,
   });
 
@@ -186,7 +190,9 @@ class _GridVisualizerCanvasState extends ConsumerState<GridVisualizerCanvas>
                   controller: widget.controller,
                   executor: widget.executor,
                   exploredNodes: widget.exploredNodes,
+                  exploredCount: widget.exploredCount,
                   pathNodes: widget.pathNodes,
+                  pathCount: widget.pathCount,
                   accentColor: widget.accentColor ?? AppTheme.accent,
                   pulseValue: _pulseAnimation.value,
                   staticPicture: _staticGridPicture,
@@ -209,7 +215,9 @@ class _GridPainter extends CustomPainter {
   final GridController controller;
   final AlgorithmExecutor<GridCoordinate>? executor;
   final List<GridCoordinate>? exploredNodes;
+  final int? exploredCount;
   final List<GridCoordinate>? pathNodes;
+  final int? pathCount;
   final Color accentColor;
   final double pulseValue;
   final ui.Picture? staticPicture;
@@ -221,7 +229,9 @@ class _GridPainter extends CustomPainter {
     required this.controller,
     required this.executor,
     this.exploredNodes,
+    this.exploredCount,
     this.pathNodes,
+    this.pathCount,
     required this.accentColor,
     required this.pulseValue,
     required this.staticPicture,
@@ -356,8 +366,20 @@ class _GridPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final path = Path();
+    final count = exploredCount ?? explored.length;
+    
+    int i = 0;
     for (final state in explored) {
+      if (i >= count) break;
+      
+      // Safety check: sometimes nodes might be out of grid bounds during rapid changes
+      if (state.row >= controller.rows || state.column >= controller.columns) {
+        i++;
+        continue;
+      }
+
       if (controller.grid[state.row][state.column].type != NodeType.empty) {
+        i++;
         continue;
       }
 
@@ -368,6 +390,7 @@ class _GridPainter extends CustomPainter {
         cellHeight - 1,
       );
       path.addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(2)));
+      i++;
     }
     canvas.drawPath(path, paint);
   }
@@ -385,24 +408,24 @@ class _GridPainter extends CustomPainter {
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
 
     final path = Path();
+    final count = pathCount ?? pathNodesList.length;
+
+    int i = 0;
     for (final state in pathNodesList) {
-      if (controller.grid[state.row][state.column].type == NodeType.start ||
-          controller.grid[state.row][state.column].type == NodeType.goal) {
-        continue;
-      }
+      if (i >= count) break;
 
       final rect = Rect.fromLTWH(
-        state.column * cellWidth + 0.5,
-        state.row * cellHeight + 0.5,
-        cellWidth - 1,
-        cellHeight - 1,
+        state.column * cellWidth + 1.5,
+        state.row * cellHeight + 1.5,
+        cellWidth - 3,
+        cellHeight - 3,
       );
-      path.addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(2)));
+      path.addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(4)));
+      i++;
     }
-
-    // Draw shadow path once (for the whole path)
+    
+    canvas.drawShadow(path, AppTheme.cyan, 4, true);
     canvas.drawPath(path, shadowPaint);
-    // Draw solid path once
     canvas.drawPath(path, paint);
   }
 
@@ -439,6 +462,11 @@ class _GridPainter extends CustomPainter {
         oldDelegate.staticPicture != staticPicture ||
         oldDelegate.executor?.lastStep != executor?.lastStep ||
         oldDelegate.controller != controller ||
-        oldDelegate.settings != settings;
+        oldDelegate.settings != settings ||
+        oldDelegate.exploredCount != exploredCount ||
+        oldDelegate.pathCount != pathCount ||
+        oldDelegate.exploredNodes != exploredNodes ||
+        oldDelegate.pathNodes != pathNodes;
   }
 }
+

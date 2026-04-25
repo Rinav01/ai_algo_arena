@@ -241,10 +241,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     int crossAxisCount = 2;
     if (screenWidth > 800) {
       crossAxisCount = 4;
-    } else if (screenWidth > 600)
+    } else if (screenWidth > 600) {
       crossAxisCount = 3;
-    else
+    } else {
       crossAxisCount = 2;
+    }
 
     double availableWidth = screenWidth - 32.0 - (crossAxisCount - 1) * 12;
     double cardWidth = availableWidth / crossAxisCount;

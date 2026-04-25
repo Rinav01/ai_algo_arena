@@ -78,7 +78,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
   final _stepController = StreamController<AlgorithmStep<State>>.broadcast();
 
   List<AlgorithmStep<State>>? _fullHistory;
-  Duration _executionTime = Duration.zero;
+  final Duration _executionTime = Duration.zero;
   int _currentIndex = 0;
   Timer? _playbackTimer;
 
@@ -185,7 +185,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
 
         if (kIsWeb) {
           // Web doesn't support Isolates, run directly
-          final problem = GridProblem.fromSnapshot(_problemSnapshot!);
+          final problem = GridProblem.fromSnapshot(_problemSnapshot);
           for (final step in algorithm.solve(problem as Problem<State>)) {
             _fullHistory!.add(step);
           }

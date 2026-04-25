@@ -18,6 +18,7 @@ import 'package:algo_arena/state/settings_provider.dart';
 import 'package:algo_arena/models/algo_info.dart';
 import 'package:algo_arena/services/maze_generator.dart';
 import 'package:algo_arena/services/api_service.dart';
+import 'package:algo_arena/services/run_optimizer.dart';
 import 'package:algo_arena/screens/history_screen.dart';
 
 class AlgorithmBattleScreen extends ConsumerStatefulWidget {
@@ -262,22 +263,53 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
   }
 
   Future<void> _autoSaveRun(BattleResult result) async {
-    debugPrint('Auto-saving battle results as a unified record...');
+    debugPrint('Auto-saving battle results with Phase 2 optimizations...');
     try {
+      final cols = _controller.columns;
+      final totalCells = _controller.rows * cols;
+      final wallCount = _controller.grid.expand((r) => r).where((n) => n.type == NodeType.wall).length;
+      final density = wallCount / totalCells;
+
+      final nodeDiff = (result.algorithm1.totalSteps - result.algorithm2.totalSteps).abs();
+      final timeDiff = (result.algorithm1.executionTime.inMilliseconds - result.algorithm2.executionTime.inMilliseconds).abs();
+
       final runData = {
         'algorithm': '${result.algorithm1.algorithmName} vs ${result.algorithm2.algorithmName}',
-        'isBattle': true,
+        'type': 'battle',
+        'isBattle': true, // Legacy support
         'snapshot': _sanitizeSnapshot(result.algorithm1.problemSnapshot),
+        'totalSteps': result.winner.totalSteps, // Summary for list view
+        'durationMs': result.winner.executionTime.inMilliseconds, // Summary for list view
+        'metadata': {
+          'winner': result.winner.algorithmName,
+          'obstacleDensity': density,
+          'nodesDiff': nodeDiff,
+          'timeDiff': timeDiff,
+        },
         'competitors': [
-          _formatMetrics(result.algorithm1),
-          _formatMetrics(result.algorithm2),
+          RunOptimizer.optimizeCompetitor(
+            result.algorithm1.algorithmName,
+            result.algorithm1.history.cast<AlgorithmStep<GridCoordinate>>(),
+            result.algorithm1.path.cast<GridCoordinate>(),
+            result.algorithm1.executionTime,
+            cols,
+            isWinner: result.winner == result.algorithm1,
+          ),
+          RunOptimizer.optimizeCompetitor(
+            result.algorithm2.algorithmName,
+            result.algorithm2.history.cast<AlgorithmStep<GridCoordinate>>(),
+            result.algorithm2.path.cast<GridCoordinate>(),
+            result.algorithm2.executionTime,
+            cols,
+            isWinner: result.winner == result.algorithm2,
+          ),
         ],
         'timestamp': DateTime.now().toIso8601String(),
+        'tags': ['battle', density > 0.3 ? 'dense' : 'sparse'],
       };
 
-      debugPrint('Sending unified battle data to: ${ApiService.baseUrl}/runs');
+      debugPrint('Sending optimized battle data...');
       await ApiService().saveRun(runData);
-      debugPrint('Battle saved successfully');
       
       if (mounted) {
         ref.invalidate(runsProvider);
@@ -285,16 +317,6 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
     } catch (e) {
       debugPrint('CRITICAL: Error auto-saving battle run: $e');
     }
-  }
-
-  Map<String, dynamic> _formatMetrics(AlgorithmMetrics metrics) {
-    return {
-      'name': metrics.algorithmName,
-      'steps': metrics.history
-          .map((AlgorithmStep<dynamic> s) => s.toJson((coord) => (coord as GridCoordinate).toJson()))
-          .toList(),
-      'durationMs': metrics.executionTime.inMilliseconds,
-    };
   }
 
   void _showBattleAnalytics(BattleResult result) {

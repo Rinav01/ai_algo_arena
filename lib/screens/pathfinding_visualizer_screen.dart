@@ -19,6 +19,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:algo_arena/state/settings_provider.dart';
 import 'package:algo_arena/models/algo_info.dart';
 import 'package:algo_arena/services/api_service.dart';
+import 'package:algo_arena/services/run_optimizer.dart';
 import 'package:algo_arena/screens/history_screen.dart';
 import 'dart:typed_data';
 
@@ -247,23 +248,37 @@ class _PathfindingVisualizerScreenState
   Future<void> _autoSaveRun() async {
     if (_executor == null) return;
     
-    debugPrint('Auto-save triggered for ${widget.algorithmId}');
+    debugPrint('Auto-save triggered for ${widget.algorithmId} with Phase 2 optimizations...');
     try {
+      final cols = _controller.columns;
+      final totalCells = _controller.rows * cols;
+      final wallCount = _controller.grid.expand((r) => r).where((n) => n.type == NodeType.wall).length;
+      final density = wallCount / totalCells;
+
       final runData = {
         'algorithm': widget.algorithmId,
-        'steps': _executor!.history
-            ?.map((AlgorithmStep<dynamic> s) => s.toJson((coord) => (coord as GridCoordinate).toJson()))
-            .toList(),
+        'type': 'single',
+        'isBattle': false,
         'snapshot': _sanitizeSnapshot(_executor!.problemSnapshot),
+        'metadata': {
+          'obstacleDensity': density,
+          'foundPath': _isSolved,
+          'pathLength': _path.length,
+          'nodesExplored': _nodesExplored,
+        },
+        'steps': RunOptimizer.optimizeSteps(
+          _executor!.history!.cast<AlgorithmStep<GridCoordinate>>(),
+          cols,
+        ),
+        'path': _path.map((c) => RunOptimizer.compress(c, cols)).toList(),
         'durationMs': _executor!.executionTime.inMilliseconds,
         'timestamp': DateTime.now().toIso8601String(),
+        'tags': [widget.algorithmId, density > 0.3 ? 'dense' : 'sparse'],
       };
 
-      debugPrint('Sending run data to: ${ApiService.baseUrl}/runs');
+      debugPrint('Sending optimized run data to: ${ApiService.baseUrl}/runs');
       await ApiService().saveRun(runData);
-      debugPrint('Run auto-saved successfully');
-
-      // Invalidate the runs provider so history refreshes
+      
       if (mounted) {
         ref.invalidate(runsProvider);
       }
