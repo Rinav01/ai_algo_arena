@@ -7,27 +7,30 @@ import 'package:algo_arena/services/nqueens_solver.dart';
 import 'package:algo_arena/widgets/visualizer_widgets.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:algo_arena/models/algo_info.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:algo_arena/screens/visualizer_base_mixin.dart';
+import 'package:algo_arena/services/api_service.dart';
+import 'package:algo_arena/core/problem_definition.dart';
 
-class NQueensVisualizerScreen extends StatefulWidget {
+class NQueensVisualizerScreen extends ConsumerStatefulWidget {
   const NQueensVisualizerScreen({super.key});
 
   @override
-  State<NQueensVisualizerScreen> createState() =>
+  ConsumerState<NQueensVisualizerScreen> createState() =>
       _NQueensVisualizerScreenState();
 }
 
-class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
-    with SingleTickerProviderStateMixin {
+class _NQueensVisualizerScreenState extends ConsumerState<NQueensVisualizerScreen>
+    with SingleTickerProviderStateMixin, VisualizerBaseMixin<NQueensVisualizerScreen, QueensState> {
   late QueensState currentState;
   NQueensSolver? solver;
   StreamSubscription<NQueensStep>? _stepSubscription;
-  final ValueNotifier<NQueensStep?> _currentStepNotifier = ValueNotifier(null);
 
   int boardSize = 8;
-  double executionSpeed = 2.0;
   NQueensSolverMode selectedMode = NQueensSolverMode.backtracking;
-  bool isSolving = false;
-  bool isSolved = false;
+
+  @override
+  String get algorithmId => selectedMode.label;
 
   @override
   void initState() {
@@ -35,25 +38,61 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
     _resetBoard();
   }
 
+  @override
+  void dispose() {
+    _stopSolver();
+    super.dispose();
+  }
+
+  @override
+  Map<String, dynamic> getProblemSnapshot() {
+    return {
+      'boardSize': boardSize,
+      'initialPlacement': currentState.placement,
+    };
+  }
+
+  @override
+  Future<void> onStep(AlgorithmStep<QueensState> step) async {
+    // This is a bit different because NQueens doesn't use AlgorithmExecutor yet
+    // But we'll try to keep it consistent
+  }
+
+  @override
+  Future<void> onGoalReached(AlgorithmStep<QueensState> step) async {
+    statusMessage = 'Solution Found!';
+  }
+
+  @override
+  Future<void> onAutoSave() async {
+    try {
+      final runData = {
+        'algorithm': selectedMode.label,
+        'type': 'csp',
+        'isBattle': false,
+        'snapshot': getProblemSnapshot(),
+        'metadata': {
+          'boardSize': boardSize,
+          'foundPath': isSolved,
+          'steps': stepCount,
+        },
+        'durationMs': 0, // Need to track this
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+      await ApiService().saveRun(runData);
+    } catch (e) {
+      debugPrint('Error auto-saving N-Queens run: $e');
+    }
+  }
+
   void _resetBoard() {
     _stopSolver();
+    resetBase();
     currentState = QueensState(
       placement: List.filled(boardSize, -1),
       n: boardSize,
     );
-    _currentStepNotifier.value = NQueensStep(
-      board: currentState.placement,
-      currentRow: -1,
-      steps: 0,
-      backtracks: 0,
-    );
-    isSolved = false;
-    isSolving = false;
-  }
-
-  Duration get _stepDelay {
-    final milliseconds = (300 / executionSpeed).round().clamp(10, 3000);
-    return Duration(milliseconds: milliseconds);
+    statusMessage = 'Idle';
   }
 
   void _stopSolver() {
@@ -72,44 +111,68 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
     solver = NQueensSolver(
       n: boardSize,
       mode: selectedMode,
-      stepDelay: _stepDelay,
+      stepDelay: Duration(milliseconds: (300 / executionSpeed).round().clamp(10, 3000)),
     );
 
     _stepSubscription = solver!.stepStream.listen((step) {
-      _currentStepNotifier.value = step;
+      if (!mounted) return;
+
+      // Throttle UI updates
+      stepCount = step.steps;
+      // We'll treat backtracks as part of nodes explored for consistency in stats
+      nodesExplored = step.steps + step.backtracks;
+      
+      final newState = QueensState(placement: step.board, n: boardSize);
+      currentState = newState;
+
       if (step.isSolved) {
-        setState(() {
-          isSolved = true;
-          isSolving = false;
-        });
+        isSolved = true;
+        isSolving = false;
+        statusMessage = 'Solution Found!';
+        onGoalReached(AlgorithmStep(
+          newlyExplored: [newState],
+          path: [],
+          stepCount: step.steps,
+          isGoalReached: true,
+        ));
+        
+        // Custom auto-save trigger since we aren't using base.solve()
+        onAutoSave();
+      } else {
+        statusMessage = 'Solving... Row: ${step.currentRow + 1}';
+      }
+
+      // Manual throttle for NQueens since it doesn't use the mixin's executor stream
+      final now = DateTime.now();
+      if (now.difference(lastUiUpdate) >= const Duration(milliseconds: 32)) {
+        lastUiUpdate = now;
+        setState(() {});
       }
     });
 
     await solver!.solve();
   }
 
-  void _pauseResume() {
+  void _pauseResumeCustom() {
     if (isSolving) {
       solver?.pause();
-      setState(() => isSolving = false);
-    } else if (_currentStepNotifier.value != null && !isSolved) {
+      setState(() {
+        isSolving = false;
+        statusMessage = 'Paused';
+      });
+    } else if (solver != null && !isSolved) {
       solver?.resume();
-      setState(() => isSolving = true);
+      setState(() {
+        isSolving = true;
+        statusMessage = 'Resumed';
+      });
     }
-  }
-
-  void _reset() {
-    setState(() {
-      _resetBoard();
-    });
   }
 
   void _handleSquareTap(int row, int col) {
     if (isSolving) return;
 
-    final newPlacement = List<int>.from(
-      _currentStepNotifier.value?.board ?? currentState.placement,
-    );
+    final newPlacement = List<int>.from(currentState.placement);
     if (newPlacement[row] == col) {
       newPlacement[row] = -1;
     } else {
@@ -120,17 +183,14 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
     }
 
     final newState = QueensState(placement: newPlacement, n: boardSize);
-    _currentStepNotifier.value = NQueensStep(
-      board: newPlacement,
-      currentRow: row,
-      steps: 0,
-      backtracks: 0,
-    );
     setState(() {
       currentState = newState;
       isSolved = NQueensUtils.isGoal(newState);
       if (isSolved) {
         HapticFeedback.vibrate();
+        statusMessage = 'Goal reached manually!';
+      } else {
+        statusMessage = 'Playing manually';
       }
     });
   }
@@ -179,7 +239,7 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
                   const SizedBox(height: 20),
                   _buildModeSelector(setModalState),
                   const SizedBox(height: 20),
-                  _buildSpeedControl(setModalState),
+                  _buildSpeedControlModal(setModalState),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: isSolving
@@ -264,7 +324,7 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
     );
   }
 
-  Widget _buildSpeedControl(StateSetter setModalState) {
+  Widget _buildSpeedControlModal(StateSetter setModalState) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -299,13 +359,6 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
   }
 
   @override
-  void dispose() {
-    _stopSolver();
-    _currentStepNotifier.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -323,44 +376,35 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
                 initialKey: selectedMode.label,
               ),
               const SizedBox(height: 20),
-              ValueListenableBuilder<NQueensStep?>(
-                valueListenable: _currentStepNotifier,
-                builder: (context, step, _) {
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: GlassStatCard(
-                          label: 'STEPS',
-                          value: step?.steps ?? 0,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: GlassStatCard(
-                          label: 'BACKTRACKS',
-                          value: step?.backtracks ?? 0,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: GlassStatCard(
-                          label: 'ROW',
-                          value: (step?.currentRow ?? -1) + 1,
-                        ),
-                      ),
-                    ],
-                  );
-                },
+              Row(
+                children: [
+                  Expanded(
+                    child: GlassStatCard(
+                      label: 'STEPS',
+                      value: stepCount,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GlassStatCard(
+                      label: 'BACKTRACKS',
+                      value: solver != null ? nodesExplored - stepCount : 0,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GlassStatCard(
+                      label: 'ROW',
+                      value: currentState.placement.indexOf(-1) == -1 ? boardSize : currentState.placement.indexOf(-1) + 1,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 14),
               Center(
                 child:
                     StatusBanner(
-                          message: isSolved
-                              ? 'Solution Found!'
-                              : isSolving
-                              ? 'Solving...'
-                              : 'Idle',
+                          message: statusMessage,
                           isSolved: isSolved,
                           isSolving: isSolving,
                         )
@@ -377,10 +421,10 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
               VisualizerControls(
                 isSolving: isSolving,
                 isSolved: isSolved,
-                stepCount: _currentStepNotifier.value?.steps ?? 0,
+                stepCount: stepCount,
                 onSolve: _showSolverConfig,
-                onPauseResume: _pauseResume,
-                onClear: _reset,
+                onPauseResume: _pauseResumeCustom,
+                onClear: _resetBoard,
               ),
             ],
           ),
@@ -419,119 +463,102 @@ class _NQueensVisualizerScreenState extends State<NQueensVisualizerScreen>
         ),
         const SizedBox(height: 16),
         RepaintBoundary(
-          child: ValueListenableBuilder<NQueensStep?>(
-            valueListenable: _currentStepNotifier,
-            builder: (context, step, _) {
-              final board = step?.board ?? List.filled(boardSize, -1);
-              final activeRow = step?.currentRow ?? -1;
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 600.0),
+              child: Container(
+                padding: EdgeInsets.all(12.0),
+                decoration: AppTheme.glassCardAccent(radius: 16),
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: boardSize,
+                    mainAxisSpacing: 2,
+                    crossAxisSpacing: 2,
+                  ),
+                  itemCount: boardSize * boardSize,
+                  itemBuilder: (context, index) {
+                    final row = index ~/ boardSize;
+                    final col = index % boardSize;
+                    final hasQueen = currentState.placement[row] == col;
+                    
+                    bool isConflict = false;
+                    if (hasQueen) {
+                      isConflict = !NQueensUtils.isSafe(currentState.placement, row, col);
+                    }
 
-              return Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: 600.0),
-                  child: Container(
-                    padding: EdgeInsets.all(12.0),
-                    decoration: AppTheme.glassCardAccent(radius: 16),
-                    child: GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: boardSize,
-                        mainAxisSpacing: 2,
-                        crossAxisSpacing: 2,
-                      ),
-                      itemCount: boardSize * boardSize,
-                      itemBuilder: (context, index) {
-                        final row = index ~/ boardSize;
-                        final col = index % boardSize;
-                        final hasQueen = board[row] == col;
-                        final isActiveRow = row == activeRow;
+                    Color cellColor = ((row + col) % 2 == 0)
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.black.withValues(alpha: 0.15);
 
-                        bool isConflict = false;
-                        if (hasQueen) {
-                          isConflict = !NQueensUtils.isSafe(board, row, col);
-                        }
-
-                        Color cellColor = ((row + col) % 2 == 0)
-                            ? Colors.white.withValues(alpha: 0.05)
-                            : Colors.black.withValues(alpha: 0.15);
-
-                        if (isActiveRow) {
-                          cellColor = AppTheme.accent.withValues(alpha: 0.1);
-                        }
-
-                        return GestureDetector(
-                          onTap: () => _handleSquareTap(row, col),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            decoration: BoxDecoration(
-                              color: cellColor,
-                              borderRadius: BorderRadius.circular(4.0),
-                              border: Border.all(
-                                color: hasQueen
-                                    ? (isConflict
-                                          ? AppTheme.error
-                                          : AppTheme.success)
-                                    : (isActiveRow
-                                          ? AppTheme.accent.withValues(
-                                              alpha: 0.3,
-                                            )
-                                          : Colors.transparent),
-                                width: hasQueen ? 2.0 : 1.0,
-                              ),
-                            ),
-                            child: hasQueen
-                                ? Center(
-                                        child: Text(
-                                          '♕',
-                                          style: TextStyle(
-                                            fontSize: 28.0,
+                    return GestureDetector(
+                      onTap: () => _handleSquareTap(row, col),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        decoration: BoxDecoration(
+                          color: cellColor,
+                          borderRadius: BorderRadius.circular(4.0),
+                          border: Border.all(
+                            color: hasQueen
+                                ? (isConflict
+                                      ? AppTheme.error
+                                      : AppTheme.success)
+                                : Colors.transparent,
+                            width: hasQueen ? 2.0 : 1.0,
+                          ),
+                        ),
+                        child: hasQueen
+                            ? Center(
+                                    child: Text(
+                                      '♕',
+                                      style: TextStyle(
+                                        fontSize: 28.0,
+                                        color: isConflict
+                                            ? AppTheme.error
+                                            : Colors.white,
+                                        shadows: [
+                                          Shadow(
                                             color: isConflict
                                                 ? AppTheme.error
-                                                : Colors.white,
-                                            shadows: [
-                                              Shadow(
-                                                color: isConflict
-                                                    ? AppTheme.error
-                                                    : AppTheme.success,
-                                                blurRadius: 10,
-                                              ),
-                                            ],
+                                                : AppTheme.success,
+                                            blurRadius: 10,
                                           ),
-                                        ),
-                                      )
-                                      .animate()
-                                      .scale(
-                                        duration: 200.ms,
-                                        curve: Curves.easeOut,
-                                      )
-                                      .animate(target: isSolved ? 1 : 0)
-                                      .shimmer(
-                                        duration: 1200.ms,
-                                        color: AppTheme.success.withValues(
-                                          alpha: 0.5,
-                                        ),
-                                      )
-                                      .shake(
-                                        duration: 400.ms,
-                                        hz: 4,
-                                        rotation: 0.05,
-                                        delay: (index * 20).ms,
-                                      )
-                                      .scale(
-                                        begin: const Offset(1, 1),
-                                        end: const Offset(1.2, 1.2),
-                                        duration: 400.ms,
-                                        curve: Curves.easeOutBack,
-                                      )
-                                : null,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                  .animate()
+                                  .scale(
+                                    duration: 200.ms,
+                                    curve: Curves.easeOut,
+                                  )
+                                  .animate(target: isSolved ? 1 : 0)
+                                  .shimmer(
+                                    duration: 1200.ms,
+                                    color: AppTheme.success.withValues(
+                                      alpha: 0.5,
+                                    ),
+                                  )
+                                  .shake(
+                                    duration: 400.ms,
+                                    hz: 4,
+                                    rotation: 0.05,
+                                    delay: (index * 20).ms,
+                                  )
+                                  .scale(
+                                    begin: const Offset(1, 1),
+                                    end: const Offset(1.2, 1.2),
+                                    duration: 400.ms,
+                                    curve: Curves.easeOutBack,
+                                  )
+                            : null,
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+              ),
+            ),
           ),
         ),
       ],

@@ -1,7 +1,30 @@
 import 'dart:collection';
 import 'package:collection/collection.dart';
-
 import 'package:algo_arena/core/problem_definition.dart';
+
+/// Registry to map algorithm IDs to their concrete implementations.
+class AlgorithmRegistry {
+  static SearchAlgorithm<State> create<State>(String id) {
+    switch (id) {
+      case 'BFS':
+        return BFSAlgorithm<State>();
+      case 'DFS':
+        return DFSAlgorithm<State>();
+      case 'A*':
+        return AStarAlgorithm<State>();
+      case 'Dijkstra':
+        return DijkstraAlgorithm<State>();
+      case 'Greedy':
+        return GreedyBestFirstAlgorithm<State>();
+      default:
+        return AStarAlgorithm<State>();
+    }
+  }
+
+  static List<String> get pathfindingIds => ['BFS', 'DFS', 'Dijkstra', 'Greedy', 'A*'];
+  static List<String> get puzzleIds => ['BFS', 'A*', 'Greedy'];
+  static List<String> get nqueensIds => ['BFS', 'DFS'];
+}
 
 /// Generic BFS algorithm that works with any Problem
 class BFSAlgorithm<State> extends SearchAlgorithm<State> {

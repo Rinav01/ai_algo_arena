@@ -1,8 +1,9 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/analytics_api_service.dart';
+import '../services/api_service.dart';
 import '../models/analytics_models.dart';
 
-final analyticsApiServiceProvider = Provider((ref) => AnalyticsApiService());
+final apiServiceProvider = Provider((ref) => ApiService());
 
 // ─── Filters State ───────────────────────────────────────────────────────────
 
@@ -39,7 +40,7 @@ final analyticsFiltersProvider = StateProvider<AnalyticsFilters>((ref) => Analyt
 // ─── Summary Provider ────────────────────────────────────────────────────────
 
 final summaryProvider = FutureProvider<AnalyticsResponse<SummaryData>>((ref) async {
-  final api = ref.watch(analyticsApiServiceProvider);
+  final api = ref.watch(apiServiceProvider);
   final filters = ref.watch(analyticsFiltersProvider);
   
   final res = await api.getSummary(
@@ -48,25 +49,51 @@ final summaryProvider = FutureProvider<AnalyticsResponse<SummaryData>>((ref) asy
     endDate: filters.endDate,
   );
 
-  final data = (res['data'] as List? ?? [])
-      .map((item) => SummaryData.fromJson(item))
-      .toList();
-  
-  final insights = (res['insights'] as List? ?? [])
-      .map((item) => BattleInsight.fromJson(item))
-      .toList();
+  try {
+    final rawData = res['data'];
+    debugPrint('Analytics Summary rawData: $rawData');
+    final List listData = (rawData is Map) 
+        ? (rawData['byAlgorithm'] as List? ?? []) 
+        : (rawData as List? ?? []);
 
-  return AnalyticsResponse(
-    data: data,
-    meta: res['meta'] ?? {},
-    insights: insights,
-  );
+    debugPrint('Analytics Summary listData: $listData');
+
+    final data = listData.map((item) {
+      try {
+        return SummaryData.fromJson(item);
+      } catch (e) {
+        debugPrint('Error parsing SummaryData item: $item - $e');
+        rethrow;
+      }
+    }).toList();
+    
+    final insights = (res['insights'] as List? ?? []).map((item) {
+      try {
+        return BattleInsight.fromJson(item);
+      } catch (e) {
+        debugPrint('Error parsing BattleInsight item: $item - $e');
+        rethrow;
+      }
+    }).toList();
+
+    debugPrint('Analytics Summary parsed successfully: ${data.length} items');
+
+    return AnalyticsResponse(
+      data: data,
+      meta: res['meta'] ?? {},
+      insights: insights,
+    );
+  } catch (e, stack) {
+    debugPrint('CRITICAL: Analytics Summary Provider Error: $e');
+    debugPrint(stack.toString());
+    rethrow;
+  }
 });
 
 // ─── Trends Provider ─────────────────────────────────────────────────────────
 
 final trendsProvider = FutureProvider<AnalyticsResponse<TrendData>>((ref) async {
-  final api = ref.watch(analyticsApiServiceProvider);
+  final api = ref.watch(apiServiceProvider);
   final filters = ref.watch(analyticsFiltersProvider);
   
   final res = await api.getTrends(
@@ -74,9 +101,19 @@ final trendsProvider = FutureProvider<AnalyticsResponse<TrendData>>((ref) async 
     metric: filters.metric,
   );
 
-  final data = (res['data'] as List? ?? [])
-      .map((item) => TrendData.fromJson(item))
+  final rawData = res['data'];
+  final List trendsList = (rawData is Map) 
+      ? (rawData['trends'] as List? ?? []) 
+      : (rawData as List? ?? []);
+
+  // Map flat trends to a single TrendData object
+  final points = trendsList
+      .map((item) => TrendPoint.fromJson(item, filters.metric ?? 'nodes'))
       .toList();
+      
+  final data = points.isNotEmpty 
+      ? [TrendData(algorithm: filters.algorithm ?? 'All Algorithms', points: points)]
+      : <TrendData>[];
   
   final insights = (res['insights'] as List? ?? [])
       .map((item) => BattleInsight.fromJson(item))
@@ -92,13 +129,26 @@ final trendsProvider = FutureProvider<AnalyticsResponse<TrendData>>((ref) async 
 // ─── Distribution Provider ────────────────────────────────────────────────────
 
 final distributionProvider = FutureProvider<AnalyticsResponse<DistributionData>>((ref) async {
-  final api = ref.watch(analyticsApiServiceProvider);
+  final api = ref.watch(apiServiceProvider);
   
   final res = await api.getDistribution();
 
-  final data = (res['data'] as List? ?? [])
-      .map((item) => DistributionData.fromJson(item))
-      .toList();
+  final rawData = res['data'];
+  debugPrint('Analytics Summary rawData: $rawData');
+  final List listData = (rawData is Map) 
+      ? (rawData['distribution'] as List? ?? []) 
+      : (rawData as List? ?? []);
+
+  final total = listData.fold<int>(0, (sum, item) => sum + (item['count'] as int? ?? 0));
+
+  final data = listData.map((item) {
+    final count = item['count'] as int? ?? 0;
+    return DistributionData(
+      algorithm: item['algorithm'] ?? 'Unknown',
+      count: count,
+      percentage: total > 0 ? (count / total * 100) : 0.0,
+    );
+  }).toList();
   
   final insights = (res['insights'] as List? ?? [])
       .map((item) => BattleInsight.fromJson(item))
@@ -114,7 +164,7 @@ final distributionProvider = FutureProvider<AnalyticsResponse<DistributionData>>
 // ─── Battle Insights Provider ─────────────────────────────────────────────────
 
 final battleInsightsProvider = FutureProvider<List<BattleInsight>>((ref) async {
-  final api = ref.watch(analyticsApiServiceProvider);
+  final api = ref.watch(apiServiceProvider);
   final res = await api.getBattleInsights();
   
   return (res['insights'] as List? ?? [])

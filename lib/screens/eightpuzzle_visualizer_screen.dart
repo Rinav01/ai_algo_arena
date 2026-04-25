@@ -1,51 +1,39 @@
+import 'package:algo_arena/models/algo_info.dart';
 import 'package:algo_arena/widgets/visualizer_widgets.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:algo_arena/core/app_theme.dart';
 import 'package:algo_arena/core/eightpuzzle_problem.dart';
-import 'package:algo_arena/core/search_algorithms.dart';
-import 'package:algo_arena/services/algorithm_executor.dart';
 import 'package:algo_arena/core/problem_definition.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:algo_arena/models/algo_info.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:algo_arena/screens/visualizer_base_mixin.dart';
+import 'package:algo_arena/services/api_service.dart';
 
-class EightPuzzleVisualizerScreen extends StatefulWidget {
+class EightPuzzleVisualizerScreen extends ConsumerStatefulWidget {
   const EightPuzzleVisualizerScreen({super.key});
 
   @override
-  State<EightPuzzleVisualizerScreen> createState() =>
+  ConsumerState<EightPuzzleVisualizerScreen> createState() =>
       _EightPuzzleVisualizerScreenState();
 }
 
 class _EightPuzzleVisualizerScreenState
-    extends State<EightPuzzleVisualizerScreen>
-    with SingleTickerProviderStateMixin {
+    extends ConsumerState<EightPuzzleVisualizerScreen>
+    with SingleTickerProviderStateMixin, VisualizerBaseMixin<EightPuzzleVisualizerScreen, PuzzleState> {
   late AnimationController _victoryController;
   late EightPuzzleProblem problem;
   late PuzzleState currentState;
-  AlgorithmExecutor<PuzzleState>? executor;
-  StreamSubscription<AlgorithmStep<PuzzleState>>? _stepSubscription;
 
   List<PuzzleState> currentPath = [];
-  Set<PuzzleState> exploredStates = {};
-  // Track last UI update time to avoid excessive setState calls
-  DateTime _lastUiUpdate = DateTime.fromMillisecondsSinceEpoch(0);
-  int stepCount = 0;
-  int nodesExplored = 0;
-  bool isSolving = false;
-  bool isSolved = false;
+  
   final List<String> algorithms = ['BFS', 'A*', 'Greedy'];
   String selectedDifficulty = 'Medium';
   final Map<String, int> difficulties = {'Easy': 10, 'Medium': 25, 'Hard': 50};
   String selectedAlgorithm = 'A*';
-  double executionSpeed = 2.0;
-  String _statusMessage = 'Ready to solve';
 
-  Duration get _stepDelay {
-    if (executionSpeed >= 4.9) return Duration.zero;
-    final milliseconds = (220 / executionSpeed).round().clamp(10, 2200);
-    return Duration(milliseconds: milliseconds);
-  }
+  @override
+  String get algorithmId => selectedAlgorithm;
 
   @override
   void initState() {
@@ -58,27 +46,75 @@ class _EightPuzzleVisualizerScreenState
     _resetPuzzle();
   }
 
-  void _resetPuzzle() {
-    _stepSubscription?.cancel();
-    _stepSubscription = null;
-    if (executor != null) {
-      executor!.stop();
-      executor!.dispose();
-      executor = null;
+  @override
+  void dispose() {
+    _victoryController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Map<String, dynamic> getProblemSnapshot() {
+    return {
+      'initialState': problem.initialState.tiles,
+      'goalState': problem.goalState.tiles,
+    };
+  }
+
+  @override
+  Future<void> onStep(AlgorithmStep<PuzzleState> step) async {
+    if (step.path.isNotEmpty) {
+      currentPath = step.path;
+      currentState = step.path.last;
+    } else if (step.newlyExplored.isNotEmpty) {
+      currentState = step.newlyExplored.last;
     }
 
-    // Default start state (solved goal)
+    // Update status message with search info
+    final g = currentPath.length - 1;
+    final h = problem.heuristic(currentState).toInt();
+    final f = g + h;
+    statusMessage = 'Searching (f=$f = g:$g + h:$h)';
+  }
+
+  @override
+  Future<void> onGoalReached(AlgorithmStep<PuzzleState> step) async {
+    final g = currentPath.length - 1;
+    statusMessage = 'Goal Reached! Cost: $g moves';
+    _victoryController.forward(from: 0.0);
+  }
+
+  @override
+  Future<void> onAutoSave() async {
+    // Implement auto-save for 8-puzzle
+    try {
+      final runData = {
+        'algorithm': selectedAlgorithm,
+        'type': 'puzzle',
+        'isBattle': false,
+        'snapshot': getProblemSnapshot(),
+        'metadata': {
+          'difficulty': selectedDifficulty,
+          'foundPath': isSolved,
+          'pathLength': currentPath.length - 1,
+          'nodesExplored': nodesExplored,
+        },
+        'steps': executor!.history!.length, // Simplistic for now
+        'durationMs': executor!.executionTime.inMilliseconds,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+      await ApiService().saveRun(runData);
+    } catch (e) {
+      debugPrint('Error auto-saving 8-puzzle run: $e');
+    }
+  }
+
+  void _resetPuzzle() {
+    resetBase();
     problem = EightPuzzleProblem(
       initialState: EightPuzzleProblem.defaultGoalState,
     );
     currentState = problem.initialState;
     currentPath = [currentState];
-    exploredStates.clear();
-    stepCount = 0;
-    nodesExplored = 0;
-    isSolving = false;
-    isSolved = false;
-    _statusMessage = 'Ready to solve';
   }
 
   Future<void> _shuffle() async {
@@ -87,16 +123,14 @@ class _EightPuzzleVisualizerScreenState
     setState(() {
       isSolving = true;
       isSolved = false;
-      _statusMessage = 'Scrambling...';
+      statusMessage = 'Scrambling...';
     });
 
     final depth = difficulties[selectedDifficulty] ?? 25;
     PuzzleState tempState = currentState;
 
-    // Visual Scramble: Fast sequence of valid moves
     for (int i = 0; i < depth; i++) {
       final neighbors = problem.getNeighbors(tempState);
-      // Pick a random neighbor
       final next =
           neighbors[DateTime.now().microsecondsSinceEpoch % neighbors.length];
 
@@ -114,148 +148,8 @@ class _EightPuzzleVisualizerScreenState
       stepCount = 0;
       nodesExplored = 0;
       currentPath = [currentState];
-      exploredStates.clear();
-      _statusMessage = 'Shuffle complete';
+      statusMessage = 'Shuffle complete';
     });
-  }
-
-  Future<void> _solvePuzzle() async {
-    if (isSolving) return;
-
-    if (!EightPuzzleProblem.isSolvable(currentState)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('This puzzle configuration is unsolvable!'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-      setState(() => _statusMessage = 'Unsolvable State');
-      return;
-    }
-
-    setState(() {
-      isSolving = true;
-      isSolved = false;
-      exploredStates.clear();
-      currentPath = [currentState];
-      stepCount = 0;
-      nodesExplored = 0;
-      _statusMessage = 'Starting $selectedAlgorithm...';
-    });
-
-    late SearchAlgorithm<PuzzleState> algorithm;
-    switch (selectedAlgorithm) {
-      case 'BFS':
-        algorithm = BFSAlgorithm<PuzzleState>();
-        break;
-      case 'A*':
-        algorithm = AStarAlgorithm<PuzzleState>();
-        break;
-      case 'Greedy':
-        algorithm = GreedyBestFirstAlgorithm<PuzzleState>();
-        break;
-      default:
-        algorithm = AStarAlgorithm<PuzzleState>();
-    }
-
-    executor = AlgorithmExecutor<PuzzleState>(
-      algorithm: algorithm,
-      problem: problem,
-      stepDelayMs: _stepDelay.inMilliseconds,
-    );
-
-    try {
-      await executor!.start();
-
-      await _stepSubscription?.cancel();
-      _stepSubscription = executor!.stepStream.listen(
-        (step) {
-          if (!mounted) return;
-
-          // Update internal values always, but throttle UI rebuilds
-          stepCount = step.stepCount;
-          nodesExplored = executor!.exploredSet.length;
-          exploredStates = executor!.exploredSet.cast<PuzzleState>().toSet();
-
-          if (step.path.isNotEmpty) {
-            currentPath = step.path;
-            currentState = step.path.last;
-          } else if (step.newlyExplored.isNotEmpty) {
-            currentState = step.newlyExplored.last;
-          }
-
-          _statusMessage = step.message ?? _statusMessage;
-
-          if (step.isGoalReached) {
-            isSolved = true;
-            isSolving = false;
-            final g = currentPath.length - 1;
-            _statusMessage = 'Goal Reached! Cost: $g moves';
-            _victoryController.forward(from: 0.0);
-          } else {
-            // Update f = g + h status
-            final g = currentPath.length - 1;
-            final h = problem.heuristic(currentState).toInt();
-            final f = g + h;
-            _statusMessage = 'Searching (f=$f = g:$g + h:$h)';
-          }
-
-          final now = DateTime.now();
-          if (now.difference(_lastUiUpdate) >=
-              const Duration(milliseconds: 50)) {
-            _lastUiUpdate = now;
-            setState(() {});
-          }
-        },
-        onError: (error) {
-          if (mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('Error: $error')));
-            setState(() {
-              isSolving = false;
-              _statusMessage = 'Error: $error';
-            });
-          }
-        },
-        onDone: () {
-          if (mounted) {
-            setState(() => isSolving = false);
-          }
-        },
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-        setState(() {
-          isSolving = false;
-          _statusMessage = 'Error: $e';
-        });
-      }
-    }
-  }
-
-  void _reset() {
-    if (isSolving) executor?.stop();
-    setState(() => _resetPuzzle());
-  }
-
-  void _pauseResume() {
-    if (isSolving) {
-      executor?.pause();
-      setState(() {
-        isSolving = false;
-        _statusMessage = 'Paused';
-      });
-    } else if (stepCount > 0) {
-      executor?.resume();
-      setState(() {
-        isSolving = true;
-        _statusMessage = 'Resumed';
-      });
-    }
   }
 
   void _handleTileTap(int index) {
@@ -283,9 +177,8 @@ class _EightPuzzleVisualizerScreenState
         stepCount = 0;
         nodesExplored = 0;
         currentPath = [currentState];
-        exploredStates.clear();
         isSolved = problem.isGoal(currentState);
-        _statusMessage = isSolved
+        statusMessage = isSolved
             ? 'Goal reached manually!'
             : 'Playing manually';
         if (isSolved) {
@@ -464,7 +357,7 @@ class _EightPuzzleVisualizerScreenState
             onPressed: isSolving
                 ? null
                 : () {
-                    _solvePuzzle().then((_) => setModalState(() {}));
+                    solve().then((_) => setModalState(() {}));
                   },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accent,
@@ -482,14 +375,6 @@ class _EightPuzzleVisualizerScreenState
         ),
       ],
     );
-  }
-
-  @override
-  void dispose() {
-    _stepSubscription?.cancel();
-    _victoryController.dispose();
-    executor?.dispose();
-    super.dispose();
   }
 
   @override
@@ -541,7 +426,7 @@ class _EightPuzzleVisualizerScreenState
               Center(
                 child:
                     StatusBanner(
-                          message: _statusMessage,
+                          message: statusMessage,
                           isSolved: isSolved,
                           isSolving: isSolving,
                         )
@@ -611,8 +496,8 @@ class _EightPuzzleVisualizerScreenState
                 isSolved: isSolved,
                 stepCount: stepCount,
                 onSolve: _showAISolveMenu,
-                onPauseResume: _pauseResume,
-                onClear: _reset,
+                onPauseResume: pauseResume,
+                onClear: _resetPuzzle,
               ),
             ],
           ),
@@ -686,21 +571,16 @@ class _EightPuzzleVisualizerScreenState
             width: size,
             child: Stack(
               children: List.generate(9, (i) {
-                // We generate widgets for each tile value (1-8)
-                // Empty space (0) doesn't need a visible tile
                 final value = i + 1;
                 if (value == 9) {
                   return const SizedBox.shrink();
-                } // value 9 represents empty in this loop's logic if we use 0-8
+                } 
 
-                // Let's be explicit: tiles are 1, 2, 3, 4, 5, 6, 7, 8.
-                // The empty space is 0.
                 final tileValue = value < 9 ? value : 0;
                 if (tileValue == 0) {
                   return const SizedBox.shrink();
                 }
 
-                // Find where this tile value is in the current state
                 final pos = state.tiles.indexOf(tileValue);
                 if (pos == -1) return const SizedBox.shrink();
 

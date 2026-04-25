@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:algo_arena/core/app_theme.dart';
 import 'package:algo_arena/models/analytics_models.dart';
-import 'package:intl/intl.dart';
+
 
 class TrendsLineChart extends StatelessWidget {
   final List<TrendData> data;

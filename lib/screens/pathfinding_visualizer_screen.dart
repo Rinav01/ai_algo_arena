@@ -1,18 +1,15 @@
 import 'package:algo_arena/services/maze_generator.dart';
+import 'package:algo_arena/services/map_persistence.dart';
+import 'package:algo_arena/widgets/algorithm_recommendation_card.dart';
 import 'package:algo_arena/screens/algorithm_battle_screen.dart';
 import 'package:algo_arena/widgets/grid_visualizer_canvas.dart';
 import 'package:algo_arena/widgets/visualizer_widgets.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:algo_arena/core/problem_definition.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:algo_arena/core/app_theme.dart';
 import 'package:algo_arena/core/grid_problem.dart';
-import 'package:algo_arena/core/search_algorithms.dart';
-import 'package:algo_arena/services/algorithm_executor.dart';
-import 'package:algo_arena/services/map_persistence.dart';
-import 'package:algo_arena/widgets/algorithm_recommendation_card.dart';
 import 'package:algo_arena/models/grid_node.dart';
 import 'package:algo_arena/state/grid_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +18,7 @@ import 'package:algo_arena/models/algo_info.dart';
 import 'package:algo_arena/services/api_service.dart';
 import 'package:algo_arena/services/run_optimizer.dart';
 import 'package:algo_arena/screens/history_screen.dart';
+import 'package:algo_arena/screens/visualizer_base_mixin.dart';
 import 'dart:typed_data';
 
 class PathfindingVisualizerScreen extends ConsumerStatefulWidget {
@@ -40,21 +38,11 @@ class PathfindingVisualizerScreen extends ConsumerStatefulWidget {
 
 class _PathfindingVisualizerScreenState
     extends ConsumerState<PathfindingVisualizerScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, VisualizerBaseMixin<PathfindingVisualizerScreen, GridCoordinate> {
   late final GridController _controller;
-  AlgorithmExecutor<GridCoordinate>? _executor;
-  StreamSubscription<AlgorithmStep<GridCoordinate>>? _stepSubscription;
   GridProblem? _problem;
-  late AnimationController _pulseController;
 
   List<GridCoordinate> _path = [];
-  bool _isSolving = false;
-  bool _isSolved = false;
-  int _nodesExplored = 0;
-  double _executionSpeed = 1.0;
-  String _statusMessage = 'Ready to solve';
-  int _stepCount = 0;
-  List<FlSpot> _perfData = []; // nodes explored vs time/steps
 
   // Dragging states
   bool _isDraggingStart = false;
@@ -65,30 +53,40 @@ class _PathfindingVisualizerScreenState
   static const Color pathColor = AppTheme.cellPath;
 
   @override
+  String get algorithmId => widget.algorithmId;
+
+  @override
   void initState() {
     super.initState();
     _controller = GridController(rows: 15, columns: 25);
     _initializeProblem();
-
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
   }
 
   @override
   void dispose() {
-    if (_isSolving) _executor?.stop();
-    _stepSubscription?.cancel();
-    _executor?.dispose();
     _controller.dispose();
-    _pulseController.dispose();
+    _reSolveTimer?.cancel();
     super.dispose();
   }
 
-  Duration get _stepDelay {
-    final ms = (180 / _executionSpeed).round().clamp(10, 1800);
-    return Duration(milliseconds: ms);
+  @override
+  Map<String, dynamic> getProblemSnapshot() {
+    return _controller.toOptimizedSnapshot(ref.read(settingsProvider));
+  }
+
+  @override
+  Future<void> onStep(AlgorithmStep<GridCoordinate> step) async {
+    _path = executor!.currentPath;
+  }
+
+  @override
+  Future<void> onGoalReached(AlgorithmStep<GridCoordinate> step) async {
+    statusMessage = 'Solution found! Path length: ${_path.length} moves';
+  }
+
+  @override
+  Future<void> onAutoSave() async {
+    await _autoSaveRun();
   }
 
   void _initializeProblem() {
@@ -112,8 +110,6 @@ class _PathfindingVisualizerScreenState
   }
 
   Future<void> _solvePuzzle({bool isLiveUpdate = false}) async {
-    if (_isSolving && !isLiveUpdate) return;
-
     if (_controller.goal == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -125,101 +121,8 @@ class _PathfindingVisualizerScreenState
     }
 
     _initializeProblem();
-
-    setState(() {
-      if (!isLiveUpdate) {
-        _isSolving = true;
-        _isSolved = false;
-        _statusMessage = 'Starting ${widget.algorithmId} search…';
-        _pulseController.repeat(reverse: true);
-      }
-      _path = [];
-      _stepCount = 0;
-      _nodesExplored = 0;
-      _perfData = [const FlSpot(0, 0)];
-    });
-
-    SearchAlgorithm<GridCoordinate> algo;
-    switch (widget.algorithmId) {
-      case 'BFS':
-        algo = BFSAlgorithm<GridCoordinate>();
-        break;
-      case 'DFS':
-        algo = DFSAlgorithm<GridCoordinate>();
-        break;
-      case 'Dijkstra':
-        algo = DijkstraAlgorithm<GridCoordinate>();
-        break;
-      case 'Greedy':
-        algo = GreedyBestFirstAlgorithm<GridCoordinate>();
-        break;
-      case 'A*':
-      default:
-        algo = AStarAlgorithm<GridCoordinate>();
-    }
-
-    // Dispose previous executor and cancel its subscription
-    await _executor?.dispose();
-    await _stepSubscription?.cancel();
-
-    _executor = AlgorithmExecutor<GridCoordinate>(
-      algorithm: algo,
-      problemSnapshot: _controller.toOptimizedSnapshot(
-        ref.read(settingsProvider),
-      ),
-      stepDelayMs: isLiveUpdate ? 0 : _stepDelay.inMilliseconds,
-    );
-
-    try {
-      await _executor!.start();
-      await _stepSubscription?.cancel();
-      _stepSubscription = _executor!.stepStream.listen(
-        (step) {
-          if (!mounted) return;
-          // UI updates only for metrics; Canvas handles grid painting via addListener in initState/CustomPaint
-          setState(() {
-            _path = _executor!.currentPath;
-            _stepCount = step.stepCount;
-            _nodesExplored = _executor!.exploredSet.length;
-            _statusMessage = step.message ?? _statusMessage;
-
-            if (_stepCount % 20 == 0) {
-              _perfData.add(
-                FlSpot(_stepCount.toDouble(), _nodesExplored.toDouble()),
-              );
-            }
-
-            if (step.isGoalReached) {
-              _isSolved = true;
-              _isSolving = false;
-              _pulseController.stop();
-              _perfData.add(
-                FlSpot(_stepCount.toDouble(), _nodesExplored.toDouble()),
-              );
-              _statusMessage =
-                  'Solution found! Path length: ${_path.length} moves';
-            }
-          });
-        },
-        onDone: () {
-          if (mounted) {
-            setState(() {
-              _isSolving = false;
-              _pulseController.stop();
-            });
-            _autoSaveRun();
-          }
-        },
-      );
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isSolving = false;
-          _pulseController.stop();
-          _statusMessage = 'Error: $e';
-        });
-      }
-    }
+    _path = [];
+    await solve(isLiveUpdate: isLiveUpdate);
   }
 
   Map<String, dynamic>? _sanitizeSnapshot(Map<String, dynamic>? snapshot) {
@@ -246,7 +149,7 @@ class _PathfindingVisualizerScreenState
   }
 
   Future<void> _autoSaveRun() async {
-    if (_executor == null) return;
+    if (executor == null) return;
     
     debugPrint('Auto-save triggered for ${widget.algorithmId} with Phase 2 optimizations...');
     try {
@@ -259,19 +162,19 @@ class _PathfindingVisualizerScreenState
         'algorithm': widget.algorithmId,
         'type': 'single',
         'isBattle': false,
-        'snapshot': _sanitizeSnapshot(_executor!.problemSnapshot),
+        'snapshot': _sanitizeSnapshot(executor!.problemSnapshot),
         'metadata': {
           'obstacleDensity': density,
-          'foundPath': _isSolved,
+          'foundPath': isSolved,
           'pathLength': _path.length,
-          'nodesExplored': _nodesExplored,
+          'nodesExplored': nodesExplored,
         },
         'steps': RunOptimizer.optimizeSteps(
-          _executor!.history!.cast<AlgorithmStep<GridCoordinate>>(),
+          executor!.history!.cast<AlgorithmStep<GridCoordinate>>(),
           cols,
         ),
         'path': _path.map((c) => RunOptimizer.compress(c, cols)).toList(),
-        'durationMs': _executor!.executionTime.inMilliseconds,
+        'durationMs': executor!.executionTime.inMilliseconds,
         'timestamp': DateTime.now().toIso8601String(),
         'tags': [widget.algorithmId, density > 0.3 ? 'dense' : 'sparse'],
       };
@@ -287,37 +190,10 @@ class _PathfindingVisualizerScreenState
     }
   }
 
-  void _pauseResume() {
-    if (_isSolving) {
-      _executor?.pause();
-      _pulseController.stop();
-      setState(() {
-        _isSolving = false;
-        _statusMessage = 'Paused';
-      });
-    } else if (_stepCount > 0) {
-      _executor?.resume();
-      _pulseController.repeat(reverse: true);
-      setState(() {
-        _isSolving = true;
-        _statusMessage = 'Resumed';
-      });
-    }
-  }
-
   void _reset() {
-    if (_isSolving) _executor?.stop();
-    _pulseController.stop();
-    _stepSubscription?.cancel();
-    _stepSubscription = null;
-    _executor = null;
+    resetBase();
     setState(() {
       _path = [];
-      _stepCount = 0;
-      _nodesExplored = 0;
-      _isSolving = false;
-      _isSolved = false;
-      _statusMessage = 'Ready to solve';
     });
   }
 
@@ -327,13 +203,13 @@ class _PathfindingVisualizerScreenState
   }
 
   void _generateMaze() {
-    if (_isSolving) return;
+    if (isSolving) return;
     _reset();
 
     MazeGenerator.generatePrims(_controller, includeWeights: true);
 
     setState(() {
-      _statusMessage = 'Maze generated (Randomized Prim\'s)';
+      statusMessage = 'Maze generated (Randomized Prim\'s)';
     });
   }
 
@@ -380,7 +256,7 @@ class _PathfindingVisualizerScreenState
                 _controller.loadFromJson(data);
                 _reset();
                 Navigator.pop(context);
-                setState(() => _statusMessage = 'Map imported successfully');
+                setState(() => statusMessage = 'Map imported successfully');
               } catch (e) {
                 ScaffoldMessenger.of(
                   context,
@@ -395,7 +271,7 @@ class _PathfindingVisualizerScreenState
   }
 
   void _handlePointerDown(int row, int col) {
-    if (_isSolving && !_isSolved) return;
+    if (isSolving && !isSolved) return;
 
     // Check for anchor dragging
     final node = _controller.grid[row][col];
@@ -409,7 +285,7 @@ class _PathfindingVisualizerScreenState
   }
 
   void _handlePointerUpdate(int row, int col) {
-    if (_isSolving && !_isSolved) return;
+    if (isSolving && !isSolved) return;
 
     if (_isDraggingStart) {
       _controller.moveAnchor(isStart: true, row: row, column: col);
@@ -419,7 +295,7 @@ class _PathfindingVisualizerScreenState
       _triggerImmediateReSolve();
     } else {
       _controller.handleCellInteraction(row, col);
-      if (_isSolved) _triggerImmediateReSolve();
+      if (isSolved) _triggerImmediateReSolve();
     }
   }
 
@@ -431,7 +307,7 @@ class _PathfindingVisualizerScreenState
   }
 
   void _triggerImmediateReSolve() {
-    if (!_isSolved && _path.isEmpty) return;
+    if (!isSolved && _path.isEmpty) return;
 
     _reSolveTimer?.cancel();
     _reSolveTimer = Timer(const Duration(milliseconds: 50), () {
@@ -466,13 +342,13 @@ class _PathfindingVisualizerScreenState
               Row(
                 children: [
                   Expanded(
-                    child: GlassStatCard(label: 'STEPS', value: _stepCount),
+                    child: GlassStatCard(label: 'STEPS', value: stepCount),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: GlassStatCard(
                       label: 'EXPLORED',
-                      value: _nodesExplored,
+                      value: nodesExplored,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -489,9 +365,9 @@ class _PathfindingVisualizerScreenState
               // ── Status ───────────────────────────────────────────────────
               Center(
                 child: StatusBanner(
-                  message: _statusMessage,
-                  isSolved: _isSolved,
-                  isSolving: _isSolving,
+                  message: statusMessage,
+                  isSolved: isSolved,
+                  isSolving: isSolving,
                 ),
               ),
               const SizedBox(height: 14),
@@ -564,7 +440,7 @@ class _PathfindingVisualizerScreenState
                     aspectRatio: 25 / 15, // Native ratio based on cols and rows
                     child: GridVisualizerCanvas(
                       controller: _controller,
-                      executor: _executor,
+                      executor: executor,
                       isInteractive: true,
                       onPointerDown: _handlePointerDown,
                       onPointerUpdate: _handlePointerUpdate,
@@ -580,27 +456,27 @@ class _PathfindingVisualizerScreenState
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 decoration: AppTheme.glassCard(radius: 12),
                 child: SpeedControl(
-                  speed: _executionSpeed,
-                  isSolving: _isSolving,
-                  onChanged: (v) => setState(() => _executionSpeed = v),
+                  speed: executionSpeed,
+                  isSolving: isSolving,
+                  onChanged: (v) => setState(() => executionSpeed = v),
                 ),
               ),
               const SizedBox(height: 14),
 
               // ── Analytics ────────────────────────────────────────────────
               PerformanceChart(
-                dataPoints: _perfData,
+                dataPoints: perfData,
                 accentColor: AppTheme.accent,
               ),
               const SizedBox(height: 16),
 
               // ── Controls ─────────────────────────────────────────────────
               VisualizerControls(
-                isSolving: _isSolving,
-                isSolved: _isSolved,
-                stepCount: _stepCount,
+                isSolving: isSolving,
+                isSolved: isSolved,
+                stepCount: stepCount,
                 onSolve: _solvePuzzle,
-                onPauseResume: _pauseResume,
+                onPauseResume: pauseResume,
                 onClear: _clearWalls,
                 onVersus: () {
                   Navigator.push(
