@@ -209,7 +209,7 @@ lib/
 │   └── visualizer_widgets.dart
 └── main.dart                   # App entry point
 
----
+```
 
 ## 🔌 Extensibility
 Designed for growth, Algo Arena supports easy extensions:
