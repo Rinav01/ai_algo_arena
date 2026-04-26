@@ -121,14 +121,81 @@ class BattleInsight {
   }
 }
 
+class WinnerStat {
+  final String winner;
+  final int count;
+  final double avgNodesDiff;
+  final double avgTimeDiff;
+
+  WinnerStat({
+    required this.winner,
+    required this.count,
+    required this.avgNodesDiff,
+    required this.avgTimeDiff,
+  });
+
+  factory WinnerStat.fromJson(Map<String, dynamic> json) {
+    return WinnerStat(
+      winner: json['winner'] ?? 'Unknown',
+      count: json['count'] ?? 0,
+      avgNodesDiff: (json['avgNodesDiff'] ?? 0).toDouble(),
+      avgTimeDiff: (json['avgTimeDiff'] ?? 0).toDouble(),
+    );
+  }
+}
+
+class BattleInsightData {
+  final int totalBattles;
+  final List<WinnerStat> winnerDistribution;
+
+  BattleInsightData({
+    required this.totalBattles,
+    required this.winnerDistribution,
+  });
+
+  factory BattleInsightData.fromJson(Map<String, dynamic> json) {
+    return BattleInsightData(
+      totalBattles: json['totalBattles'] ?? 0,
+      winnerDistribution: (json['winnerDistribution'] as List? ?? [])
+          .map((w) => WinnerStat.fromJson(w))
+          .toList(),
+    );
+  }
+}
+
+class ComplexityDataPoint {
+  final String algorithm;
+  final String? heuristic;
+  final double durationMs;
+  final double obstacleDensity;
+
+  ComplexityDataPoint({
+    required this.algorithm,
+    this.heuristic,
+    required this.durationMs,
+    required this.obstacleDensity,
+  });
+
+  factory ComplexityDataPoint.fromJson(Map<String, dynamic> json) {
+    return ComplexityDataPoint(
+      algorithm: json['algorithm'] ?? 'Unknown',
+      heuristic: json['heuristic'],
+      durationMs: (json['durationMs'] ?? 0).toDouble(),
+      obstacleDensity: (json['obstacleDensity'] ?? 0).toDouble(),
+    );
+  }
+}
+
 class AnalyticsResponse<T> {
   final List<T> data;
   final Map<String, dynamic> meta;
   final List<BattleInsight> insights;
+  final BattleInsightData? battleData; // Optional field for battle stats
 
   AnalyticsResponse({
     required this.data,
     required this.meta,
     required this.insights,
+    this.battleData,
   });
 }

@@ -163,11 +163,43 @@ final distributionProvider = FutureProvider<AnalyticsResponse<DistributionData>>
 
 // ─── Battle Insights Provider ─────────────────────────────────────────────────
 
-final battleInsightsProvider = FutureProvider<List<BattleInsight>>((ref) async {
+final battleInsightsProvider = FutureProvider<AnalyticsResponse<WinnerStat>>((ref) async {
   final api = ref.watch(apiServiceProvider);
   final res = await api.getBattleInsights();
   
-  return (res['insights'] as List? ?? [])
+  final rawData = res;
+  final List listData = (rawData is Map)
+      ? (rawData['winnerDistribution'] as List? ?? [])
+      : (rawData as List? ?? []);
+      
+  final data = listData.map((item) => WinnerStat.fromJson(item)).toList();
+  
+  final insights = (res['insights'] as List? ?? [])
       .map((item) => BattleInsight.fromJson(item))
       .toList();
+      
+  return AnalyticsResponse(
+    data: data,
+    meta: res['meta'] ?? {},
+    insights: insights,
+    battleData: BattleInsightData.fromJson(rawData ?? {}),
+  );
+});
+
+// ─── Complexity Provider ──────────────────────────────────────────────────────
+
+final complexityProvider = FutureProvider<AnalyticsResponse<ComplexityDataPoint>>((ref) async {
+  final api = ref.watch(apiServiceProvider);
+  final res = await api.getComplexity();
+  
+  // The complexity API returns an array directly as res
+  final List<dynamic> listData = (res is List) ? (res as List<dynamic>) : (res['data'] as List<dynamic>? ?? []);
+      
+  final data = listData.map((item) => ComplexityDataPoint.fromJson(item as Map<String, dynamic>)).toList();
+  
+  return AnalyticsResponse(
+    data: data,
+    meta: res['meta'] ?? {},
+    insights: [], // No insights for complexity yet
+  );
 });

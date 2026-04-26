@@ -168,6 +168,7 @@ class _PathfindingVisualizerScreenState
           'foundPath': isSolved,
           'pathLength': _path.length,
           'nodesExplored': nodesExplored,
+          'heuristic': ref.read(settingsProvider).allowDiagonalMoves ? 'Octile' : 'Manhattan',
         },
         'steps': RunOptimizer.optimizeSteps(
           executor!.history!.cast<AlgorithmStep<GridCoordinate>>(),

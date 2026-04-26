@@ -31,12 +31,20 @@ class ApiService {
     String? algorithm,
     int page = 1,
     int limit = 20,
+    String? sort,
+    String? date,
   }) async {
     try {
       String url = "$baseUrl/runs?page=$page&limit=$limit";
 
       if (algorithm != null && algorithm != "All") {
         url += "&algorithm=$algorithm";
+      }
+      if (sort != null) {
+        url += "&sort=$sort";
+      }
+      if (date != null) {
+        url += "&date=$date";
       }
 
       final response = await http.get(Uri.parse(url));
@@ -140,7 +148,7 @@ class ApiService {
     }
   }
 
-  /// Fetches comparative AI-style insights.
+  /// Fetches battle insights.
   Future<Map<String, dynamic>> getBattleInsights() async {
     try {
       final uri = Uri.parse("$_analyticsUrl/battle-insights");
@@ -153,6 +161,22 @@ class ApiService {
       }
     } catch (e) {
       throw Exception("Network error while fetching battle insights: $e");
+    }
+  }
+
+  /// Fetches complexity data.
+  Future<Map<String, dynamic>> getComplexity() async {
+    try {
+      final uri = Uri.parse("$_analyticsUrl/complexity");
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception("Failed to fetch complexity: ${response.statusCode}");
+      }
+    } catch (e) {
+      throw Exception("Network error while fetching complexity: $e");
     }
   }
 }

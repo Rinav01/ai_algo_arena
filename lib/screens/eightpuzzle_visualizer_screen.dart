@@ -97,6 +97,7 @@ class _EightPuzzleVisualizerScreenState
           'foundPath': isSolved,
           'pathLength': currentPath.length - 1,
           'nodesExplored': nodesExplored,
+          'heuristic': 'Manhattan',
         },
         'steps': executor!.history!.length, // Simplistic for now
         'durationMs': executor!.executionTime.inMilliseconds,

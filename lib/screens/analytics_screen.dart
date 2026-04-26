@@ -9,10 +9,70 @@ import 'package:algo_arena/widgets/analytics/distribution_chart.dart';
 import 'package:algo_arena/widgets/analytics/analytics_filters.dart';
 import 'package:algo_arena/widgets/analytics/analytics_skeleton.dart';
 import 'package:algo_arena/widgets/bottom_nav_bar.dart';
+import 'package:algo_arena/widgets/analytics/versus_tab_widgets.dart';
+import 'package:algo_arena/widgets/analytics/complexity_tab_widgets.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class AnalyticsScreen extends ConsumerWidget {
   const AnalyticsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        backgroundColor: AppTheme.background,
+        appBar: AppBar(
+          backgroundColor: AppTheme.background,
+          elevation: 0,
+          toolbarHeight: 100, // accommodate the header text
+          flexibleSpace: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Analytics Dashboard",
+                    style: Theme.of(context).textTheme.displayMedium,
+                  ).animate().fadeIn().slideY(begin: 0.2),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Scan · Compare · Understand performance in seconds",
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.textMuted,
+                        ),
+                  ).animate().fadeIn(delay: 200.ms),
+                ],
+              ),
+            ),
+          ),
+          bottom: const TabBar(
+            indicatorColor: AppTheme.accent,
+            labelColor: AppTheme.accent,
+            unselectedLabelColor: AppTheme.textMuted,
+            indicatorWeight: 3,
+            tabs: [
+              Tab(text: "General"),
+              Tab(text: "Versus"),
+              Tab(text: "Complexity"),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            _GeneralTab(),
+            VersusTabContent(),
+            ComplexityTabContent(),
+          ],
+        ),
+        bottomNavigationBar: const ArenaBottomNavBar(currentIndex: 3),
+      ),
+    );
+  }
+}
+
+class _GeneralTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -21,127 +81,100 @@ class AnalyticsScreen extends ConsumerWidget {
     final distributionAsync = ref.watch(distributionProvider);
     final filters = ref.watch(analyticsFiltersProvider);
 
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(summaryProvider);
-            ref.invalidate(trendsProvider);
-            ref.invalidate(distributionProvider);
-          },
-          color: AppTheme.accent,
-          backgroundColor: AppTheme.surfaceHigh,
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // ─── Header ──────────────────────────────────────────────────────────
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Analytics Dashboard",
-                        style: Theme.of(context).textTheme.displayMedium,
-                      ).animate().fadeIn().slideY(begin: 0.2),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Scan · Compare · Understand performance in seconds",
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.textMuted,
-                            ),
-                      ).animate().fadeIn(delay: 200.ms),
-                    ],
-                  ),
-                ),
-              ),
-
-              // ─── Filters ────────────────────────────────────────────────────────
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  child: AnalyticsFiltersBar(),
-                ),
-              ),
-
-              // ─── Content ────────────────────────────────────────────────────────
-              summaryAsync.when(
-                loading: () => const SliverFillRemaining(child: AnalyticsSkeleton()),
-                error: (err, stack) => SliverFillRemaining(
-                  child: _ErrorState(onRetry: () => ref.invalidate(summaryProvider)),
-                ),
-                data: (summaryRes) {
-                  if (summaryRes.data.isEmpty) {
-                    return const SliverFillRemaining(child: _EmptyState());
-                  }
-
-                  return SliverPadding(
-                    padding: const EdgeInsets.all(20),
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate([
-                        // ─── Insight Cards ──────────────────────────────────────────
-                        if (summaryRes.insights.isNotEmpty) ...[
-                          const _SectionHeader(label: "🧠 SMART INSIGHTS"),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            height: 180,
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: summaryRes.insights.length,
-                              itemBuilder: (context, index) {
-                                return InsightCard(insight: summaryRes.insights[index]);
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                        ],
-
-                        // ─── Summary Section ────────────────────────────────────────
-                        const _SectionHeader(label: "📊 PERFORMANCE SUMMARY"),
-                        const SizedBox(height: 16),
-                        SummaryBarChart(
-                          data: summaryRes.data,
-                          metric: filters.metric ?? 'nodes',
-                        ),
-                        const SizedBox(height: 32),
-
-                        // ─── Trends Section ─────────────────────────────────────────
-                        const _SectionHeader(label: "📈 PERFORMANCE TRENDS"),
-                        const SizedBox(height: 16),
-                        trendsAsync.when(
-                          data: (trendsRes) => TrendsLineChart(
-                            data: trendsRes.data,
-                            metric: filters.metric ?? 'nodes',
-                          ),
-                          loading: () => const _SkeletonPlaceholder(height: 350),
-                          error: (_, __) => const SizedBox.shrink(),
-                        ),
-                        const SizedBox(height: 32),
-
-                        // ─── Distribution Section ────────────────────────────────────
-                        const _SectionHeader(label: "🥧 USAGE DISTRIBUTION"),
-                        const SizedBox(height: 16),
-                        distributionAsync.when(
-                          data: (distRes) => DistributionPieChart(data: distRes.data),
-                          loading: () => const _SkeletonPlaceholder(height: 300),
-                          error: (_, __) => const SizedBox.shrink(),
-                        ),
-                        const SizedBox(height: 100),
-                      ]),
-                    ),
-                  );
-                },
-              ),
-            ],
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(summaryProvider);
+        ref.invalidate(trendsProvider);
+        ref.invalidate(distributionProvider);
+      },
+      color: AppTheme.accent,
+      backgroundColor: AppTheme.surfaceHigh,
+      child: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // ─── Filters ────────────────────────────────────────────────────────
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: AnalyticsFiltersBar(),
+            ),
           ),
-        ),
+
+          // ─── Content ────────────────────────────────────────────────────────
+          summaryAsync.when(
+            loading: () => const SliverFillRemaining(child: AnalyticsSkeleton()),
+            error: (err, stack) => SliverFillRemaining(
+              child: _ErrorState(onRetry: () => ref.invalidate(summaryProvider)),
+            ),
+            data: (summaryRes) {
+              if (summaryRes.data.isEmpty) {
+                return const SliverFillRemaining(child: _EmptyState());
+              }
+
+              return SliverPadding(
+                padding: const EdgeInsets.all(20),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    // ─── Insight Cards ──────────────────────────────────────────
+                    if (summaryRes.insights.isNotEmpty) ...[
+                      const _SectionHeader(label: "🧠 SMART INSIGHTS"),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 180,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: summaryRes.insights.length,
+                          itemBuilder: (context, index) {
+                            return InsightCard(insight: summaryRes.insights[index]);
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                    ],
+
+                    // ─── Summary Section ────────────────────────────────────────
+                    const _SectionHeader(label: "📊 PERFORMANCE SUMMARY"),
+                    const SizedBox(height: 16),
+                    SummaryBarChart(
+                      data: summaryRes.data,
+                      metric: filters.metric ?? 'nodes',
+                    ),
+                    const SizedBox(height: 32),
+
+                    // ─── Trends Section ─────────────────────────────────────────
+                    const _SectionHeader(label: "📈 PERFORMANCE TRENDS"),
+                    const SizedBox(height: 16),
+                    trendsAsync.when(
+                      data: (trendsRes) => TrendsLineChart(
+                        data: trendsRes.data,
+                        metric: filters.metric ?? 'nodes',
+                      ),
+                      loading: () => const _SkeletonPlaceholder(height: 350),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // ─── Distribution Section ────────────────────────────────────
+                    const _SectionHeader(label: "🥧 USAGE DISTRIBUTION"),
+                    const SizedBox(height: 16),
+                    distributionAsync.when(
+                      data: (distRes) => DistributionPieChart(data: distRes.data),
+                      loading: () => const _SkeletonPlaceholder(height: 300),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
+                    const SizedBox(height: 100),
+                  ]),
+                ),
+              );
+            },
+          ),
+        ],
       ),
-      bottomNavigationBar: const ArenaBottomNavBar(currentIndex: 3),
     );
   }
 }
+
+
 
 class _SectionHeader extends StatelessWidget {
   final String label;
