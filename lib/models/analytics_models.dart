@@ -1,3 +1,8 @@
+import 'dart:ui';
+
+import 'package:algo_arena/core/app_theme.dart';
+import 'package:flutter/material.dart';
+
 /// Data models for the Analytics dashboard.
 
 class SummaryData {
@@ -88,36 +93,70 @@ class DistributionData {
   }
 }
 
-class BattleInsight {
+class Insight {
+  final String type;
   final String title;
-  final String description;
-  final String type; // e.g., "efficiency", "speed", "complexity"
-  final String impact; // e.g., "35% fewer nodes"
+  final String message;
+  final double confidence;
+  final String severity;
+  final Map<String, dynamic>? context;
+  final Map<String, dynamic>? metrics;
+  final String? reason;
 
-  BattleInsight({
-    required this.title,
-    required this.description,
+  Insight({
     required this.type,
-    required this.impact,
+    required this.title,
+    required this.message,
+    required this.confidence,
+    required this.severity,
+    this.context,
+    this.metrics,
+    this.reason,
   });
 
-  factory BattleInsight.fromJson(dynamic json) {
-    if (json is String) {
-      return BattleInsight(
-        title: 'Quick Tip',
-        description: json,
-        type: 'general',
-        impact: 'Insight',
-      );
-    }
-    
-    final map = json as Map<String, dynamic>;
-    return BattleInsight(
-      title: map['title'] ?? 'Insight',
-      description: map['description'] ?? '',
-      type: map['type'] ?? 'general',
-      impact: map['impact'] ?? '',
+  factory Insight.fromJson(Map<String, dynamic> json) {
+    return Insight(
+      type: json['type'] ?? 'performance',
+      title: json['title'] ?? '',
+      message: json['message'] ?? json['description'] ?? '',
+      confidence: (json['confidence'] ?? 0).toDouble(),
+      severity: json['severity'] ?? 'low',
+      context: json['context'],
+      metrics: json['metrics'],
+      reason: json['reason'],
     );
+  }
+
+  Color getSeverityColor() {
+    switch (severity.toLowerCase()) {
+      case 'high':
+      case 'critical':
+        return AppTheme.error;
+      case 'medium':
+      case 'warning':
+        return Colors.orange;
+      case 'low':
+      case 'info':
+      default:
+        return AppTheme.success;
+    }
+  }
+
+  IconData getIcon() {
+    switch (type.toLowerCase()) {
+      case 'performance':
+        return Icons.speed;
+      case 'efficiency':
+        return Icons.bolt;
+      case 'anomaly':
+        return Icons.warning_amber_rounded;
+      case 'trend':
+        return Icons.trending_up;
+      case 'recommendation':
+        return Icons.lightbulb_outline;
+      default:
+        return Icons.insights;
+    }
   }
 }
 
@@ -189,7 +228,7 @@ class ComplexityDataPoint {
 class AnalyticsResponse<T> {
   final List<T> data;
   final Map<String, dynamic> meta;
-  final List<BattleInsight> insights;
+  final List<Insight> insights;
   final BattleInsightData? battleData; // Optional field for battle stats
 
   AnalyticsResponse({

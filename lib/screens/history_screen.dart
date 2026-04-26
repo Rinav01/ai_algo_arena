@@ -199,7 +199,7 @@ class HistoryScreen extends ConsumerWidget {
   }
 
   Widget _buildControlBar(BuildContext context, WidgetRef ref) {
-    final sortMode = ref.watch(sortModeProvider);
+    ref.watch(sortModeProvider);
     
     return SliverToBoxAdapter(
       child: Container(

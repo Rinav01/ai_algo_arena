@@ -1,3 +1,5 @@
+import 'dart:ui';
+import 'package:algo_arena/models/analytics_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:algo_arena/core/app_theme.dart';
@@ -111,23 +113,92 @@ class _GeneralTab extends ConsumerWidget {
                 return const SliverFillRemaining(child: _EmptyState());
               }
 
+              final selectedInsightCategory = ref.watch(insightCategoryFilterProvider);
+
+              // Sort and filter insights
+              final allInsights = [...summaryRes.insights];
+              allInsights.sort((a, b) {
+                // Prioritize High severity, then Confidence
+                if (a.severity == 'high' && b.severity != 'high') return -1;
+                if (a.severity != 'high' && b.severity == 'high') return 1;
+                return b.confidence.compareTo(a.confidence);
+              });
+
+              final filteredInsights = selectedInsightCategory == "All"
+                  ? allInsights
+                  : allInsights.where((i) => i.type.toLowerCase() == selectedInsightCategory.toLowerCase()).toList();
+
+              final topInsight = allInsights.isNotEmpty && allInsights.first.severity == 'high' ? allInsights.first : null;
+
               return SliverPadding(
                 padding: const EdgeInsets.all(20),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    // ─── Insight Cards ──────────────────────────────────────────
-                    if (summaryRes.insights.isNotEmpty) ...[
+                    // ─── Insight Section ─────────────────────────────────────────
+                    if (allInsights.isNotEmpty) ...[
                       const _SectionHeader(label: "🧠 SMART INSIGHTS"),
                       const SizedBox(height: 16),
-                      SizedBox(
-                        height: 180,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: summaryRes.insights.length,
-                          itemBuilder: (context, index) {
-                            return InsightCard(insight: summaryRes.insights[index]);
-                          },
+                      
+                      // Highlight Top Insight
+                      if (topInsight != null) ...[
+                        _TopInsightHighlight(insight: topInsight),
+                        const SizedBox(height: 20),
+                      ],
+
+                      // Filter Chips
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: ["All", "Performance", "Warning", "Recommendation", "Trend"].map((cat) {
+                            final isSelected = selectedInsightCategory == cat;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Text(cat),
+                                selected: isSelected,
+                                onSelected: (val) {
+                                  if (val) ref.read(insightCategoryFilterProvider.notifier).state = cat;
+                                },
+                                backgroundColor: AppTheme.surfaceVariant.withValues(alpha: 0.3),
+                                selectedColor: AppTheme.accent.withValues(alpha: 0.2),
+                                labelStyle: TextStyle(
+                                  color: isSelected ? AppTheme.accentLight : AppTheme.textMuted,
+                                  fontSize: 12,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                ),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                side: BorderSide(
+                                  color: isSelected ? AppTheme.accent.withValues(alpha: 0.5) : Colors.transparent,
+                                ),
+                              ),
+                            );
+                          }).toList(),
                         ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Carousel
+                      SizedBox(
+                        height: 220,
+                        child: filteredInsights.isEmpty
+                            ? Center(
+                                child: Text(
+                                  "No $selectedInsightCategory insights found",
+                                  style: const TextStyle(color: AppTheme.textMuted),
+                                ),
+                              )
+                            : ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                physics: const BouncingScrollPhysics(),
+                                itemCount: filteredInsights.length,
+                                itemBuilder: (context, index) {
+                                  final insight = filteredInsights[index];
+                                  return InsightCard(
+                                    insight: insight,
+                                    onTap: () => _showInsightDetails(context, insight),
+                                  );
+                                },
+                              ),
                       ),
                       const SizedBox(height: 32),
                     ],
@@ -258,6 +329,236 @@ class _EmptyState extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _TopInsightHighlight extends StatelessWidget {
+  final Insight insight;
+  const _TopInsightHighlight({required this.insight});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.error.withValues(alpha: 0.15),
+            AppTheme.error.withValues(alpha: 0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.error.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.auto_awesome_rounded, color: AppTheme.error, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "🔥 TOP INSIGHT: ${insight.title}",
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppTheme.error,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  insight.message,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ));
+  }
+}
+
+void _showInsightDetails(BuildContext context, Insight insight) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.65,
+        decoration: BoxDecoration(
+          color: AppTheme.surface.withOpacity(0.85),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+        ),
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: insight.getSeverityColor().withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Icon(
+                          insight.getIcon(),
+                          color: insight.getSeverityColor(),
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              insight.type.toUpperCase(),
+                              style: const TextStyle(
+                                color: AppTheme.accent,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            Text(
+                              insight.title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      insight.message,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    "ENGINEERING ANALYSIS",
+                    style: TextStyle(
+                      color: AppTheme.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    insight.reason ?? "No detailed reason provided for this insight.",
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.7),
+                      fontSize: 15,
+                      height: 1.5,
+                    ),
+                  ),
+                  const Spacer(),
+                  // Metrics Grid
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _MetricDetail(
+                        label: "CONFIDENCE",
+                        value: "${(insight.confidence * 100).toInt()}%",
+                        color: AppTheme.success,
+                      ),
+                      _MetricDetail(
+                        label: "SEVERITY",
+                        value: insight.severity.toUpperCase(),
+                        color: insight.getSeverityColor(),
+                      ),
+                      if (insight.context?['algorithm'] != null)
+                        _MetricDetail(
+                          label: "TARGET",
+                          value: insight.context!['algorithm'],
+                          color: AppTheme.accent,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+
+class _MetricDetail extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _MetricDetail({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppTheme.textMuted,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
     );
   }
 }

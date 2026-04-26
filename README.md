@@ -2,178 +2,253 @@
 
 [![Flutter](https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/dart-%230175C2.svg?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev)
+[![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-%234ea94b.svg?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![Platform: Cross-Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Windows-blueviolet?style=for-the-badge)]()
 
-**Algo Arena** is a premium, engineering-grade visualization platform for AI search algorithms. Built with a focus on high-fidelity performance analysis, it enables real-time benchmarking, interactive pathfinding exploration, and side-by-side algorithm "battles" using a multi-isolate background execution engine.
-
----
-
-## 🎬 Cinematic Preview
-
-<p align="center">
-  <img src="assets/screenshots/grid.png" width="48%" alt="Neural Grid" />
-  <img src="assets/screenshots/battle.png" width="48%" alt="Battle Arena" />
-</p>
+**Algo Arena** is a premium, engineering-grade visualization platform for AI search algorithms. It transforms raw performance metrics into human-readable, context-aware insights using a sophisticated **5-Engine Analytics Architecture**.
 
 ---
 
-## 🧠 Algorithm Intelligence Matrix
+## ❓ Why Algo Arena?
 
-| Algorithm | Type | Heuristic? | Weighted? | Guarantees Shortest? | Time Complexity |
-| :--- | :--- | :---: | :---: | :---: | :--- |
-| **A* Search** | Informed | Yes | Yes | Yes (if admissible) | $O(E)$ |
-| **Dijkstra** | Uninformed | No | Yes | Yes | $O(E + V \log V)$ |
-| **BFS** | Uninformed | No | No | Yes (unweighted) | $O(V + E)$ |
-| **DFS** | Uninformed | No | No | No | $O(V + E)$ |
-| **Greedy BFS** | Informed | Yes | Yes | No | $O(b^m)$ |
-| **8-Puzzle (A*)** | State-Space | Yes | N/A | Yes | $O(states)$ |
-| **N-Queens** | Backtracking | N/A | N/A | Yes (all solutions) | $O(n!)$ |
+Most algorithm visualizers focus solely on education and lack real-world benchmarking capabilities. They show *how* an algorithm works, but not *how well* it performs under stress.
+
+**Algo Arena bridges that gap** by acting as a:
+- 🔬 **Performance Lab**: Stress-test algorithms on complex, user-defined topologies.
+- 📊 **Analytics Platform**: Quantify search behavior with multi-dimensional metrics.
+- ⚙️ **Engineering Tool**: Analyze optimization trade-offs (e.g., Heuristic weight vs. Search time).
 
 ---
 
-## 🏗️ Architectural Blueprint
+## 🧩 Engineering Challenges Solved
 
-### Multi-Isolate Execution Model
-The core engine offloads heavy search logic to background **Worker Isolates**. This ensures the Main UI thread remains at a consistent **60 FPS** even during dual-algorithm battles.
+Building a high-performance visualizer in a single-threaded UI environment presented significant hurdles:
 
+- 🚫 **UI Lag during High-Frequency Updates**: Solved via **Message Batching** (100 steps/msg) and **Isolate Staggering** to prevent CPU spikes.
+- 🔁 **Heavy Computation Blocking Main Thread**: Offloaded all pathfinding solvers to background **Dart Isolates**, maintaining a consistent 60 FPS.
+- 📉 **Noisy Analytics Data**: Designed a **Rule-Based Insight Filtering System** to extract high-signal trends from thousands of raw data points.
+- 🧠 **Comparison Complexity**: Designed a **Synchronized Battle Execution Engine** that ensures two independent solvers run on identical grid states with zero cross-talk.
+
+---
+
+## 🏗️ System Architecture
+
+### Full System Data Flow
 ```mermaid
 graph TD
-    subgraph "Main Isolate (UI Thread)"
+    subgraph "Flutter Frontend (Main Isolate)"
         UI[HUD Interface]
         SC[State Controller]
         BM[Battle Manager]
     end
 
-    subgraph "Worker Isolate A"
+    subgraph "Background Worker Isolates"
         ALGA[Algorithm A Solver]
+        ALGB[Algorithm B Solver]
     end
 
-    subgraph "Worker Isolate B"
-        ALGB[Algorithm B Solver]
+    subgraph "Node.js Backend (Insight Cloud)"
+        API[Express API]
+        IE[5-Engine Insight Rule System]
+        DB[(MongoDB)]
     end
 
     UI --> SC
     SC --> BM
-    BM -- "Spawn (Staggered 100ms)" --> ALGA
-    BM -- "Spawn (Staggered 100ms)" --> ALGB
+    BM -- "Spawn Isolates" --> ALGA
+    BM -- "Spawn Isolates" --> ALGB
     
-    ALGA -- "Batched Messaging (100 steps/msg)" --> SC
-    ALGB -- "Batched Messaging (100 steps/msg)" --> SC
-    SC -- "State Update" --> UI
+    ALGA -- "Batched Steps" --> SC
+    ALGB -- "Batched Steps" --> SC
+    SC -- "Sync Metadata" --> API
+    API --> DB
+    DB --> IE
+    IE -- "Rule-Based Insights" --> API
+    API -- "JSON Insights" --> UI
 ```
 
 ---
 
-## 📂 Codebase Anatomy
+## 📊 Intelligent Analytics & Benchmark Mode
 
-A detailed map of the project's architecture and file responsibilities. For a more exhaustive technical report, see the [Project Guide](file:///d:/Flutter%20Projects/Personal/ai_algo/PROJECT_GUIDE.md).
+### ⚔️ Benchmark Mode (Algorithm Battle)
+Run two algorithms in parallel to compare efficiency in real-time. The system ensures:
+- **Identical Initial State**: Same grid, start/end points, and weights.
+- **Isolated Execution**: No resource contention between solvers.
+- **Synchronized Playback**: View step-by-step progress side-by-side.
 
-### 📁 core/ (Logic & Definitions)
-- **[problem_definition.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/core/problem_definition.dart)**: Abstract foundation for all Problems and Search Algorithms.
-- **[search_algorithms.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/core/search_algorithms.dart)**: Pure Dart implementations of BFS, DFS, Dijkstra, A*, and Greedy BFS.
-- **[grid_problem.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/core/grid_problem.dart)**: Maps 2D grid logic to the abstract problem-solving domain.
-
-### 📁 services/ (Business Logic)
-- **[algorithm_executor.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/services/algorithm_executor.dart)**: Orchestrates asynchronous, step-by-step solver progression.
-- **[algorithm_recommender.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/services/algorithm_recommender.dart)**: Suggests the optimal algorithm based on map complexity and density.
-- **[maze_generator.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/services/maze_generator.dart)**: Procedural generation using Prim's and Recursive Division.
-
-### 📁 state/ (State Management)
-- **[grid_controller.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/state/grid_controller.dart)**: Central manager for grid manipulations and user interactions.
-- **[settings_provider.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/state/settings_provider.dart)**: Riverpod provider for managing global app configurations.
-
-### 📁 widgets/ (UI Components)
-- **[grid_visualizer_canvas.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/widgets/grid_visualizer_canvas.dart)**: Interactive canvas hosting the high-performance grid painter.
-- **[battle_results_panel.dart](file:///d:/Flutter%20Projects/Personal/ai_algo/lib/widgets/battle_results_panel.dart)**: Benchmarking overlay for side-by-side performance comparison.
-
+### 📈 Metrics Tracked
+Every run is quantified using the following engineering metrics:
+- **Nodes Explored**: Total search space visited.
+- **Path Length**: Optimality of the final solution.
+- **Execution Time (ms)**: Pure solver duration excluding UI overhead.
+- **Memory Usage**: Isolate heap allocation during search.
+- **Efficiency Ratio**: Path Nodes / Explored Nodes.
+- **Heuristic Accuracy**: How closely the heuristic guided the search to the path.
 
 ---
 
-## ⚔️ Battle Arena Mechanics
+## 🌐 API Contract (Insight Cloud)
 
-The Battle Arena is not just a visualizer; it's a benchmarking suite. Each battle generates a **Strategic Analysis Report** based on real-time execution metrics.
+Algo Arena integrates with a cloud-based analytics engine to provide longitudinal trend analysis.
 
-### Performance Indicators
+### `POST /api/v1/runs`
+Uploads execution metadata for analysis.
+```json
+{
+  "algorithm": "A*",
+  "nodesExplored": 1240,
+  "pathLength": 82,
+  "gridDensity": 0.45
+}
+```
 
-| Metric | Calculation | Impact |
-| :--- | :--- | :--- |
-| **Efficiency Score** | $PathNodes / ExploredNodes$ | Higher means the algorithm was more directed. |
-| **Redundancy %** | $(TotalNodes - PathNodes) / TotalNodes$ | Measures how much "useless" work was done. |
-| **Victory Margin** | $\Delta ExploredNodes / MaxExplored$ | The percentage by which the winner outperformed the loser. |
-| **Speed per Node** | $Time(ms) / ExploredNodes$ | Efficiency of the solver implementation itself. |
-
----
-
-## 🎨 Design System: "The Neural Nexus"
-
-The UI follows a strict **Glassmorphism** design language tailored for high-performance mobile and desktop environments.
-
-| Token | Value / Hex | Usage |
-| :--- | :--- | :--- |
-| **Accent (Violet)** | `#8B5CF6` | Primary CTAs, Active States, Queue Markers |
-| **Path (Cyan)** | `#00DBE9` | Final Paths, "Lit" indicators |
-| **Surface Low** | `#161B2B` | Dialog Backgrounds, Modals |
-| **Opti-Glass** | `Opacity: 0.88` | High-performance glass without BackdropBlur |
-| **Typography** | `Space Grotesk` | High-tech headings and technical labels |
-| **Typography** | `Manrope` | Readable body text and performance metrics |
-
----
-
-## ⚡ Engineering Optimization Portfolio
-
-To achieve buttery-smooth performance, the following technical guardrails are implemented:
-
-1.  **Isolate Staggering**: Background threads are launched with a 100ms delay to prevent CPU/Memory spikes during initialization.
-2.  **Message Batching**: Instead of streaming every single node update, steps are batched (default: 100/msg), reducing inter-isolate communication overhead by **~40%**.
-3.  **Repaint Boundaries**: Critical UI components (like the node graph background and the grid) are wrapped in `RepaintBoundary` to prevent global layout repaints.
-4.  **Flat Serialization**: Grid state is serialized into `Uint8List` and `Float32List` for ultra-fast transfer across isolate boundaries.
+### `GET /api/v1/insights`
+Returns generated insights from the 5-Engine Rule System.
+```json
+{
+  "insights": [
+    {
+      "type": "performance",
+      "severity": "high",
+      "message": "A* outperformed BFS by 72% on this high-density grid.",
+      "confidence": 0.94
+    }
+  ]
+}
+```
 
 ---
 
-## 🗺️ Grid Topology & Terrain
+## 🆚 How This Stands Out
 
-Users can paint complex environments to test algorithm robustness.
-
-| Terrain Type | Cost | Visual Representation |
-| :--- | :---: | :--- |
-| **Open Floor** | `1.0` | Default transparent grid |
-| **Weighted Terrain** | `5.0` | Emerald green "Dense Forest" |
-| **Wall** | `∞` | Deep Navy obsidian-like surface |
-| **Optimal Path** | `0.0` | Electric Cyan glowing stroke |
+| Feature | Algo Arena | Typical Visualizers |
+| :--- | :---: | :---: |
+| **Real-time Analytics** | ✅ | ❌ |
+| **Algorithm Benchmarking** | ✅ | ❌ |
+| **Isolate-Based Execution** | ✅ | ❌ |
+| **Insight Generation** | ✅ | ❌ |
+| **Replay System** | ✅ | ⚠️ Limited |
 
 ---
 
-## 🚧 Roadmap & Arriving Soon
+## 📂 Project Structure
+```
 
-| Feature | Status | Priority |
-| :--- | :--- | :---: |
-| **Grid Persistence** | ✅ Implemented | High |
-| **Maze Generation** | ✅ Implemented | High |
-| **Battle Arena** | ✅ Implemented | High |
-| **8-Puzzle & N-Queens** | ✅ Implemented | High |
-| **AI Recommendation Engine** | ✅ Implemented | Medium |
-| **Procedural Maze Editor** | ✅ Implemented | Medium |
-| **Leaderboards (Ranks)** | 🚀 Arriving Soon | Medium |
-| **Bidirectional Search** | 📅 Backlog | Low |
+📱 Frontend (Flutter)
+
+lib/
+├── core/                       # Foundation & Architectures
+│   ├── algorithm_adaptor.dart  # Bridges problems to solvers
+│   ├── app_theme.dart          # Luminous Glass design system
+│   ├── eightpuzzle_problem.dart# 8-Puzzle state logic
+│   ├── grid_problem.dart       # Pathfinding logic
+│   ├── nqueens_problem.dart    # N-Queens constraints logic
+│   ├── problem_definition.dart # Abstract Problem/Solver base
+│   └── search_algorithms.dart   # Core BFS, DFS, A*, Dijkstra logic
+├── models/                     # Data Structures
+│   ├── algo_info.dart          # Algorithm metadata model
+│   ├── analytics_models.dart   # High-fidelity Insight & Stat models
+│   ├── app_settings.dart       # User preferences model
+│   └── grid_node.dart          # Cell properties & types
+├── painters/                   # Custom Graphics
+│   └── grid_painter.dart       # High-performance grid renderer
+├── screens/                    # High-Level UI Pages
+│   ├── algorithm_battle_screen.dart # Benchmarking arena
+│   ├── analytics_screen.dart   # Insight dashboard & charts
+│   ├── eightpuzzle_visualizer_screen.dart
+│   ├── history_screen.dart     # Past run logs
+│   ├── home_screen.dart        # Entry hub
+│   ├── interactive_problem_screen.dart
+│   ├── maze_editor_screen.dart  # Arena Architect editor
+│   ├── nqueens_visualizer_screen.dart
+│   ├── pathfinding_visualizer_screen.dart
+│   ├── replay_screen.dart      # Granular historical run playback
+│   ├── settings_screen.dart    # Global configurations
+│   ├── splash_screen.dart      # Cinematic entry sequence
+│   └── visualizer_base_mixin.dart
+├── services/                   # Business Logic
+│   ├── algorithm_executor.dart # Multi-isolate orchestrator
+│   ├── algorithm_recommender.dart # Contextual suggestion engine
+│   ├── api_service.dart        # Backend cloud integration
+│   ├── battle_analyzer.dart    # Post-run metrics processor
+│   ├── map_persistence.dart    # JSON serialization
+│   ├── maze_generator.dart     # Procedural map generation
+│   ├── nqueens_solver.dart     # Backtracking implementation
+│   ├── run_optimizer.dart      # Logic for efficient execution
+│   └── stats_service.dart      # Metric aggregation
+├── state/                      # State Management (Riverpod)
+│   ├── analytics_provider.dart # Insight filtering & sorting
+│   ├── grid_controller.dart    # Grid manipulation manager
+│   ├── replay_provider.dart    # Playback state control
+│   └── settings_provider.dart  # Persistence provider
+├── widgets/                    # UI Components
+│   ├── analytics/              # Specialized insight/chart widgets
+│   │   ├── analytics_filters.dart
+│   │   ├── analytics_skeleton.dart
+│   │   ├── complexity_tab_widgets.dart
+│   │   ├── distribution_chart.dart
+│   │   ├── insight_card.dart
+│   │   ├── summary_chart.dart
+│   │   ├── trends_chart.dart
+│   │   └── versus_tab_widgets.dart
+│   ├── algorithm_info_sheet.dart
+│   ├── algorithm_recommendation_card.dart
+│   ├── algorithm_tabs.dart
+│   ├── algo_info_modal.dart
+│   ├── animated_number_display.dart
+│   ├── battle_results_panel.dart
+│   ├── bottom_nav_bar.dart
+│   ├── concept_visualizer.dart
+│   ├── control_panel.dart
+│   ├── grid_visualizer_canvas.dart
+│   ├── replay_controls.dart
+│   ├── stat_card.dart
+│   ├── trend_line.dart
+│   └── visualizer_widgets.dart
+└── main.dart                   # App entry point
+
+---
+
+## 🔌 Extensibility
+Designed for growth, Algo Arena supports easy extensions:
+- **New Algorithms**: Implement `problem_definition.dart` to add any search solver.
+- **New Analytics Rules**: Plug additional logic into the 5-Engine Backend.
+- **GPU Acceleration**: Built-in support for moving grid logic to shaders in the future.
+
+---
+
+## 🛣️ Roadmap
+- [ ] **Web Version**: High-performance Flutter Web support.
+- [ ] **Multi-Agent Simulation**: Visualizing concurrent agent pathfinding.
+- [ ] **AI-Based Learning**: Automated heuristic tuning based on grid data.
+- [ ] **Real-Time Collaboration**: Shared grid sessions via WebSockets.
+
+---
+
+## 🚀 Deployment & Takeaways
+
+### Deployment Notes
+- **Frontend**: Flutter (Profile/Release mode optimized for Skia/Impeller).
+- **Backend**: Node.js Express (Stateless, scalable analytics pipeline).
+- **Database**: MongoDB Atlas (Time-series optimization for run data).
+
+### 🏁 Key Takeaways
+Algo Arena is not just a visualizer—it is a **Performance Engineering Platform**. It showcases:
+- **Advanced State Management**: Leveraging Riverpod for decoupled UI/Logic.
+- **Systems Thinking**: Designing multi-process data flows via Isolates.
+- **Data Engineering**: Transforming raw metrics into actionable engineering insights.
 
 ---
 
 ## 🚀 Getting Started
 
-### Prerequisites
-- Flutter SDK (Stable)
-- Dart 3.x
-
 ### Installation
 ```bash
-# 1. Clone the repository
 git clone https://github.com/Rinav01/ai_algo_arena.git
-
-# 2. Get dependencies
+cd ai_algo_arena
 flutter pub get
-
-# 3. Run the application
 flutter run --release
 ```
 

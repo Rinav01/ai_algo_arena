@@ -37,6 +37,8 @@ class AnalyticsFilters {
 
 final analyticsFiltersProvider = StateProvider<AnalyticsFilters>((ref) => AnalyticsFilters());
 
+final insightCategoryFilterProvider = StateProvider<String>((ref) => "All");
+
 // ─── Summary Provider ────────────────────────────────────────────────────────
 
 final summaryProvider = FutureProvider<AnalyticsResponse<SummaryData>>((ref) async {
@@ -58,7 +60,7 @@ final summaryProvider = FutureProvider<AnalyticsResponse<SummaryData>>((ref) asy
 
     debugPrint('Analytics Summary listData: $listData');
 
-    final data = listData.map((item) {
+    final List<SummaryData> rawItems = listData.map((item) {
       try {
         return SummaryData.fromJson(item);
       } catch (e) {
@@ -66,12 +68,40 @@ final summaryProvider = FutureProvider<AnalyticsResponse<SummaryData>>((ref) asy
         rethrow;
       }
     }).toList();
+
+    // Aggregate by Algorithm to avoid duplicate bars (e.g. from different segments)
+    final Map<String, List<SummaryData>> grouped = {};
+    for (var item in rawItems) {
+      grouped.putIfAbsent(item.algorithm, () => []).add(item);
+    }
+
+    final data = grouped.entries.map((entry) {
+      final algo = entry.key;
+      final items = entry.value;
+      
+      int totalRuns = 0;
+      double totalNodesWeight = 0;
+      double totalTimeWeight = 0;
+      
+      for (var item in items) {
+        totalRuns += item.runCount;
+        totalNodesWeight += item.avgNodes * item.runCount;
+        totalTimeWeight += item.avgTime * item.runCount;
+      }
+      
+      return SummaryData(
+        algorithm: algo,
+        avgNodes: totalRuns > 0 ? totalNodesWeight / totalRuns : 0,
+        avgTime: totalRuns > 0 ? totalTimeWeight / totalRuns : 0,
+        runCount: totalRuns,
+      );
+    }).toList();
     
     final insights = (res['insights'] as List? ?? []).map((item) {
       try {
-        return BattleInsight.fromJson(item);
+        return Insight.fromJson(item);
       } catch (e) {
-        debugPrint('Error parsing BattleInsight item: $item - $e');
+        debugPrint('Error parsing Insight item: $item - $e');
         rethrow;
       }
     }).toList();
@@ -116,7 +146,7 @@ final trendsProvider = FutureProvider<AnalyticsResponse<TrendData>>((ref) async 
       : <TrendData>[];
   
   final insights = (res['insights'] as List? ?? [])
-      .map((item) => BattleInsight.fromJson(item))
+      .map((item) => Insight.fromJson(item))
       .toList();
 
   return AnalyticsResponse(
@@ -151,7 +181,7 @@ final distributionProvider = FutureProvider<AnalyticsResponse<DistributionData>>
   }).toList();
   
   final insights = (res['insights'] as List? ?? [])
-      .map((item) => BattleInsight.fromJson(item))
+      .map((item) => Insight.fromJson(item))
       .toList();
 
   return AnalyticsResponse(
@@ -168,21 +198,23 @@ final battleInsightsProvider = FutureProvider<AnalyticsResponse<WinnerStat>>((re
   final res = await api.getBattleInsights();
   
   final rawData = res;
+  // ignore: unnecessary_type_check
   final List listData = (rawData is Map)
       ? (rawData['winnerDistribution'] as List? ?? [])
+      // ignore: dead_code
       : (rawData as List? ?? []);
       
   final data = listData.map((item) => WinnerStat.fromJson(item)).toList();
   
   final insights = (res['insights'] as List? ?? [])
-      .map((item) => BattleInsight.fromJson(item))
+      .map((item) => Insight.fromJson(item))
       .toList();
       
   return AnalyticsResponse(
     data: data,
     meta: res['meta'] ?? {},
     insights: insights,
-    battleData: BattleInsightData.fromJson(rawData ?? {}),
+    battleData: BattleInsightData.fromJson(rawData),
   );
 });
 
