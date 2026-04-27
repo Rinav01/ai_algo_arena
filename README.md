@@ -10,6 +10,15 @@
 
 ---
 
+## Visual Showcase
+
+<div align="center">
+  <img src="assets/screenshots/grid.png" width="400" alt="Grid Visualizer"/>
+  <img src="assets/screenshots/battle.png" width="400" alt="Algorithm Battle"/>
+</div>
+
+---
+
 ## Why Algo Arena?
 
 Most algorithm visualizers focus solely on education and lack real-world benchmarking capabilities. They show *how* an algorithm works, but not *how well* it performs under stress.
@@ -27,6 +36,7 @@ Building a high-performance visualizer in a single-threaded UI environment prese
 
 - **UI Lag during High-Frequency Updates**: Solved via **Message Batching** (100 steps/msg) and **Isolate Staggering** to prevent CPU spikes.
 - **Heavy Computation Blocking Main Thread**: Offloaded all pathfinding solvers to background **Dart Isolates**, maintaining a consistent 60 FPS.
+- **Visualizing Mathematical Phase Space**: Developed a live-updating, coordinate-mapped graph for the Water Jug problem to represent state transitions as geometric trajectories.
 - **Noisy Analytics Data**: Designed a **Rule-Based Insight Filtering System** to extract high-signal trends from thousands of raw data points.
 - **Comparison Complexity**: Designed a **Synchronized Battle Execution Engine** that ensures two independent solvers run on identical grid states with zero cross-talk.
 
@@ -145,6 +155,7 @@ lib/
 │   ├── eightpuzzle_problem.dart# 8-Puzzle state logic
 │   ├── grid_problem.dart       # Pathfinding logic
 │   ├── nqueens_problem.dart    # N-Queens constraints logic
+│   ├── water_jug_problem.dart  # BFS/DFS state logic for jugs
 │   ├── problem_definition.dart # Abstract Problem/Solver base
 │   └── search_algorithms.dart   # Core BFS, DFS, A*, Dijkstra logic
 ├── models/                     # Data Structures
@@ -167,6 +178,7 @@ lib/
 │   ├── replay_screen.dart      # Granular historical run playback
 │   ├── settings_screen.dart    # Global configurations
 │   ├── splash_screen.dart      # Cinematic entry sequence
+│   ├── water_jug_visualizer_screen.dart # Interactive physics solver
 │   └── visualizer_base_mixin.dart
 ├── services/                   # Business Logic
 │   ├── algorithm_executor.dart # Multi-isolate orchestrator
@@ -206,7 +218,8 @@ lib/
 │   ├── replay_controls.dart
 │   ├── stat_card.dart
 │   ├── trend_line.dart
-│   └── visualizer_widgets.dart
+│   ├── visualizer_widgets.dart
+│   └── water_jug_phase_space.dart # State space graph painter
 └── main.dart                   # App entry point
 
 ```

@@ -12,7 +12,6 @@ class PhaseSpacePainter extends CustomPainter {
   final List<WaterJugState> currentPath;
   final WaterJugState? currentState;
   final int target;
-
   final bool isExpanded;
 
   PhaseSpacePainter({
@@ -27,7 +26,7 @@ class PhaseSpacePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final double padding = isExpanded ? 40.0 : 20.0;
+    final double padding = 20.0;
     final double graphWidth = size.width - (padding * 2);
     final double graphHeight = size.height - (padding * 2);
     final double stepX = graphWidth / capacityA;
@@ -37,24 +36,16 @@ class PhaseSpacePainter extends CustomPainter {
 
     // 1. Draw Grid Lines
     final gridPaint = Paint()
-      ..color = Colors.white.withValues(alpha: isExpanded ? 0.08 : 0.05)
+      ..color = Colors.white.withValues(alpha: 0.05)
       ..strokeWidth = 1.0;
-
-    final textPainter = TextPainter(textDirection: TextDirection.ltr);
 
     for (int i = 0; i <= capacityA; i++) {
       double x = origin.dx + (i * stepX);
       canvas.drawLine(Offset(x, origin.dy), Offset(x, origin.dy - graphHeight), gridPaint);
-      if (isExpanded) {
-        _drawText(canvas, textPainter, '${i}L', Offset(x - 10, origin.dy + 10), isSmall: true);
-      }
     }
     for (int i = 0; i <= capacityB; i++) {
       double y = origin.dy - (i * stepY);
       canvas.drawLine(Offset(origin.dx, y), Offset(origin.dx + graphWidth, y), gridPaint);
-      if (isExpanded) {
-        _drawText(canvas, textPainter, '${i}L', Offset(origin.dx - 30, y - 5), isSmall: true);
-      }
     }
 
     // 2. Draw Target Line (Any state where A or B == target)
@@ -77,14 +68,14 @@ class PhaseSpacePainter extends CustomPainter {
     final exploredPaint = Paint()..color = Colors.white.withValues(alpha: 0.2);
     for (final state in exploredStates) {
       final pos = _stateToOffset(state, origin, stepX, stepY);
-      canvas.drawCircle(pos, isExpanded ? 4 : 3, exploredPaint);
+      canvas.drawCircle(pos, 3, exploredPaint);
     }
 
     // 4. Draw Path
     if (currentPath.length > 1) {
       final pathPaint = Paint()
         ..color = AppTheme.accent
-        ..strokeWidth = isExpanded ? 3.0 : 2.0
+        ..strokeWidth = 2.0
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round;
 
@@ -105,15 +96,17 @@ class PhaseSpacePainter extends CustomPainter {
       final glowPaint = Paint()
         ..color = AppTheme.accent.withValues(alpha: 0.3)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-      canvas.drawCircle(pos, isExpanded ? 15 : 10, glowPaint);
+      canvas.drawCircle(pos, 10, glowPaint);
 
       final headPaint = Paint()..color = Colors.white;
-      canvas.drawCircle(pos, isExpanded ? 7 : 5, headPaint);
+      canvas.drawCircle(pos, 5, headPaint);
     }
 
     // 6. Draw Axes Labels
-    _drawText(canvas, textPainter, 'Jug A (Liters)', Offset(size.width / 2 - 40, size.height - 20));
-    _drawText(canvas, textPainter, 'Jug B (Liters)', Offset(10, 10));
+    final textPainter = TextPainter(textDirection: TextDirection.ltr);
+    
+    _drawText(canvas, textPainter, 'A', Offset(size.width - 15, size.height - 15));
+    _drawText(canvas, textPainter, 'B', Offset(5, 5));
   }
 
   Offset _stateToOffset(WaterJugState state, Offset origin, double stepX, double stepY) {
@@ -123,14 +116,10 @@ class PhaseSpacePainter extends CustomPainter {
     );
   }
 
-  void _drawText(Canvas canvas, TextPainter tp, String text, Offset pos, {bool isSmall = false}) {
+  void _drawText(Canvas canvas, TextPainter tp, String text, Offset pos) {
     tp.text = TextSpan(
       text: text,
-      style: TextStyle(
-        color: AppTheme.textMuted, 
-        fontSize: isSmall ? 8 : 10, 
-        fontWeight: FontWeight.bold
-      ),
+      style: const TextStyle(color: AppTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold),
     );
     tp.layout();
     tp.paint(canvas, pos);
@@ -140,7 +129,6 @@ class PhaseSpacePainter extends CustomPainter {
   bool shouldRepaint(covariant PhaseSpacePainter oldDelegate) {
     return oldDelegate.currentState != currentState ||
            oldDelegate.exploredStates.length != exploredStates.length ||
-           oldDelegate.currentPath.length != currentPath.length ||
-           oldDelegate.isExpanded != isExpanded;
+           oldDelegate.currentPath.length != currentPath.length;
   }
 }
