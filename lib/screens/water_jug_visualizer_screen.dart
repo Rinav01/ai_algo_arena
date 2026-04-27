@@ -110,11 +110,171 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
       currentJugA = 0;
       currentJugB = 0;
       currentOp = 'Initial State';
-      historyPath = [];
-      exploredStates = {};
+      historyPath = [WaterJugState(0, 0, 'Initial State')];
+      exploredStates = {WaterJugState(0, 0, 'Initial State')};
       nodesExpanded = 0;
       frontierSize = 0;
     });
+  }
+
+  void _randomizeProblem() {
+    final rand = math.Random();
+    setState(() {
+      capacityA = 3 + rand.nextInt(10); // 3-12
+      capacityB = 3 + rand.nextInt(10); // 3-12
+      // Avoid capacityA == capacityB for better problems
+      if (capacityA == capacityB) capacityB++;
+      
+      // Target must be achievable (multiples of GCD) or just random <= max
+      target = 1 + rand.nextInt(math.max(capacityA, capacityB));
+      _reset();
+    });
+  }
+
+  void _performManualAction(String type) {
+    if (isSolving) return;
+    
+    setState(() {
+      int newA = currentJugA;
+      int newB = currentJugB;
+      String op = '';
+
+      switch (type) {
+        case 'fillA':
+          newA = capacityA;
+          op = 'Fill Jug A';
+          break;
+        case 'fillB':
+          newB = capacityB;
+          op = 'Fill Jug B';
+          break;
+        case 'emptyA':
+          newA = 0;
+          op = 'Empty Jug A';
+          break;
+        case 'emptyB':
+          newB = 0;
+          op = 'Empty Jug B';
+          break;
+        case 'pourAtoB':
+          int amount = math.min(currentJugA, capacityB - currentJugB);
+          newA -= amount;
+          newB += amount;
+          op = 'Pour A → B';
+          break;
+        case 'pourBtoA':
+          int amount = math.min(currentJugB, capacityA - currentJugA);
+          newB -= amount;
+          newA += amount;
+          op = 'Pour B → A';
+          break;
+      }
+
+      currentJugA = newA;
+      currentJugB = newB;
+      currentOp = op;
+      
+      final newState = WaterJugState(newA, newB, op);
+      
+      // Update history and explored set for manual solving
+      if (historyPath.isEmpty || historyPath.last != newState) {
+        historyPath = List.from(historyPath)..add(newState);
+        exploredStates = Set.from(exploredStates)..add(newState);
+        nodesExpanded++;
+      }
+
+      if (newA == target || newB == target || (newA + newB) == target) {
+        isSolved = true;
+        statusMessage = 'Goal Reached Manually!';
+      }
+    });
+  }
+
+  Widget _buildManualControls() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: AppTheme.glassCard(radius: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.touch_app_rounded, color: AppTheme.accent, size: 20),
+              const SizedBox(width: 10),
+              Text(
+                'MANUAL INTERACTION',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: AppTheme.accentLight,
+                  letterSpacing: 2,
+                ),
+              ),
+              const Spacer(),
+              if (isSolved)
+                const Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 18),
+            ],
+          ),
+          const SizedBox(height: 20),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final buttonWidth = (constraints.maxWidth - 20) / 3;
+              return Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildManualBtn('FILL A', 'fillA', AppTheme.cyan, Icons.add_circle_outline, buttonWidth),
+                      _buildManualBtn('POUR A→B', 'pourAtoB', Colors.white, Icons.swap_horiz_rounded, buttonWidth),
+                      _buildManualBtn('EMPTY A', 'emptyA', AppTheme.cyan, Icons.remove_circle_outline, buttonWidth),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildManualBtn('FILL B', 'fillB', AppTheme.accent, Icons.add_circle_outline, buttonWidth),
+                      _buildManualBtn('POUR B→A', 'pourBtoA', Colors.white, Icons.swap_horiz_rounded, buttonWidth),
+                      _buildManualBtn('EMPTY B', 'emptyB', AppTheme.accent, Icons.remove_circle_outline, buttonWidth),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManualBtn(String label, String action, Color color, IconData icon, double width) {
+    bool isEnabled = !isSolving;
+    return SizedBox(
+      width: width,
+      child: Material(
+        color: isEnabled ? AppTheme.surfaceHighest.withValues(alpha: 0.3) : Colors.black12,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: isEnabled ? () => _performManualAction(action) : null,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Column(
+              children: [
+                Icon(icon, color: isEnabled ? color : AppTheme.textMuted, size: 18),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: isEnabled ? Colors.white : AppTheme.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -153,6 +313,8 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
                         _buildVisualizerArea(),
                         const SizedBox(height: 20),
                         _buildPhaseSpaceAndStats(),
+                        const SizedBox(height: 20),
+                        _buildManualControls(),
                         const SizedBox(height: 20),
                         _buildControlPanel(),
                         const SizedBox(height: 20),
@@ -258,6 +420,12 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
                   color: AppTheme.accentLight,
                   letterSpacing: 2,
                 ),
+              ),
+              const Spacer(),
+              IconButton(
+                onPressed: isSolving ? null : _randomizeProblem,
+                icon: const Icon(Icons.casino_rounded, color: AppTheme.warning, size: 20),
+                tooltip: 'Randomize Parameters',
               ),
             ],
           ),
@@ -744,45 +912,51 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
           // 1. Phase Space Map
           Expanded(
             flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.hub_rounded, color: AppTheme.accent, size: 14),
-                      const SizedBox(width: 8),
-                      Text(
-                        'PHASE SPACE MAP',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppTheme.textMuted,
-                          letterSpacing: 1.5,
+            child: InkWell(
+              onTap: _showExpandedPhaseSpace,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.hub_rounded, color: AppTheme.accent, size: 14),
+                        const SizedBox(width: 8),
+                        Text(
+                          'PHASE SPACE MAP',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: AppTheme.textMuted,
+                            letterSpacing: 1.5,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: CustomPaint(
-                        painter: PhaseSpacePainter(
-                          capacityA: capacityA,
-                          capacityB: capacityB,
-                          exploredStates: exploredStates,
-                          currentPath: historyPath,
-                          currentState: historyPath.isNotEmpty ? historyPath.last : null,
-                          target: target,
+                        const Spacer(),
+                        const Icon(Icons.fullscreen_rounded, color: AppTheme.textMuted, size: 14),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        size: Size.infinite,
+                        child: CustomPaint(
+                          painter: PhaseSpacePainter(
+                            capacityA: capacityA,
+                            capacityB: capacityB,
+                            exploredStates: exploredStates,
+                            currentPath: historyPath,
+                            currentState: historyPath.isNotEmpty ? historyPath.last : null,
+                            target: target,
+                          ),
+                          size: Size.infinite,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -981,6 +1155,97 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
           );
         },
       ),
+    );
+  }
+  void _showExpandedPhaseSpace() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Phase Space',
+      barrierColor: Colors.black.withValues(alpha: 0.9),
+      transitionDuration: 300.ms,
+      pageBuilder: (context, anim1, anim2) {
+        return Center(
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.9,
+            height: MediaQuery.of(context).size.width * 0.9,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.accent.withValues(alpha: 0.15),
+                  blurRadius: 40,
+                  spreadRadius: 10,
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'PHASE SPACE ANALYSIS',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                        Text(
+                          'State Transitions: $capacityA L × $capacityB L',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 30),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                    ),
+                    child: CustomPaint(
+                      painter: PhaseSpacePainter(
+                        capacityA: capacityA,
+                        capacityB: capacityB,
+                        exploredStates: exploredStates,
+                        currentPath: historyPath,
+                        currentState: historyPath.isNotEmpty ? historyPath.last : null,
+                        target: target,
+                        isExpanded: true,
+                      ),
+                      size: Size.infinite,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildLegendItem('Explored Path', AppTheme.accent),
+                    _buildLegendItem('Discovery Set', Colors.white.withValues(alpha: 0.15)),
+                    _buildLegendItem('Goal Threshold', AppTheme.warning.withValues(alpha: 0.2)),
+                  ],
+                ),
+              ],
+            ),
+          ).animate().scale(curve: Curves.easeOutBack).fadeIn(),
+        );
+      },
     );
   }
 }
