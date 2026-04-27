@@ -132,6 +132,20 @@ class GridProblem extends Problem<GridCoordinate> {
   }
 
   @override
+  Map<String, dynamic> toSnapshot() {
+    return {
+      'type': 'grid',
+      'rows': rows,
+      'columns': cols,
+      'types': _types,
+      'weights': _weights,
+      'start': (row: _start.row, column: _start.column),
+      'goal': (row: _goal.row, column: _goal.column),
+      'settings': settings.toJson(),
+    };
+  }
+
+  @override
   GridCoordinate get initialState => _start;
 
   @override

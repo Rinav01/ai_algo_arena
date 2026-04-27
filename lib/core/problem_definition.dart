@@ -103,22 +103,25 @@ abstract class Problem<State> {
   /// Goal state of the problem
   State get goalState;
 
+  /// Get a snapshot for background processing
+  Map<String, dynamic> toSnapshot();
+
   /// Check if a state is the goal
   bool isGoal(State state);
 
-  /// Get all valid neighbor states
+  /// Get successors for a state
   List<State> getNeighbors(State state);
 
-  /// Heuristic function for informed search (return 0 for uninformed)
-  double heuristic(State state) => 0.0;
+  /// Check if a state is valid (e.g. not a wall)
+  bool isValid(State state);
 
-  /// Cost to move from one state to another (default: 1)
-  double moveCost(State from, State to) => 1.0;
+  /// Heuristic function (distance to goal)
+  double heuristic(State state);
 
-  /// Check if a state is valid/walkable
-  bool isValid(State state) => true;
+  /// Cost to move from one state to another
+  double moveCost(State from, State to);
 
-  /// Get a string representation for debugging
+  /// String representation of a state for debugging
   String stateToString(State state);
 }
 

@@ -400,7 +400,7 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
       _executor = AlgorithmExecutor<GridCoordinate>(
         algorithm: algo,
         problem: widget.problem,
-        stepDelayMs: _stepDelay.inMilliseconds,
+        stepDelayMs: _stepDelay.inMilliseconds, algorithmId: '',
       );
     }
 
@@ -467,7 +467,7 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
     _executor ??= AlgorithmExecutor<GridCoordinate>(
       algorithm: AStarAlgorithm<GridCoordinate>(),
       problem: widget.problem,
-      stepDelayMs: _stepDelay.inMilliseconds,
+      stepDelayMs: _stepDelay.inMilliseconds, algorithmId: '',
     );
 
     try {

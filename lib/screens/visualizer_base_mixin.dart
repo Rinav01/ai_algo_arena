@@ -6,7 +6,7 @@ import 'package:algo_arena/services/algorithm_executor.dart';
 import 'package:algo_arena/core/search_algorithms.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-mixin VisualizerBaseMixin<T extends ConsumerStatefulWidget, S> on ConsumerState<T>, SingleTickerProviderStateMixin<T> {
+mixin VisualizerBaseMixin<T extends ConsumerStatefulWidget, S> on ConsumerState<T>, TickerProvider {
   // --- Abstract Methods ---
   String get algorithmId;
   Map<String, dynamic> getProblemSnapshot();
@@ -74,6 +74,7 @@ mixin VisualizerBaseMixin<T extends ConsumerStatefulWidget, S> on ConsumerState<
 
     executor = AlgorithmExecutor<S>(
       algorithm: algo,
+      algorithmId: algorithmId,
       problemSnapshot: getProblemSnapshot(),
       stepDelayMs: isLiveUpdate ? 0 : stepDelay.inMilliseconds,
     );

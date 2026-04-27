@@ -121,12 +121,12 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
     _executorA = AlgorithmExecutor<GridCoordinate>(
       algorithm: _getAlgorithm(_algoAId),
       problemSnapshot: snapshot,
-      stepDelayMs: _stepDelay.inMilliseconds,
+      stepDelayMs: _stepDelay.inMilliseconds, algorithmId: '',
     );
     _executorB = AlgorithmExecutor<GridCoordinate>(
       algorithm: _getAlgorithm(_algoBId),
       problemSnapshot: snapshot,
-      stepDelayMs: _stepDelay.inMilliseconds,
+      stepDelayMs: _stepDelay.inMilliseconds, algorithmId: '',
     );
 
     final completerA = Completer<void>();

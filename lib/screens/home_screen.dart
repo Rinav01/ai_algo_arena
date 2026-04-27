@@ -440,6 +440,14 @@ const _algorithmsByCategory = <int, List<_AlgoInfo>>{
       color: AppTheme.accent,
       route: '/astar',
     ),
+    _AlgoInfo(
+      name: 'Water Jug',
+      subtitle: 'State-Space Puzzle',
+      difficulty: 'MEDIUM',
+      icon: Icons.opacity_rounded,
+      color: AppTheme.cyan,
+      route: '/waterjug',
+    ),
   ],
   3: [
     // Maze

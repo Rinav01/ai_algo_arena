@@ -2,11 +2,6 @@ import 'dart:math' as math;
 import 'package:algo_arena/core/problem_definition.dart';
 import 'package:collection/collection.dart';
 
-/// 8-Puzzle state: [0,1,2,3,4,5,6,7,8] where 0 = empty
-/// Layout:
-/// 0 1 2
-/// 3 4 5
-/// 6 7 8
 class PuzzleState {
   final List<int> tiles; // 0 = empty space
 
@@ -133,6 +128,24 @@ class EightPuzzleProblem extends Problem<PuzzleState> {
       }
     }
     return distance.toDouble();
+  }
+
+  @override
+  double moveCost(PuzzleState from, PuzzleState to) => 1.0;
+
+  @override
+  bool isValid(PuzzleState state) => true;
+
+  @override
+  Map<String, dynamic> toSnapshot() => {
+    'type': 'puzzle',
+    'initialState': _initialState.tiles,
+  };
+
+  static EightPuzzleProblem fromSnapshot(Map<String, dynamic> snapshot) {
+    return EightPuzzleProblem(
+      initialState: PuzzleState(List<int>.from(snapshot['initialState'])),
+    );
   }
 
   @override

@@ -2,8 +2,9 @@ import 'dart:async';
 import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-
 import 'package:algo_arena/core/grid_problem.dart';
+import 'package:algo_arena/core/water_jug_problem.dart';
+import 'package:algo_arena/core/eightpuzzle_problem.dart';
 import 'package:algo_arena/core/problem_definition.dart';
 import 'package:algo_arena/core/search_algorithms.dart';
 import 'package:algo_arena/models/app_settings.dart';
@@ -28,41 +29,71 @@ class _StreamRequest {
   _StreamRequest(this.sendPort, this.algorithmId, this.snapshot);
 }
 
+/// Factory to reconstruct problems from snapshots
+class ProblemFactory {
+  static Problem<S> fromSnapshot<S>(Map<String, dynamic> snapshot) {
+    final type = snapshot['type'] as String?;
+    
+    switch (type) {
+      case 'grid':
+        return GridProblem.fromSnapshot(snapshot) as Problem<S>;
+      case 'water_jug':
+        return WaterJugProblem.fromSnapshot(snapshot) as Problem<S>;
+      case 'puzzle':
+        return EightPuzzleProblem.fromSnapshot(snapshot) as Problem<S>;
+      default:
+        // Fallback for legacy support: assume Grid if rows/columns are present
+        if (snapshot.containsKey('rows') || snapshot.containsKey('columns')) {
+          return GridProblem.fromSnapshot(snapshot) as Problem<S>;
+        }
+        throw UnsupportedError('Unknown problem type in snapshot: $type');
+    }
+  }
+}
+
 /// The actual entry point for the isolate (Streaming version)
 Future<void> _streamInIsolate(_StreamRequest request) async {
   try {
-    final problem = GridProblem.fromSnapshot(request.snapshot);
+    // 1. Reconstruct Problem from snapshot
+    final problem = ProblemFactory.fromSnapshot(request.snapshot);
 
-    // Instantiate the algorithm inside the isolate to avoid non-sendable object issues
-    final SearchAlgorithm<GridCoordinate> algorithm = switch (request
-        .algorithmId) {
-      'Breadth-First Search' => BFSAlgorithm<GridCoordinate>(),
-      'Depth-First Search' => DFSAlgorithm<GridCoordinate>(),
-      'Dijkstra\'s Algorithm' => DijkstraAlgorithm<GridCoordinate>(),
-      'A* Search' => AStarAlgorithm<GridCoordinate>(),
-      'Greedy Best-First Search' => GreedyBestFirstAlgorithm<GridCoordinate>(),
-      _ => throw Exception('Unknown algorithm ID: ${request.algorithmId}'),
-    };
+    // 2. Resolve Algorithm
+    final SearchAlgorithm algorithm = AlgorithmRegistry.create(request.algorithmId);
 
-    final List<AlgorithmStep<GridCoordinate>> buffer = [];
+    final List<AlgorithmStep> buffer = [];
     const int batchSize = 100;
 
     for (final step in algorithm.solve(problem)) {
-      buffer.add(step);
+      // Optimization: Only send full path for the goal or every N steps
+      // to reduce Isolate communication overhead (memory & CPU)
+      final isMajorStep = step.isGoalReached || (step.stepCount % 25 == 0);
+      
+      final strippedStep = AlgorithmStep<dynamic>(
+        newlyExplored: step.newlyExplored,
+        currentState: step.currentState,
+        path: isMajorStep ? step.path : const [], // Strip path for minor steps
+        stepCount: step.stepCount,
+        isGoalReached: step.isGoalReached,
+        frontierSize: step.frontierSize,
+        message: step.message,
+      );
+
+      buffer.add(strippedStep);
       if (buffer.length >= batchSize) {
         request.sendPort.send(
-          _StreamMessage<GridCoordinate>.batch(List.from(buffer)),
+          _StreamMessage<dynamic>.batch(List.from(buffer)),
         );
         buffer.clear();
       }
     }
 
     if (buffer.isNotEmpty) {
-      request.sendPort.send(_StreamMessage<GridCoordinate>.batch(buffer));
+      request.sendPort.send(_StreamMessage<dynamic>.batch(buffer));
     }
-    request.sendPort.send(_StreamMessage<GridCoordinate>.done());
-  } catch (e) {
-    request.sendPort.send(_StreamMessage<GridCoordinate>.error(e.toString()));
+    request.sendPort.send(_StreamMessage<dynamic>.done());
+  } catch (e, stack) {
+    debugPrint('Isolate Error: $e\n$stack');
+    request.sendPort.send(_StreamMessage<dynamic>.error(e.toString()));
   }
 }
 
@@ -137,14 +168,17 @@ class AlgorithmExecutor<State> with ChangeNotifier {
   /// Generate a cache key for the current problem and algorithm
   String get _cacheKey {
     if (_problemSnapshot != null) {
-      final tempProblem = GridProblem.fromSnapshot(_problemSnapshot);
+      final tempProblem = ProblemFactory.fromSnapshot(_problemSnapshot);
       return '${algorithm.runtimeType}_${tempProblem.hashCode}';
     }
     return '${algorithm.runtimeType}_${_problem.hashCode}';
   }
 
+  final String algorithmId;
+
   AlgorithmExecutor({
     required this.algorithm,
+    required this.algorithmId,
     Problem<State>? problem,
     Map<String, dynamic>? problemSnapshot,
     int? stepDelayMs,
@@ -185,7 +219,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
 
         if (kIsWeb) {
           // Web doesn't support Isolates, run directly
-          final problem = GridProblem.fromSnapshot(_problemSnapshot);
+          final problem = ProblemFactory.fromSnapshot(_problemSnapshot);
           for (final step in algorithm.solve(problem as Problem<State>)) {
             _fullHistory!.add(step);
           }
@@ -213,7 +247,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
 
           final request = _StreamRequest(
             receivePort.sendPort,
-            algorithm.name,
+            algorithmId,
             _problemSnapshot,
           );
 
@@ -521,7 +555,7 @@ class AdvancedAlgorithmExecutor<State> extends AlgorithmExecutor<State> {
     required super.algorithm,
     super.problem,
     super.problemSnapshot,
-    super.stepDelayMs,
+    super.stepDelayMs, required super.algorithmId,
   }) : _baseStepDelay = Duration(milliseconds: stepDelayMs ?? 16);
 
   /// Set playback speed multiplier

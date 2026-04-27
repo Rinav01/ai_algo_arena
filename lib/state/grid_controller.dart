@@ -321,6 +321,7 @@ class GridController extends ChangeNotifier {
     }
 
     return {
+      'type': 'grid',
       'rows': rows,
       'columns': columns,
       'types': types,

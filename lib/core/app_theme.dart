@@ -1,14 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// ─── "Neural Arena" Design System (Generated via Google Stitch) ─────────────
-/// Creative North Star: "The Neural Nexus" — a high-performance HUD where
-/// data feels alive. Intentional asymmetry, tonal depth, technical elegance.
-///
-/// Background: #0E1322  Surfaces: layered container tiers.
-/// Accent:     #8B5CF6  (violet secondary)
-/// Tertiary:   #00DBE9  (cyan — used for paths, health bars, active states)
-/// Fonts:      Space Grotesk (headings) + Manrope (body/stats)
-/// ─────────────────────────────────────────────────────────────────────────────
 abstract class AppTheme {
   // ── Surface Hierarchy (tonal layering, no drop-shadows) ────────────────────
   static const Color background = Color(0xFF0E1322);

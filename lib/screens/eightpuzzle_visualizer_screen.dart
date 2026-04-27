@@ -55,6 +55,7 @@ class _EightPuzzleVisualizerScreenState
   @override
   Map<String, dynamic> getProblemSnapshot() {
     return {
+      'type': 'puzzle',
       'initialState': problem.initialState.tiles,
       'goalState': problem.goalState.tiles,
     };
