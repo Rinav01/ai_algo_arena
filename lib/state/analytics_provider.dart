@@ -197,12 +197,9 @@ final battleInsightsProvider = FutureProvider<AnalyticsResponse<WinnerStat>>((re
   final api = ref.watch(apiServiceProvider);
   final res = await api.getBattleInsights();
   
-  final rawData = res;
-  // ignore: unnecessary_type_check
-  final List listData = (rawData is Map)
-      ? (rawData['winnerDistribution'] as List? ?? [])
-      // ignore: dead_code
-      : (rawData as List? ?? []);
+  // Backend wraps results in a 'data' object
+  final rawData = res['data'] ?? res;
+  final List listData = rawData['winnerDistribution'] as List? ?? [];
       
   final data = listData.map((item) => WinnerStat.fromJson(item)).toList();
   

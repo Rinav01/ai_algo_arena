@@ -28,25 +28,46 @@ class AnalyticsScreen extends ConsumerWidget {
           backgroundColor: AppTheme.background,
           elevation: 0,
           toolbarHeight: 100, // accommodate the header text
-          flexibleSpace: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Analytics Dashboard",
-                    style: Theme.of(context).textTheme.displayMedium,
-                  ).animate().fadeIn().slideY(begin: 0.2),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Scan · Compare · Understand performance in seconds",
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textMuted,
+          flexibleSpace: ClipRect(
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -20,
+                  top: -10,
+                  child: IgnorePointer(
+                    child: Icon(
+                      Icons.leaderboard_rounded,
+                      size: 160,
+                      color: AppTheme.accent.withValues(alpha: 0.05),
+                    ),
+                  ),
+                ),
+                SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(72, 24, 20, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Analytics Dashboard",
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.onBackground,
+                                letterSpacing: -0.5,
+                              ),
                         ),
-                  ).animate().fadeIn(delay: 200.ms),
-                ],
-              ),
+                        Text(
+                          "Algorithm Performance Metrics",
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: AppTheme.textSecondary,
+                                letterSpacing: 1.2,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           bottom: const TabBar(
@@ -61,11 +82,28 @@ class AnalyticsScreen extends ConsumerWidget {
             ],
           ),
         ),
-        body: TabBarView(
+        body: Stack(
           children: [
-            _GeneralTab(),
-            VersusTabContent(),
-            ComplexityTabContent(),
+            // Background Watermark
+            Positioned(
+              left: -50,
+              bottom: 100,
+              child: Opacity(
+                opacity: 0.03,
+                child: Icon(
+                  Icons.analytics_outlined,
+                  size: 400,
+                  color: AppTheme.accent,
+                ),
+              ),
+            ),
+            TabBarView(
+              children: [
+                _GeneralTab(),
+                const VersusTabContent(),
+                const ComplexityTabContent(),
+              ],
+            ),
           ],
         ),
         bottomNavigationBar: const ArenaBottomNavBar(currentIndex: 3),
@@ -136,7 +174,7 @@ class _GeneralTab extends ConsumerWidget {
                   delegate: SliverChildListDelegate([
                     // ─── Insight Section ─────────────────────────────────────────
                     if (allInsights.isNotEmpty) ...[
-                      const _SectionHeader(label: "🧠 SMART INSIGHTS"),
+                      const _SectionHeader(label: "SMART INSIGHTS"),
                       const SizedBox(height: 16),
                       
                       // Highlight Top Insight
@@ -204,7 +242,7 @@ class _GeneralTab extends ConsumerWidget {
                     ],
 
                     // ─── Summary Section ────────────────────────────────────────
-                    const _SectionHeader(label: "📊 PERFORMANCE SUMMARY"),
+                    const _SectionHeader(label: "PERFORMANCE SUMMARY"),
                     const SizedBox(height: 16),
                     SummaryBarChart(
                       data: summaryRes.data,
@@ -213,7 +251,7 @@ class _GeneralTab extends ConsumerWidget {
                     const SizedBox(height: 32),
 
                     // ─── Trends Section ─────────────────────────────────────────
-                    const _SectionHeader(label: "📈 PERFORMANCE TRENDS"),
+                    const _SectionHeader(label: "PERFORMANCE TRENDS"),
                     const SizedBox(height: 16),
                     trendsAsync.when(
                       data: (trendsRes) => TrendsLineChart(
@@ -226,7 +264,7 @@ class _GeneralTab extends ConsumerWidget {
                     const SizedBox(height: 32),
 
                     // ─── Distribution Section ────────────────────────────────────
-                    const _SectionHeader(label: "🥧 USAGE DISTRIBUTION"),
+                    const _SectionHeader(label: "USAGE DISTRIBUTION"),
                     const SizedBox(height: 16),
                     distributionAsync.when(
                       data: (distRes) => DistributionPieChart(data: distRes.data),
@@ -360,7 +398,7 @@ class _TopInsightHighlight extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "🔥 TOP INSIGHT: ${insight.title}",
+                  "TOP INSIGHT: ${insight.title}",
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: AppTheme.error,
                         fontWeight: FontWeight.w900,

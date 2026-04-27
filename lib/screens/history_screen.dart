@@ -96,31 +96,59 @@ class HistoryScreen extends ConsumerWidget {
 
   Widget _buildHeader(BuildContext context, AsyncValue<List<dynamic>> runsAsync) {
     return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 40, 20, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: ClipRect(
+        child: Stack(
           children: [
-            Text(
-              'RUN HISTORY',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: AppTheme.accentLight,
-                letterSpacing: 2,
+            Positioned(
+              left: -50,
+              bottom: -50,
+              child: IgnorePointer(
+                child: Icon(
+                  Icons.history_rounded,
+                  size: 400,
+                  color: AppTheme.accent.withValues(alpha: 0.02),
+                ),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Past Executions',
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            Positioned(
+              right: -20,
+              top: -10,
+              child: IgnorePointer(
+                child: Icon(
+                  Icons.history_rounded,
+                  size: 180,
+                  color: AppTheme.accent.withValues(alpha: 0.05),
+                ),
               ),
             ),
-            const SizedBox(height: 24),
-            runsAsync.when(
-              data: (runs) => _buildSummarySection(context, runs),
-              loading: () => const SizedBox(height: 80),
-              error: (_, __) => const SizedBox(),
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(72, 40, 20, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'RUN HISTORY',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppTheme.accentLight,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Past Executions',
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  runsAsync.when(
+                    data: (runs) => _buildSummarySection(context, runs),
+                    loading: () => const SizedBox(height: 80),
+                    error: (_, __) => const SizedBox(),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

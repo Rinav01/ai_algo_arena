@@ -30,7 +30,10 @@ class SummaryBarChart extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             metric == 'nodes' ? "Average Nodes Explored" : "Average Time (ms)",
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppTheme.textMuted,
+                  letterSpacing: 0.5,
+                ),
           ),
           const SizedBox(height: 24),
           Expanded(
@@ -42,13 +45,15 @@ class SummaryBarChart extends StatelessWidget {
                   touchTooltipData: BarTouchTooltipData(
                     getTooltipColor: (_) => AppTheme.surfaceHigh,
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      final item = data[groupIndex];
+                      final actualValue = metric == 'nodes' ? item.avgNodes : item.avgTime;
                       return BarTooltipItem(
-                        "${data[groupIndex].algorithm}\n",
+                        "${item.algorithm}\n",
                         const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                         children: [
                           TextSpan(
-                            text: "${rod.toY.toStringAsFixed(1)} ${metric == 'nodes' ? 'nodes' : 'ms'}",
-                            style: const TextStyle(color: AppTheme.accentLight),
+                            text: "${actualValue.toStringAsFixed(1)} ${metric == 'nodes' ? 'nodes' : 'ms'}",
+                            style: const TextStyle(color: AppTheme.accentLight, fontWeight: FontWeight.w500),
                           ),
                         ],
                       );
@@ -58,12 +63,17 @@ class SummaryBarChart extends StatelessWidget {
                 titlesData: FlTitlesData(
                   show: true,
                   bottomTitles: AxisTitles(
+                    axisNameWidget: const Text(
+                      'ALGORITHM',
+                      style: TextStyle(color: AppTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                    ),
+                    axisNameSize: 20,
                     sideTitles: SideTitles(
                       showTitles: true,
                       getTitlesWidget: (value, meta) {
                         if (value.toInt() < 0 || value.toInt() >= data.length) return const SizedBox.shrink();
                         return Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
+                          padding: const EdgeInsets.only(top: 4.0),
                           child: Text(
                             data[value.toInt()].algorithm,
                             style: const TextStyle(color: AppTheme.textMuted, fontSize: 10),
@@ -72,7 +82,23 @@ class SummaryBarChart extends StatelessWidget {
                       },
                     ),
                   ),
-                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: AxisTitles(
+                    axisNameWidget: Text(
+                      metric == 'nodes' ? 'AVG. NODES' : 'AVG. TIME (ms)',
+                      style: const TextStyle(color: AppTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                    ),
+                    axisNameSize: 20,
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 40,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          value.toInt().toString(),
+                          style: const TextStyle(color: AppTheme.textMuted, fontSize: 10),
+                        );
+                      },
+                    ),
+                  ),
                   topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 ),
@@ -81,20 +107,25 @@ class SummaryBarChart extends StatelessWidget {
                 barGroups: data.asMap().entries.map((entry) {
                   final index = entry.key;
                   final item = entry.value;
-                  final value = metric == 'nodes' ? item.avgNodes : item.avgTime;
+                  final rawValue = metric == 'nodes' ? item.avgNodes : item.avgTime;
+                  final maxY = _getMaxY();
+                  
+                  // If value is 0, don't show a bar. 
+                  // If it's small, ensure it's at least 5% of maxY for visibility
+                  final visualValue = rawValue > 0 ? (rawValue < maxY * 0.05 ? maxY * 0.05 : rawValue) : 0.0;
 
                   return BarChartGroupData(
                     x: index,
                     barRods: [
                       BarChartRodData(
-                        toY: value,
-                        gradient: AppTheme.ctaGradient,
-                        width: 16,
+                        toY: visualValue,
+                        color: _getColorForIndex(index),
+                        width: 18,
                         borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
                         backDrawRodData: BackgroundBarChartRodData(
-                          show: true,
-                          toY: _getMaxY(),
-                          color: AppTheme.surfaceVariant.withValues(alpha: 0.3),
+                          show: rawValue > 0, // Only show background if there's actually data
+                          toY: maxY,
+                          color: AppTheme.surfaceVariant.withValues(alpha: 0.15), // More subtle background
                         ),
                       ),
                     ],
@@ -105,6 +136,17 @@ class SummaryBarChart extends StatelessWidget {
               curve: Curves.easeOutQuart,
             ),
           ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: data.asMap().entries.map((entry) {
+              return _LegendItem(
+                label: entry.value.algorithm,
+                color: _getColorForIndex(entry.key),
+              );
+            }).toList(),
+          ),
         ],
       ),
     );
@@ -113,6 +155,48 @@ class SummaryBarChart extends StatelessWidget {
   double _getMaxY() {
     if (data.isEmpty) return 100;
     final maxVal = data.map((e) => metric == 'nodes' ? e.avgNodes : e.avgTime).reduce((a, b) => a > b ? a : b);
-    return maxVal * 1.2;
+    return maxVal < 10 ? 10.0 : maxVal * 1.2;
+  }
+
+  Color _getColorForIndex(int index) {
+    final colors = [
+      AppTheme.accent,
+      AppTheme.cyan,
+      AppTheme.success,
+      AppTheme.warning,
+      AppTheme.error,
+      const Color(0xFF9D50BB), // Purple
+      const Color(0xFF6E48AA), // Deep Purple
+      const Color(0xFF2193b0), // Blue
+    ];
+    return colors[index % colors.length];
+  }
+}
+
+class _LegendItem extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _LegendItem({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 10, color: AppTheme.textMuted),
+        ),
+      ],
+    );
   }
 }

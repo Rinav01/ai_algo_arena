@@ -50,7 +50,11 @@ class AlgorithmRecommendationCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Text('🤖', style: TextStyle(fontSize: 26)),
+                    const Icon(
+                      Icons.smart_toy_outlined,
+                      color: AppTheme.accent,
+                      size: 32,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(

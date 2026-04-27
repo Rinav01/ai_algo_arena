@@ -81,12 +81,12 @@ class _NavItem extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
         decoration: BoxDecoration(
           color: isActive
-              ? AppTheme.accent.withValues(alpha: 0.15)
+              ? AppTheme.accent.withValues(alpha: 0.25)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12.0),
           border: Border.all(
             color: isActive
-                ? AppTheme.accent.withValues(alpha: 0.35)
+                ? AppTheme.accent.withValues(alpha: 0.5)
                 : Colors.transparent,
           ),
         ),
@@ -96,10 +96,10 @@ class _NavItem extends StatelessWidget {
           children: [
             Icon(
               icon,
-              size: math.min(22.0, 32.0),
+              size: 24.0,
               color: isActive ? AppTheme.accent : AppTheme.textMuted,
             ),
-            SizedBox(height: math.min(4.0, 6.0)),
+            const SizedBox(height: 4.0),
             Stack(
               clipBehavior: Clip.none,
               children: [

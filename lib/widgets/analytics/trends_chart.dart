@@ -46,8 +46,12 @@ class TrendsLineChart extends StatelessWidget {
               // Legend
               Wrap(
                 spacing: 12,
-                children: data
-                    .map((d) => _LegendItem(label: d.algorithm))
+                runSpacing: 8,
+                children: data.asMap().entries
+                    .map((entry) => _LegendItem(
+                      label: entry.value.algorithm, 
+                      color: _getColorForIndex(entry.key),
+                    ))
                     .toList(),
               ),
             ],
@@ -110,6 +114,11 @@ class TrendsLineChart extends StatelessWidget {
                     sideTitles: SideTitles(showTitles: false),
                   ),
                   bottomTitles: AxisTitles(
+                    axisNameWidget: const Text(
+                      'BATTLE HISTORY',
+                      style: TextStyle(color: AppTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                    ),
+                    axisNameSize: 20,
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 30,
@@ -120,6 +129,11 @@ class TrendsLineChart extends StatelessWidget {
                     ),
                   ),
                   leftTitles: AxisTitles(
+                    axisNameWidget: Text(
+                      metric.toUpperCase().replaceAll('_', ' '),
+                      style: const TextStyle(color: AppTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                    ),
+                    axisNameSize: 24,
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 42,
@@ -404,7 +418,8 @@ class _TopRunsSheetState extends State<_TopRunsSheet> {
 
 class _LegendItem extends StatelessWidget {
   final String label;
-  const _LegendItem({required this.label});
+  final Color color;
+  const _LegendItem({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -414,8 +429,8 @@ class _LegendItem extends StatelessWidget {
         Container(
           width: 8,
           height: 8,
-          decoration: const BoxDecoration(
-            color: AppTheme.accent,
+          decoration: BoxDecoration(
+            color: color,
             shape: BoxShape.circle,
           ),
         ),

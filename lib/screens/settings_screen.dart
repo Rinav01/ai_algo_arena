@@ -119,7 +119,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
       ),
-      bottomNavigationBar: const ArenaBottomNavBar(currentIndex: 3),
+      bottomNavigationBar: const ArenaBottomNavBar(currentIndex: 4),
     );
   }
 
@@ -138,7 +138,7 @@ class SettingsScreen extends ConsumerWidget {
       ],
       flexibleSpace: FlexibleSpaceBar(
         centerTitle: false,
-        titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
+        titlePadding: const EdgeInsetsDirectional.only(start: 72, bottom: 16),
         title: const Text(
           'SETTINGS',
           style: TextStyle(
@@ -159,6 +159,15 @@ class SettingsScreen extends ConsumerWidget {
                   Icons.settings_rounded,
                   size: 180,
                   color: AppTheme.accent.withValues(alpha: 0.05),
+                ),
+              ),
+              Positioned(
+                left: -40,
+                bottom: -20,
+                child: Icon(
+                  Icons.tune_rounded,
+                  size: 200,
+                  color: AppTheme.accent.withValues(alpha: 0.03),
                 ),
               ),
             ],

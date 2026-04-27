@@ -4,8 +4,9 @@ import 'dart:async';
 import 'package:algo_arena/core/app_theme.dart';
 import 'package:algo_arena/core/nqueens_problem.dart';
 import 'package:algo_arena/services/nqueens_solver.dart';
-import 'package:algo_arena/widgets/visualizer_widgets.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:algo_arena/widgets/visualizer_widgets.dart';
 import 'package:algo_arena/models/algo_info.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:algo_arena/screens/visualizer_base_mixin.dart';
@@ -510,23 +511,18 @@ class _NQueensVisualizerScreenState extends ConsumerState<NQueensVisualizerScree
                         ),
                         child: hasQueen
                             ? Center(
-                                    child: Text(
-                                      '♕',
-                                      style: TextStyle(
-                                        fontSize: 28.0,
-                                        color: isConflict
-                                            ? AppTheme.error
-                                            : Colors.white,
-                                        shadows: [
-                                          Shadow(
-                                            color: isConflict
-                                                ? AppTheme.error
-                                                : AppTheme.success,
-                                            blurRadius: 10,
-                                          ),
-                                        ],
+                                    child: SvgPicture.asset(
+                                      'assets/images/crown.svg',
+                                      width: 28,
+                                      height: 28,
+                                      colorFilter: ColorFilter.mode(
+                                        isConflict ? AppTheme.error : Colors.white,
+                                        BlendMode.srcIn,
                                       ),
-                                    ),
+                                    ).animate().scale(
+                                          duration: const Duration(milliseconds: 300),
+                                          curve: Curves.easeOutBack,
+                                        ),
                                   )
                                   .animate()
                                   .scale(

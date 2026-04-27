@@ -285,6 +285,8 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
           'obstacleDensity': density,
           'nodesDiff': nodeDiff,
           'timeDiff': timeDiff,
+          'nodesExplored': result.winner.exploredStates.length,
+          'pathLength': result.winner.path.length,
         },
         'competitors': [
           RunOptimizer.optimizeCompetitor(

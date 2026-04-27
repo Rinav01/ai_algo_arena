@@ -74,6 +74,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           children: [
             // Node-graph ambient background
             Positioned.fill(child: _NodeGraphPainterWidget(pulse: _pulse)),
+            // Watermark icon
+            Positioned(
+              left: -60,
+              bottom: -40,
+              child: IgnorePointer(
+                child: Icon(
+                  Icons.hub_rounded,
+                  size: 350,
+                  color: AppTheme.accent.withValues(alpha: 0.02),
+                ),
+              ),
+            ),
+            Positioned(
+              right: -30,
+              top: -20,
+              child: IgnorePointer(
+                child: Icon(
+                  Icons.hub_rounded,
+                  size: 200,
+                  color: AppTheme.accent.withValues(alpha: 0.05),
+                ),
+              ),
+            ),
             // Glow orb behind title
             Positioned(
               top: -30,
@@ -160,7 +183,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                       _QuickStat(
                         label: 'REAL-TIME VIZ',
-                        value: '✓',
+                        value: 'YES',
                         accent: AppTheme.cyan,
                       ),
                     ],

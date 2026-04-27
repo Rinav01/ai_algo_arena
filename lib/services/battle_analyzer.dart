@@ -143,7 +143,7 @@ class BattleResult {
     final winnerLine =
         '''
 ╠$separator╣
-║ WINNER: ${winner.algorithmName.padRight(42)} 🏆 ║
+║ WINNER: ${winner.algorithmName.padRight(42)} ║
 ║ MARGIN: ${victoryMargin.toStringAsFixed(1).padRight(5)}% exploration reduction${' '.padRight(16)}║
 ╠$separator╣
     ''';

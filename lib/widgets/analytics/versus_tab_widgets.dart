@@ -39,11 +39,11 @@ class VersusTabContent extends ConsumerWidget {
                 padding: const EdgeInsets.all(20),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    _SectionHeader(label: "🏆 WIN RATE DISTRIBUTION"),
+                    _SectionHeader(label: "WIN RATE DISTRIBUTION"),
                     const SizedBox(height: 16),
                     _WinRatePieChart(data: battleData.winnerDistribution),
                     const SizedBox(height: 32),
-                    _SectionHeader(label: "📊 MARGIN OF VICTORY (AVG NODES)"),
+                    _SectionHeader(label: "MARGIN OF VICTORY (AVG NODES)"),
                     const SizedBox(height: 16),
                     _MarginOfVictoryBarChart(data: battleData.winnerDistribution),
                     const SizedBox(height: 100),
@@ -196,101 +196,153 @@ class _MarginOfVictoryBarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 300,
-      padding: const EdgeInsets.all(20),
-      decoration: AppTheme.glassCard(radius: 20),
-      child: BarChart(
-        BarChartData(
-          alignment: BarChartAlignment.spaceAround,
-          maxY: _getMaxY(),
-          barTouchData: BarTouchData(
-            enabled: true,
-            touchTooltipData: BarTouchTooltipData(
-              getTooltipColor: (_) => AppTheme.surfaceHigh,
-              getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                return BarTooltipItem(
-                  '${data[group.x].winner}\n',
-                  const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                  children: [
-                    TextSpan(
-                      text: '${rod.toY.abs().toInt()} nodes saved',
-                      style: const TextStyle(color: AppTheme.accentLight, fontWeight: FontWeight.normal),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          height: 300,
+          padding: const EdgeInsets.all(20),
+          decoration: AppTheme.glassCard(radius: 20),
+          child: BarChart(
+            BarChartData(
+              alignment: BarChartAlignment.spaceAround,
+              maxY: _getMaxY(),
+              barTouchData: BarTouchData(
+                enabled: true,
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipColor: (_) => AppTheme.surfaceHigh,
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    return BarTooltipItem(
+                      '${data[group.x].winner}\n',
+                      const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      children: [
+                        TextSpan(
+                          text: '${rod.toY.abs().toInt()} nodes saved',
+                          style: const TextStyle(color: AppTheme.accentLight, fontWeight: FontWeight.normal),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              titlesData: FlTitlesData(
+                show: true,
+                bottomTitles: AxisTitles(
+                  axisNameWidget: const Text(
+                    'WINNER ALGORITHM',
+                    style: TextStyle(color: AppTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                  ),
+                  axisNameSize: 20,
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, meta) {
+                      if (value < 0 || value >= data.length) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Text(
+                          data[value.toInt()].winner,
+                          style: const TextStyle(color: AppTheme.textMuted, fontSize: 10),
+                        ),
+                      );
+                    },
+                    reservedSize: 30,
+                  ),
+                ),
+                leftTitles: AxisTitles(
+                  axisNameWidget: const Text(
+                    'NODES SAVED',
+                    style: TextStyle(color: AppTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                  ),
+                  axisNameSize: 20,
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    getTitlesWidget: (value, meta) {
+                      return Text(
+                        value.toInt().toString(),
+                        style: const TextStyle(color: AppTheme.textMuted, fontSize: 10),
+                      );
+                    },
+                    reservedSize: 40,
+                  ),
+                ),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              ),
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                getDrawingHorizontalLine: (value) => FlLine(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  strokeWidth: 1,
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              barGroups: data.asMap().entries.map((entry) {
+                final index = entry.key;
+                final stat = entry.value;
+                final margin = stat.avgNodesDiff.abs();
+                final maxY = _getMaxY();
+                final visualValue = margin > 0 ? (margin < maxY * 0.05 ? maxY * 0.05 : margin) : 0.0;
+
+                return BarChartGroupData(
+                  x: index,
+                  barRods: [
+                    BarChartRodData(
+                      toY: visualValue,
+                      color: _getColorForIndex(index),
+                      width: 16,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                      backDrawRodData: BackgroundBarChartRodData(
+                        show: margin > 0,
+                        toY: maxY,
+                        color: AppTheme.surfaceVariant.withValues(alpha: 0.15),
+                      ),
                     ),
                   ],
                 );
-              },
+              }).toList(),
             ),
           ),
-          titlesData: FlTitlesData(
-            show: true,
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, meta) {
-                  if (value < 0 || value >= data.length) return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      data[value.toInt()].winner,
-                      style: const TextStyle(color: AppTheme.textMuted, fontSize: 10),
-                    ),
-                  );
-                },
-                reservedSize: 30,
-              ),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, meta) {
-                  return Text(
-                    value.toInt().toString(),
-                    style: const TextStyle(color: AppTheme.textMuted, fontSize: 10),
-                  );
-                },
-                reservedSize: 40,
-              ),
-            ),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          ),
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            getDrawingHorizontalLine: (value) => FlLine(
-              color: Colors.white.withValues(alpha: 0.1),
-              strokeWidth: 1,
-            ),
-          ),
-          borderData: FlBorderData(show: false),
-          barGroups: data.asMap().entries.map((entry) {
-            final index = entry.key;
-            final stat = entry.value;
-            // avgNodesDiff is negative if the winner used fewer nodes, we want to show it as a positive margin
-            final margin = stat.avgNodesDiff.abs();
-            return BarChartGroupData(
-              x: index,
-              barRods: [
-                BarChartRodData(
-                  toY: margin,
-                  color: AppTheme.accent,
-                  width: 16,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: data.asMap().entries.map((entry) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: _getColorForIndex(entry.key),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  entry.value.winner,
+                  style: const TextStyle(fontSize: 10, color: AppTheme.textMuted),
                 ),
               ],
             );
           }).toList(),
         ),
-      ),
+      ],
     );
   }
 
+  Color _getColorForIndex(int index) {
+    final colors = [AppTheme.accent, AppTheme.cyan, AppTheme.success, AppTheme.warning, AppTheme.error];
+    return colors[index % colors.length];
+  }
+
   double _getMaxY() {
-    double max = 0;
+    double maxVal = 0;
     for (var stat in data) {
-      if (stat.avgNodesDiff.abs() > max) max = stat.avgNodesDiff.abs();
+      if (stat.avgNodesDiff.abs() > maxVal) maxVal = stat.avgNodesDiff.abs();
     }
-    return max * 1.2; // Add some headroom
+    return maxVal < 10 ? 10.0 : maxVal * 1.2; // Add some headroom
   }
 }

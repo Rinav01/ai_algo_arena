@@ -18,10 +18,10 @@ class _AlgorithmTabsWidgetState extends State<AlgorithmTabsWidget> {
   late String _selectedAlgorithm;
 
   final algorithms = const [
-    {'name': 'BFS', 'icon': '📊', 'fullName': 'Breadth-First Search'},
-    {'name': 'DFS', 'icon': '🔗', 'fullName': 'Depth-First Search'},
-    {'name': 'A*', 'icon': '🚀', 'fullName': 'A* Search'},
-    {'name': 'Dijkstra', 'icon': '🔍', 'fullName': 'Dijkstra\'s Algorithm'},
+    {'name': 'BFS', 'fullName': 'Breadth-First Search'},
+    {'name': 'DFS', 'fullName': 'Depth-First Search'},
+    {'name': 'A*', 'fullName': 'A* Search'},
+    {'name': 'Dijkstra', 'fullName': 'Dijkstra\'s Algorithm'},
   ];
 
   @override

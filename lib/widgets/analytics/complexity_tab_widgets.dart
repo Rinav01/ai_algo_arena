@@ -38,7 +38,7 @@ class ComplexityTabContent extends ConsumerWidget {
                 padding: const EdgeInsets.all(20),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    _SectionHeader(label: "🧠 BIG-O HEURISTIC COMPLEXITY"),
+                    _SectionHeader(label: "BIG-O HEURISTIC COMPLEXITY"),
                     const SizedBox(height: 8),
                     Text(
                       "Time complexity vs Obstacle Density. Spot exponential explosion visually.",

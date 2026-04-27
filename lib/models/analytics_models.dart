@@ -24,9 +24,9 @@ class SummaryData {
     
     return SummaryData(
       algorithm: json['algorithm'] ?? 'Unknown',
-      avgNodes: (json['avgNodes'] ?? metrics['nodes'] ?? 0).toDouble(),
-      avgTime: (json['avgTime'] ?? metrics['time'] ?? 0).toDouble(),
-      runCount: json['totalRuns'] ?? json['count'] ?? metrics['runs'] ?? 0,
+      avgNodes: (json['avgNodes'] ?? metrics['nodes'] ?? metrics['avgNodes'] ?? metrics['totalNodes'] ?? 0).toDouble(),
+      avgTime: (json['avgTime'] ?? metrics['time'] ?? metrics['avgTime'] ?? metrics['durationMs'] ?? 0).toDouble(),
+      runCount: json['totalRuns'] ?? json['count'] ?? metrics['runs'] ?? metrics['count'] ?? 0,
     );
   }
 }
@@ -194,7 +194,7 @@ class BattleInsightData {
 
   factory BattleInsightData.fromJson(Map<String, dynamic> json) {
     return BattleInsightData(
-      totalBattles: json['totalBattles'] ?? 0,
+      totalBattles: (json['totalBattles'] ?? json['count'] ?? 0) as int,
       winnerDistribution: (json['winnerDistribution'] as List? ?? [])
           .map((w) => WinnerStat.fromJson(w))
           .toList(),

@@ -1,4 +1,4 @@
-# 🌌 Algo Arena: High-Performance AI Visualizer
+# Algo Arena: High-Performance AI Visualizer
 
 [![Flutter](https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/dart-%230175C2.svg?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev)
@@ -10,29 +10,29 @@
 
 ---
 
-## ❓ Why Algo Arena?
+## Why Algo Arena?
 
 Most algorithm visualizers focus solely on education and lack real-world benchmarking capabilities. They show *how* an algorithm works, but not *how well* it performs under stress.
 
 **Algo Arena bridges that gap** by acting as a:
-- 🔬 **Performance Lab**: Stress-test algorithms on complex, user-defined topologies.
-- 📊 **Analytics Platform**: Quantify search behavior with multi-dimensional metrics.
-- ⚙️ **Engineering Tool**: Analyze optimization trade-offs (e.g., Heuristic weight vs. Search time).
+- **Performance Lab**: Stress-test algorithms on complex, user-defined topologies.
+- **Analytics Platform**: Quantify search behavior with multi-dimensional metrics.
+- **Engineering Tool**: Analyze optimization trade-offs (e.g., Heuristic weight vs. Search time).
 
 ---
 
-## 🧩 Engineering Challenges Solved
+## Engineering Challenges Solved
 
 Building a high-performance visualizer in a single-threaded UI environment presented significant hurdles:
 
-- 🚫 **UI Lag during High-Frequency Updates**: Solved via **Message Batching** (100 steps/msg) and **Isolate Staggering** to prevent CPU spikes.
-- 🔁 **Heavy Computation Blocking Main Thread**: Offloaded all pathfinding solvers to background **Dart Isolates**, maintaining a consistent 60 FPS.
-- 📉 **Noisy Analytics Data**: Designed a **Rule-Based Insight Filtering System** to extract high-signal trends from thousands of raw data points.
-- 🧠 **Comparison Complexity**: Designed a **Synchronized Battle Execution Engine** that ensures two independent solvers run on identical grid states with zero cross-talk.
+- **UI Lag during High-Frequency Updates**: Solved via **Message Batching** (100 steps/msg) and **Isolate Staggering** to prevent CPU spikes.
+- **Heavy Computation Blocking Main Thread**: Offloaded all pathfinding solvers to background **Dart Isolates**, maintaining a consistent 60 FPS.
+- **Noisy Analytics Data**: Designed a **Rule-Based Insight Filtering System** to extract high-signal trends from thousands of raw data points.
+- **Comparison Complexity**: Designed a **Synchronized Battle Execution Engine** that ensures two independent solvers run on identical grid states with zero cross-talk.
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 ### Full System Data Flow
 ```mermaid
@@ -70,15 +70,15 @@ graph TD
 
 ---
 
-## 📊 Intelligent Analytics & Benchmark Mode
+## Intelligent Analytics & Benchmark Mode
 
-### ⚔️ Benchmark Mode (Algorithm Battle)
+### Benchmark Mode (Algorithm Battle)
 Run two algorithms in parallel to compare efficiency in real-time. The system ensures:
 - **Identical Initial State**: Same grid, start/end points, and weights.
 - **Isolated Execution**: No resource contention between solvers.
 - **Synchronized Playback**: View step-by-step progress side-by-side.
 
-### 📈 Metrics Tracked
+### Metrics Tracked
 Every run is quantified using the following engineering metrics:
 - **Nodes Explored**: Total search space visited.
 - **Path Length**: Optimality of the final solution.
@@ -89,7 +89,7 @@ Every run is quantified using the following engineering metrics:
 
 ---
 
-## 🌐 API Contract (Insight Cloud)
+## API Contract (Insight Cloud)
 
 Algo Arena integrates with a cloud-based analytics engine to provide longitudinal trend analysis.
 
@@ -121,22 +121,22 @@ Returns generated insights from the 5-Engine Rule System.
 
 ---
 
-## 🆚 How This Stands Out
+## How This Stands Out
 
 | Feature | Algo Arena | Typical Visualizers |
 | :--- | :---: | :---: |
-| **Real-time Analytics** | ✅ | ❌ |
-| **Algorithm Benchmarking** | ✅ | ❌ |
-| **Isolate-Based Execution** | ✅ | ❌ |
-| **Insight Generation** | ✅ | ❌ |
-| **Replay System** | ✅ | ⚠️ Limited |
+| **Real-time Analytics** | [Yes] | [No] |
+| **Algorithm Benchmarking** | [Yes] | [No] |
+| **Isolate-Based Execution** | [Yes] | [No] |
+| **Insight Generation** | [Yes] | [No] |
+| **Replay System** | [Yes] | [Partial] |
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 ```
 
-📱 Frontend (Flutter)
+Frontend (Flutter)
 
 lib/
 ├── core/                       # Foundation & Architectures
@@ -211,7 +211,9 @@ lib/
 
 ```
 
-## 🔌 Extensibility
+---
+
+## Extensibility
 Designed for growth, Algo Arena supports easy extensions:
 - **New Algorithms**: Implement `problem_definition.dart` to add any search solver.
 - **New Analytics Rules**: Plug additional logic into the 5-Engine Backend.
@@ -219,7 +221,7 @@ Designed for growth, Algo Arena supports easy extensions:
 
 ---
 
-## 🛣️ Roadmap
+## Roadmap
 - [ ] **Web Version**: High-performance Flutter Web support.
 - [ ] **Multi-Agent Simulation**: Visualizing concurrent agent pathfinding.
 - [ ] **AI-Based Learning**: Automated heuristic tuning based on grid data.
@@ -227,14 +229,14 @@ Designed for growth, Algo Arena supports easy extensions:
 
 ---
 
-## 🚀 Deployment & Takeaways
+## Deployment & Takeaways
 
 ### Deployment Notes
 - **Frontend**: Flutter (Profile/Release mode optimized for Skia/Impeller).
 - **Backend**: Node.js Express (Stateless, scalable analytics pipeline).
 - **Database**: MongoDB Atlas (Time-series optimization for run data).
 
-### 🏁 Key Takeaways
+### Key Takeaways
 Algo Arena is not just a visualizer—it is a **Performance Engineering Platform**. It showcases:
 - **Advanced State Management**: Leveraging Riverpod for decoupled UI/Logic.
 - **Systems Thinking**: Designing multi-process data flows via Isolates.
@@ -242,7 +244,7 @@ Algo Arena is not just a visualizer—it is a **Performance Engineering Platform
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Installation
 ```bash
@@ -254,5 +256,5 @@ flutter run --release
 
 ---
 
-## 📜 License
-Distributed under the **MIT License**. Created with ❤️ by [Rinav](https://github.com/Rinav01).
+## License
+Distributed under the **MIT License**. Created by [Rinav](https://github.com/Rinav01).

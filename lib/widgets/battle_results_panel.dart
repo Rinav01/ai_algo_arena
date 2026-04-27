@@ -80,7 +80,7 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
           decoration: AppTheme.glassCardAccent(radius: 20),
           child: Column(
             children: [
-              // 🏆 Elite Winner Banner
+              // Elite Winner Banner
               _buildWinnerBanner(result, isAWinner),
 
               Padding(
@@ -132,7 +132,7 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('🏆', style: TextStyle(fontSize: 28)),
+              const Icon(Icons.emoji_events_outlined, color: AppTheme.accent, size: 32),
               const SizedBox(width: 12),
               Text(
                 '${result.winner.algorithmName} WINS BY ${result.victoryMargin.toStringAsFixed(1)}%',
@@ -144,7 +144,7 @@ class _BattleResultsPanelState extends State<BattleResultsPanel>
                 ),
               ),
               const SizedBox(width: 12),
-              const Text('🏆', style: TextStyle(fontSize: 28)),
+              const Icon(Icons.emoji_events_outlined, color: AppTheme.accent, size: 32),
             ],
           ),
           const SizedBox(height: 4),

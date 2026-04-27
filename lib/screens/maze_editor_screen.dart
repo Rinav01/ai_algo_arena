@@ -179,25 +179,25 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
           runSpacing: 12,
           children: [
             _buildToolButton(
-              icon: '🧱',
+              icon: Icons.view_in_ar_outlined,
               label: 'Wall',
               isSelected: _controller.selectedTool == PaintTool.wall,
               onTap: () => _controller.setTool(PaintTool.wall),
             ),
             _buildToolButton(
-              icon: '▶',
+              icon: Icons.play_arrow_outlined,
               label: 'Start',
               isSelected: _controller.selectedTool == PaintTool.start,
               onTap: () => _controller.setTool(PaintTool.start),
             ),
             _buildToolButton(
-              icon: '🚩',
+              icon: Icons.flag_outlined,
               label: 'End',
               isSelected: _controller.selectedTool == PaintTool.goal,
               onTap: () => _controller.setTool(PaintTool.goal),
             ),
             _buildToolButton(
-              icon: '🗑',
+              icon: Icons.delete_outline,
               label: 'Clear',
               isSelected: _controller.selectedTool == PaintTool.erase,
               onTap: () => _controller.setTool(PaintTool.erase),
@@ -228,7 +228,7 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
   }
 
   Widget _buildToolButton({
-    required String icon,
+    required IconData icon,
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
@@ -248,7 +248,11 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
         ),
         child: Column(
           children: [
-            Text(icon, style: const TextStyle(fontSize: 24)),
+            Icon(
+              icon,
+              size: 24,
+              color: isSelected ? Colors.black : Colors.white,
+            ),
             const SizedBox(height: 4),
             Text(
               label,
