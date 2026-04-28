@@ -1,3 +1,4 @@
+import 'package:algo_arena/widgets/skeleton_loaders.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
@@ -367,76 +368,83 @@ class _NQueensVisualizerScreenState extends ConsumerState<NQueensVisualizerScree
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: !isShellReady 
+            ? const Center(child: CircularProgressIndicator())
+            : _buildFullContent(),
+      ),
+    );
+  }
+
+  Widget _buildFullContent() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          VisualizerHeader(
+            title: 'N-Queens',
+            subtitle: 'CSP VISUALIZER',
+            onBackTap: () => Navigator.pop(context),
+            comparisonInfos: AlgoInfo.nQueens,
+            initialKey: selectedMode.label,
+          ),
+          const SizedBox(height: 20),
+          Row(
             children: [
-              VisualizerHeader(
-                title: 'N-Queens',
-                subtitle: 'CSP VISUALIZER',
-                onBackTap: () => Navigator.pop(context),
-                comparisonInfos: AlgoInfo.nQueens,
-                initialKey: selectedMode.label,
+              Expanded(
+                child: GlassStatCard(
+                  label: 'STEPS',
+                  value: stepCount,
+                ),
               ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: GlassStatCard(
-                      label: 'STEPS',
-                      value: stepCount,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GlassStatCard(
-                      label: 'BACKTRACKS',
-                      value: solver != null ? nodesExplored - stepCount : 0,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GlassStatCard(
-                      label: 'ROW',
-                      value: currentState.placement.indexOf(-1) == -1 ? boardSize : currentState.placement.indexOf(-1) + 1,
-                    ),
-                  ),
-                ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: GlassStatCard(
+                  label: 'BACKTRACKS',
+                  value: solver != null ? nodesExplored - stepCount : 0,
+                ),
               ),
-              const SizedBox(height: 14),
-              Center(
-                child:
-                    StatusBanner(
-                          message: statusMessage,
-                          isSolved: isSolved,
-                          isSolving: isSolving,
-                        ).animate(
-                          target: isSolved ? 1 : 0,
-                          onPlay: (c) => isSolved ? c.repeat(reverse: true) : c.stop(),
-                        )
-                        .shimmer(duration: 1200.ms, color: AppTheme.success.withValues(alpha: 0.3))
-                        .animate(
-                          target: isSolving ? 1 : 0,
-                          onPlay: (c) => isSolving ? c.repeat(reverse: true) : c.stop(),
-                        )
-                        .shimmer(duration: 2.seconds, color: AppTheme.warning.withValues(alpha: 0.2))
-                        .shake(hz: 3, curve: Curves.easeInOut),
-              ),
-              const SizedBox(height: 20),
-              _buildBoard(),
-              const SizedBox(height: 24),
-              VisualizerControls(
-                isSolving: isSolving,
-                isSolved: isSolved,
-                stepCount: stepCount,
-                onSolve: _showSolverConfig,
-                onPauseResume: _pauseResumeCustom,
-                onClear: _resetBoard,
+              const SizedBox(width: 10),
+              Expanded(
+                child: GlassStatCard(
+                  label: 'ROW',
+                  value: currentState.placement.indexOf(-1) == -1 ? boardSize : currentState.placement.indexOf(-1) + 1,
+                ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 14),
+          Center(
+            child: StatusBanner(
+              message: statusMessage,
+              isSolved: isSolved,
+              isSolving: isSolving,
+            ).animate(
+              target: isSolved ? 1 : 0,
+              onPlay: (c) => isSolved ? c.repeat(reverse: true) : c.stop(),
+            )
+            .shimmer(duration: 1200.ms, color: AppTheme.success.withValues(alpha: 0.3))
+            .animate(
+              target: isSolving ? 1 : 0,
+              onPlay: (c) => isSolving ? c.repeat(reverse: true) : c.stop(),
+            )
+            .shimmer(duration: 2.seconds, color: AppTheme.warning.withValues(alpha: 0.2))
+            .shake(hz: 3, curve: Curves.easeInOut),
+          ),
+          const SizedBox(height: 20),
+          !isGridReady 
+              ? SkeletonGrid(rows: boardSize, columns: boardSize)
+              : _buildBoard().animate().fadeIn(duration: 400.ms),
+          const SizedBox(height: 24),
+          VisualizerControls(
+            isSolving: isSolving,
+            isSolved: isSolved,
+            stepCount: stepCount,
+            onSolve: _showSolverConfig,
+            onPauseResume: _pauseResumeCustom,
+            onClear: _resetBoard,
+          ),
+        ],
       ),
     );
   }

@@ -159,6 +159,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
           // 4. Progress & Stats (Sticky to bottom)
           _buildResponsiveBottomLayout(size),
+
+          // 5. Shader Prewarmer (Invisible but forces GPU compilation)
+          const _ShaderPrewarmer(),
         ],
       ),
     );
@@ -726,3 +729,32 @@ class ParticlePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
+/// Invisible widget that renders common expensive UI elements once
+/// during the splash screen to pre-compile GPU shaders.
+class _ShaderPrewarmer extends StatelessWidget {
+  const _ShaderPrewarmer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: 0.001, // Nearly invisible but still part of the paint tree
+      child: SizedBox(
+        width: 1,
+        height: 1,
+        child: Stack(
+          children: [
+            // Prewarm Glass Shader
+            Container(decoration: AppTheme.glassDecoration),
+            // Prewarm Accent Glass Shader
+            Container(decoration: AppTheme.glassDecorationAccent),
+            // Prewarm standard glass card
+            Container(decoration: AppTheme.glassCard()),
+            // Prewarm a blur filter
+            BackdropFilter(filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), child: Container()),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

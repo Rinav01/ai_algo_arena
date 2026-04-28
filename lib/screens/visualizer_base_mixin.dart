@@ -28,6 +28,13 @@ mixin VisualizerBaseMixin<T extends ConsumerStatefulWidget, S> on ConsumerState<
   String statusMessage = 'Ready to solve';
   List<FlSpot> perfData = [const FlSpot(0, 0)];
 
+  // --- Hydration State ---
+  bool isShellReady = false;
+  bool isGridReady = false;
+  
+  /// Prevents animations from starting during the "Cold Start" window
+  bool get shouldAnimate => isGridReady;
+
   // Vsync-based throttle: buffer the latest step and flush once per frame
   AlgorithmStep<S>? _pendingStep;
   bool _frameCallbackScheduled = false;
@@ -39,6 +46,17 @@ mixin VisualizerBaseMixin<T extends ConsumerStatefulWidget, S> on ConsumerState<
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
+
+    // Stage 1: Shell Ready (Instant)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => isShellReady = true);
+    });
+
+    // Stage 2: Grid Ready (Progressive Hydration)
+    // Delay slightly longer than navigation transition to ensure zero contention.
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) setState(() => isGridReady = true);
+    });
   }
 
   @override

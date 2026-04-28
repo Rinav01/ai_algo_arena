@@ -1,4 +1,5 @@
 import 'package:algo_arena/models/algo_info.dart';
+import 'package:algo_arena/widgets/skeleton_loaders.dart';
 import 'package:algo_arena/widgets/visualizer_widgets.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
@@ -52,9 +53,6 @@ class _EightPuzzleVisualizerScreenState
     statusMessage,
   );
 
-  // Deferred loading: prevent ANR by not building heavy widgets on first frame
-  bool _isContentReady = false;
-
   @override
   String get algorithmId => selectedAlgorithm;
 
@@ -67,12 +65,6 @@ class _EightPuzzleVisualizerScreenState
       value: 1.0,
     );
     _resetPuzzle();
-
-    // Defer heavy content build to avoid ANR during navigation transition.
-    // Use a 300ms delay to let the route transition animation finish first.
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) setState(() => _isContentReady = true);
-    });
   }
 
   @override
@@ -413,37 +405,9 @@ class _EightPuzzleVisualizerScreenState
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: _isContentReady
-            ? _buildFullContent()
-            : _buildLoadingSkeleton(),
-      ),
-    );
-  }
-
-  /// Lightweight placeholder shown during the first frame to prevent ANR.
-  Widget _buildLoadingSkeleton() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 32,
-            height: 32,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: AppTheme.accent.withValues(alpha: 0.5),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Loading visualizer...',
-            style: TextStyle(
-              color: AppTheme.textMuted,
-              fontSize: 12,
-              letterSpacing: 1,
-            ),
-          ),
-        ],
+        child: !isShellReady 
+            ? const Center(child: CircularProgressIndicator())
+            : _buildFullContent(),
       ),
     );
   }
@@ -619,7 +583,11 @@ class _EightPuzzleVisualizerScreenState
                 child: Container(
                   padding: EdgeInsets.all(12.0),
                   decoration: AppTheme.glassCardAccent(radius: 16),
-                  child: _buildPuzzleGrid(currentState, isInteractive: true),
+                  child: !isGridReady 
+                      ? const SkeletonEightPuzzle()
+                      : _buildPuzzleGrid(currentState, isInteractive: true)
+                        .animate()
+                        .fadeIn(duration: 400.ms),
                 ),
               ),
             ],

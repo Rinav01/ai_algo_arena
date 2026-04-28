@@ -36,9 +36,11 @@ Building a high-performance visualizer in a single-threaded UI environment prese
 
 - **UI Lag during High-Frequency Updates**: Solved via **Message Batching** (100 steps/msg) and **Isolate Staggering** to prevent CPU spikes.
 - **Heavy Computation Blocking Main Thread**: Offloaded all pathfinding solvers to background **Dart Isolates**, maintaining a consistent 60 FPS.
+- **Framerate Stability via Widget Caching & Deferred Loading**: Implemented a `ConfigHash`-based rebuild system and a 300ms deferred loading strategy to decouple heavy UI initialization from navigation transitions, eliminating ANR (Application Not Responding) risks on mobile hardware.
 - **Visualizing Mathematical Phase Space**: Developed a live-updating, coordinate-mapped graph for the Water Jug problem to represent state transitions as geometric trajectories.
 - **Noisy Analytics Data**: Designed a **Rule-Based Insight Filtering System** to extract high-signal trends from thousands of raw data points.
 - **Comparison Complexity**: Designed a **Synchronized Battle Execution Engine** that ensures two independent solvers run on identical grid states with zero cross-talk.
+- **High-Fidelity State-Driven Animations**: Engineered a dual-phase animation system (Pulse/Shake for Solving, Shimmer/Breathe for Victory) that uses declarative triggers to provide visual feedback without increasing CPU load during algorithm execution.
 
 ---
 
@@ -139,6 +141,8 @@ Returns generated insights from the 5-Engine Rule System.
 | **Algorithm Benchmarking** | [Yes] | [No] |
 | **Isolate-Based Execution** | [Yes] | [No] |
 | **Insight Generation** | [Yes] | [No] |
+| **Jank-Free 60 FPS Search** | [Yes] | [No] |
+| **Premium State Animations** | [Yes] | [No] |
 | **Replay System** | [Yes] | [Partial] |
 
 ---
@@ -235,7 +239,8 @@ Designed for growth, Algo Arena supports easy extensions:
 ---
 
 ## Roadmap
-- [ ] **Web Version**: High-performance Flutter Web support.
+- [x] **Web Version**: High-performance Flutter Web support.
+- [x] **Premium Interaction System**: State-driven visual feedback and animations.
 - [ ] **Multi-Agent Simulation**: Visualizing concurrent agent pathfinding.
 - [ ] **AI-Based Learning**: Automated heuristic tuning based on grid data.
 - [ ] **Real-Time Collaboration**: Shared grid sessions via WebSockets.

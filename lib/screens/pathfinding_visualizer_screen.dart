@@ -3,6 +3,7 @@ import 'package:algo_arena/services/map_persistence.dart';
 import 'package:algo_arena/widgets/algorithm_recommendation_card.dart';
 import 'package:algo_arena/screens/algorithm_battle_screen.dart';
 import 'package:algo_arena/widgets/grid_visualizer_canvas.dart';
+import 'package:algo_arena/widgets/skeleton_loaders.dart';
 import 'package:algo_arena/widgets/visualizer_widgets.dart';
 import 'package:algo_arena/core/problem_definition.dart';
 import 'package:flutter/material.dart';
@@ -73,9 +74,6 @@ class _PathfindingVisualizerScreenState
     _controller.selectedTool,
   );
 
-  // Deferred loading: prevent ANR by not building heavy widgets on first frame
-  bool _isContentReady = false;
-
   @override
   String get algorithmId => widget.algorithmId;
 
@@ -84,11 +82,6 @@ class _PathfindingVisualizerScreenState
     super.initState();
     _controller = GridController(rows: 15, columns: 25);
     _initializeProblem();
-
-    // Defer heavy content build to avoid ANR during navigation transition.
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) setState(() => _isContentReady = true);
-    });
   }
 
   @override
@@ -356,37 +349,9 @@ class _PathfindingVisualizerScreenState
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: _isContentReady
-            ? _buildFullContent()
-            : _buildLoadingSkeleton(),
-      ),
-    );
-  }
-
-  /// Lightweight placeholder shown during the first frame to prevent ANR.
-  Widget _buildLoadingSkeleton() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 32,
-            height: 32,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: AppTheme.accent.withValues(alpha: 0.5),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Preparing grid...',
-            style: TextStyle(
-              color: AppTheme.textMuted,
-              fontSize: 12,
-              letterSpacing: 1,
-            ),
-          ),
-        ],
+        child: !isShellReady 
+            ? const Center(child: CircularProgressIndicator())
+            : _buildFullContent(),
       ),
     );
   }
@@ -546,14 +511,16 @@ class _PathfindingVisualizerScreenState
           padding: const EdgeInsets.all(8.0),
           child: AspectRatio(
             aspectRatio: 25 / 15,
-            child: GridVisualizerCanvas(
-              controller: _controller,
-              executor: executor,
-              isInteractive: true,
-              onPointerDown: _handlePointerDown,
-              onPointerUpdate: _handlePointerUpdate,
-              onPointerUp: _handlePointerUp,
-            ),
+            child: !isGridReady 
+                ? SkeletonGrid(rows: _controller.rows, columns: _controller.columns)
+                : GridVisualizerCanvas(
+                    controller: _controller,
+                    executor: executor,
+                    isInteractive: true,
+                    onPointerDown: _handlePointerDown,
+                    onPointerUpdate: _handlePointerUpdate,
+                    onPointerUp: _handlePointerUp,
+                  ).animate().fadeIn(duration: 400.ms),
           ),
         ).animate(
           target: isSolving ? 1 : 0,

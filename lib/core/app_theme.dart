@@ -87,6 +87,10 @@ abstract class AppTheme {
     );
   }
 
+  /// Convenience getters for standard glass decorations
+  static BoxDecoration get glassDecoration => glassCard();
+  static BoxDecoration get glassDecorationAccent => glassCardAccent();
+
   /// Glass card with violet accent glow.
   static BoxDecoration glassCardAccent({double radius = 16}) => glassCard(
     radius: radius,
