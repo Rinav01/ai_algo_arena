@@ -73,14 +73,14 @@ abstract class AppTheme {
       boxShadow: [
         BoxShadow(
           color: Colors.black.withValues(alpha: 0.25),
-          blurRadius: 20,
+          blurRadius: 8,
           spreadRadius: 0,
-          offset: const Offset(0, 8),
+          offset: const Offset(0, 4),
         ),
         if (glowColor != null)
           BoxShadow(
             color: glowColor.withValues(alpha: 0.15),
-            blurRadius: 24,
+            blurRadius: 12,
             spreadRadius: -4,
           ),
       ],

@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:algo_arena/core/app_theme.dart';
 import 'package:algo_arena/core/water_jug_problem.dart';
@@ -65,10 +66,14 @@ class PhaseSpacePainter extends CustomPainter {
     }
 
     // 3. Draw Explored Nodes
-    final exploredPaint = Paint()..color = Colors.white.withValues(alpha: 0.2);
-    for (final state in exploredStates) {
-      final pos = _stateToOffset(state, origin, stepX, stepY);
-      canvas.drawCircle(pos, 3, exploredPaint);
+    if (exploredStates.isNotEmpty) {
+      final exploredPaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.2)
+        ..strokeWidth = 3.0
+        ..strokeCap = StrokeCap.round;
+
+      final points = exploredStates.map((state) => _stateToOffset(state, origin, stepX, stepY)).toList();
+      canvas.drawPoints(ui.PointMode.points, points, exploredPaint);
     }
 
     // 4. Draw Path

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:algo_arena/core/problem_definition.dart';
 import 'package:algo_arena/services/algorithm_executor.dart';
@@ -26,8 +27,10 @@ mixin VisualizerBaseMixin<T extends ConsumerStatefulWidget, S> on ConsumerState<
   double executionSpeed = 1.0;
   String statusMessage = 'Ready to solve';
   List<FlSpot> perfData = [const FlSpot(0, 0)];
-  
-  DateTime lastUiUpdate = DateTime.now();
+
+  // Vsync-based throttle: buffer the latest step and flush once per frame
+  AlgorithmStep<S>? _pendingStep;
+  bool _frameCallbackScheduled = false;
 
   @override
   void initState() {
@@ -80,15 +83,41 @@ mixin VisualizerBaseMixin<T extends ConsumerStatefulWidget, S> on ConsumerState<
     );
 
     try {
+      // Small delay to ensure UI updates (like button state) are rendered 
+      // before blocking the thread with Isolate initialization
+      await Future.delayed(Duration.zero);
       await executor!.start();
       stepSubscription = executor!.stepStream.listen(
         (step) {
           if (!mounted) return;
-          
-          _handleStep(step, isLiveUpdate);
+
+          // Buffer the step — only the latest one matters for UI.
+          // Actual processing happens once per vsync via _flushPendingStep.
+          _pendingStep = step;
+
+          // Always process goal steps immediately to avoid missing them
+          if (step.isGoalReached) {
+            _flushPendingStep();
+            return;
+          }
+
+          // Schedule a frame callback to process this step at the next vsync
+          if (!_frameCallbackScheduled) {
+            _frameCallbackScheduled = true;
+            SchedulerBinding.instance.addPostFrameCallback((_) {
+              _frameCallbackScheduled = false;
+              if (mounted && _pendingStep != null) {
+                _flushPendingStep();
+              }
+            });
+          }
         },
         onDone: () {
           if (mounted) {
+            // Flush any remaining step before marking done
+            if (_pendingStep != null) {
+              _flushPendingStep();
+            }
             setState(() {
               isSolving = false;
               pulseController.stop();
@@ -108,7 +137,12 @@ mixin VisualizerBaseMixin<T extends ConsumerStatefulWidget, S> on ConsumerState<
     }
   }
 
-  void _handleStep(AlgorithmStep<S> step, bool isLiveUpdate) {
+  /// Process the buffered step and update UI exactly once.
+  void _flushPendingStep() {
+    final step = _pendingStep;
+    if (step == null) return;
+    _pendingStep = null;
+
     stepCount = step.stepCount;
     nodesExplored = executor!.exploredSet.length;
     statusMessage = step.message ?? statusMessage;
@@ -127,12 +161,7 @@ mixin VisualizerBaseMixin<T extends ConsumerStatefulWidget, S> on ConsumerState<
       onGoalReached(step);
     }
 
-    // Performance Optimization: Throttle UI updates
-    final now = DateTime.now();
-    if (isLiveUpdate || step.isGoalReached || now.difference(lastUiUpdate) >= const Duration(milliseconds: 32)) {
-      lastUiUpdate = now;
-      setState(() {});
-    }
+    setState(() {});
   }
 
   void pauseResume() {
@@ -159,6 +188,8 @@ mixin VisualizerBaseMixin<T extends ConsumerStatefulWidget, S> on ConsumerState<
     stepSubscription?.cancel();
     stepSubscription = null;
     executor = null;
+    _pendingStep = null;
+    _frameCallbackScheduled = false;
     setState(() {
       stepCount = 0;
       nodesExplored = 0;

@@ -832,12 +832,9 @@ class _NodeGraphPainterWidget extends StatelessWidget {
     return RepaintBoundary(
       child: AnimatedBuilder(
         animation: pulse,
-        builder: (context, child) => Opacity(
-          opacity: pulse.value * 0.06,
-          child: const CustomPaint(
-            painter: _NodeGraphPainter(), // No longer need to pass opacity
-            size: Size(double.infinity, 240),
-          ),
+        builder: (context, child) => CustomPaint(
+          painter: _NodeGraphPainter(opacity: pulse.value * 0.06),
+          size: const Size(double.infinity, 240),
         ),
       ),
     );
@@ -845,7 +842,8 @@ class _NodeGraphPainterWidget extends StatelessWidget {
 }
 
 class _NodeGraphPainter extends CustomPainter {
-  const _NodeGraphPainter();
+  const _NodeGraphPainter({required this.opacity});
+  final double opacity;
 
   static final List<Offset> _nodes = [
     Offset(0.1, 0.15),
@@ -874,9 +872,9 @@ class _NodeGraphPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final linePaint = Paint()
-      ..color = AppTheme.accent.withValues(alpha: 1.0)
+      ..color = AppTheme.accent.withValues(alpha: opacity)
       ..strokeWidth = 1.0;
-    final nodePaint = Paint()..color = AppTheme.accent.withValues(alpha: 1.0);
+    final nodePaint = Paint()..color = AppTheme.accent.withValues(alpha: opacity);
 
     final pts = _nodes
         .map((n) => Offset(n.dx * size.width, n.dy * size.height))
@@ -890,7 +888,7 @@ class _NodeGraphPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_NodeGraphPainter old) => false; // Static drawing, handled by Opacity
+  bool shouldRepaint(_NodeGraphPainter old) => old.opacity != opacity;
 }
 
 void _showComingSoonDialog(BuildContext context, String feature) {

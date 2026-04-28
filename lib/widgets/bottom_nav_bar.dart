@@ -36,19 +36,20 @@ class ArenaBottomNavBar extends StatelessWidget {
         child: SafeArea(
           top: false,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(_items.length, (i) {
               final item = _items[i];
               final isActive = i == currentIndex;
-              return _NavItem(
-                icon: item.icon,
-                label: item.label,
-                isActive: isActive,
-                onTap: () {
-                  if (!isActive) {
-                    Navigator.pushNamed(context, item.route);
-                  }
-                },
+              return Expanded(
+                child: _NavItem(
+                  icon: item.icon,
+                  label: item.label,
+                  isActive: isActive,
+                  onTap: () {
+                    if (!isActive) {
+                      Navigator.pushNamed(context, item.route);
+                    }
+                  },
+                ),
               );
             }),
           ),
@@ -78,7 +79,7 @@ class _NavItem extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOut,
-        padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
         decoration: BoxDecoration(
           color: isActive
               ? AppTheme.accent.withValues(alpha: 0.25)
@@ -100,25 +101,20 @@ class _NavItem extends StatelessWidget {
               color: isActive ? AppTheme.accent : AppTheme.textMuted,
             ),
             const SizedBox(height: 4.0),
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: isActive
-                          ? AppTheme.accentLight
-                          : AppTheme.textMuted,
-                      fontSize: math.min(10.0, 14.0),
-                      letterSpacing: 0.5,
-                    ),
-                  ),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: isActive
+                      ? AppTheme.accentLight
+                      : AppTheme.textMuted,
+                  fontSize: 10.0,
+                  letterSpacing: 0.5,
                 ),
-              ],
+              ),
             ),
           ],
         ),

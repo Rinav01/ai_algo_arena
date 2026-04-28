@@ -7,6 +7,7 @@ import 'package:algo_arena/screens/visualizer_base_mixin.dart';
 import 'package:algo_arena/widgets/visualizer_widgets.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:algo_arena/widgets/water_jug_phase_space.dart';
+import 'package:algo_arena/models/algo_info.dart';
 import 'dart:math' as math;
 
 class WaterJugVisualizerScreen extends ConsumerStatefulWidget {
@@ -39,8 +40,24 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
   List<WaterJugState> historyPath = [];
   Set<WaterJugState> exploredStates = {};
 
+  // Widget caching: static sections only rebuild when config changes
+  Widget? _cachedSettingsCard;
+  Widget? _cachedManualControls;
+  Widget? _cachedAlgoSelector;
+  Widget? _cachedControlPanel;
+  int _lastConfigHash = 0;
+
+  /// Hash of all config state that static widgets depend on
+  int get _configHash => Object.hash(
+    capacityA, capacityB, target, _currentAlgo,
+    isSolving, isSolved, stepCount, executionSpeed,
+  );
+
   // Animation controllers for sloshing
   late AnimationController _sloshController;
+
+  // Deferred loading: prevent ANR by not building heavy widgets on first frame
+  bool _isContentReady = false;
 
   @override
   void initState() {
@@ -49,7 +66,14 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
     _sloshController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
-    )..repeat();
+    );
+    // Don't start repeating immediately - only during solve to save frames
+
+    // Defer heavy content build to avoid ANR during navigation transition.
+    // Use a 300ms delay to let the route transition animation finish first.
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _isContentReady = true);
+    });
   }
 
   @override
@@ -73,6 +97,7 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
 
   @override
   Future<void> onGoalReached(AlgorithmStep<WaterJugState> step) async {
+    _sloshController.stop();
     setState(() {
       statusMessage = 'Goal Reached: Found $target Liters!';
     });
@@ -83,20 +108,19 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
     final state = step.currentState;
     if (state == null) return;
     
-    setState(() {
-      currentJugA = state.jugA;
-      currentJugB = state.jugB;
-      currentOp = state.operation;
-      
-      // Update Telemetry
-      nodesExpanded = step.stepCount;
-      frontierSize = step.frontierSize ?? 0;
-      historyPath = step.path;
-      
-      if (executor != null) {
-        exploredStates = executor!.exploredSet.cast<WaterJugState>();
-      }
-    });
+    // Update local variables WITHOUT calling setState here.
+    // The mixin's _handleStep will call setState() at 30fps to throttle updates.
+    currentJugA = state.jugA;
+    currentJugB = state.jugB;
+    currentOp = state.operation;
+    
+    nodesExpanded = step.stepCount;
+    frontierSize = step.frontierSize ?? 0;
+    historyPath = step.path;
+    
+    if (executor != null) {
+      exploredStates = executor!.exploredSet.cast<WaterJugState>();
+    }
   }
 
   @override
@@ -106,6 +130,7 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
 
   void _reset() {
     resetBase();
+    _sloshController.stop();
     setState(() {
       currentJugA = 0;
       currentJugB = 0;
@@ -286,7 +311,7 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
           // Background Gradient
           Positioned.fill(
             child: Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -302,30 +327,17 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
           SafeArea(
             child: Column(
               children: [
-                _buildHeader(),
+                VisualizerHeader(
+                  title: 'Water Jug Problem',
+                  subtitle: 'STATE-SPACE VIZ',
+                  onBackTap: () => Navigator.pop(context),
+                  comparisonInfos: AlgoInfo.waterJug,
+                  initialKey: _currentAlgo,
+                ),
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        _buildSettingsCard(),
-                        const SizedBox(height: 30),
-                        _buildVisualizerArea(),
-                        const SizedBox(height: 20),
-                        _buildPhaseSpaceAndStats(),
-                        const SizedBox(height: 20),
-                        _buildManualControls(),
-                        const SizedBox(height: 20),
-                        _buildControlPanel(),
-                        const SizedBox(height: 20),
-                        StatusBanner(
-                          message: statusMessage,
-                          isSolving: isSolving,
-                          isSolved: isSolved,
-                        ),
-                      ],
-                    ),
-                  ),
+                  child: _isContentReady
+                      ? _buildFullContent()
+                      : _buildLoadingSkeleton(),
                 ),
               ],
             ),
@@ -335,71 +347,122 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      child: Row(
+  /// Lightweight placeholder shown during the first frame to prevent ANR.
+  Widget _buildLoadingSkeleton() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppTheme.accent.withValues(alpha: 0.5),
+            ),
           ),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Water Jug Problem',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              Text(
-                'State-Space Search Visualization',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textMuted,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ],
+          const SizedBox(height: 16),
+          Text(
+            'Loading visualizer...',
+            style: TextStyle(
+              color: AppTheme.textMuted,
+              fontSize: 12,
+              letterSpacing: 1,
+            ),
           ),
-          const Spacer(),
-          _buildAlgoSelector(),
         ],
       ),
     );
   }
 
-  Widget _buildAlgoSelector() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _currentAlgo,
-          dropdownColor: AppTheme.surfaceHighest,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.accent),
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          items: ['BFS', 'A*'].map((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
-          onChanged: isSolving ? null : (val) {
-            if (val != null) {
-              setState(() {
-                _currentAlgo = val;
-              });
-            }
-          },
+  /// Full content built after the defer period.
+  /// Uses ListView for viewport culling — off-screen sections don't build.
+  Widget _buildFullContent() {
+    // Rebuild cached widgets only when their dependencies change
+    final currentConfigHash = _configHash;
+    if (currentConfigHash != _lastConfigHash) {
+      _lastConfigHash = currentConfigHash;
+      _cachedAlgoSelector = _buildAlgoSelector();
+      _cachedSettingsCard = _buildSettingsCard();
+      _cachedManualControls = RepaintBoundary(child: _buildManualControls());
+      _cachedControlPanel = RepaintBoundary(child: _buildControlPanel());
+    }
+
+    // ListView provides viewport culling: only visible items are built/painted.
+    // This prevents all sections from being laid out + painted on every frame
+    // during scroll, which was the root cause of ANR on high-res debug builds.
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        _cachedAlgoSelector!,
+        const SizedBox(height: 20),
+        _cachedSettingsCard!,
+        const SizedBox(height: 30),
+        _buildVisualizerArea(),
+        const SizedBox(height: 20),
+        _buildPhaseSpaceAndStats(),
+        const SizedBox(height: 20),
+        _cachedManualControls!,
+        const SizedBox(height: 20),
+        _cachedControlPanel!,
+        const SizedBox(height: 20),
+        StatusBanner(
+          message: statusMessage,
+          isSolving: isSolving,
+          isSolved: isSolved,
         ),
-      ),
+      ],
+    );
+  }
+
+
+  Widget _buildAlgoSelector() {
+    return Row(
+      children: [
+        Text(
+          'SELECT ALGORITHM:',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: AppTheme.textMuted,
+            letterSpacing: 1.5,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: AppTheme.glassCard(radius: 12),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _currentAlgo,
+                isExpanded: true,
+                dropdownColor: AppTheme.surfaceHighest,
+                icon: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: AppTheme.accent,
+                ),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+                items: ['BFS', 'A*'].map((String value) {
+                  return DropdownMenuItem<String>(value: value, child: Text(value));
+                }).toList(),
+                onChanged:
+                    isSolving
+                        ? null
+                        : (val) {
+                          if (val != null) {
+                            setState(() {
+                              _currentAlgo = val;
+                            });
+                          }
+                        },
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -485,16 +548,20 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
             children: [
               IconButton(
                 visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.remove_rounded, size: 18),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                icon: const Icon(Icons.remove_rounded, size: 16),
                 onPressed: value > 1 ? () => onChanged(value - 1) : null,
               ),
               Text(
                 '$value',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
               IconButton(
                 visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.add_rounded, size: 18),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                icon: const Icon(Icons.add_rounded, size: 16),
                 onPressed: value < 15 ? () => onChanged(value + 1) : null,
               ),
             ],
@@ -506,8 +573,8 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
 
   Widget _buildVisualizerArea() {
     // Determine if we are pouring
-    final isPouringAtoB = currentOp.contains('A to B');
-    final isPouringBtoA = currentOp.contains('B to A');
+    final isPouringAtoB = currentOp.contains('Pour A ➔ B') || currentOp.contains('A to B');
+    final isPouringBtoA = currentOp.contains('Pour B ➔ A') || currentOp.contains('B to A');
 
     return Container(
       height: 340,
@@ -558,7 +625,7 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
                 ),
               ],
             ),
-          ).animate().fadeIn(),
+          ),
 
           // 3. Jugs Area
           Padding(
@@ -623,7 +690,7 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
           _buildHUDItem('FRONTIER', '$frontierSize', AppTheme.cyan),
         ],
       ),
-    ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.2, end: 0);
+    );
   }
 
   Widget _buildHUDItem(String label, String value, Color color) {
@@ -656,13 +723,6 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
             color: AppTheme.surfaceHighest.withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: AppTheme.accent.withValues(alpha: 0.2)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -686,7 +746,7 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
           ),
         ),
       ),
-    ).animate(key: ValueKey(currentOp)).scale(duration: 200.ms, curve: Curves.easeOutBack).fadeIn();
+    );
   }
 
   void _showStepsHistory() {
@@ -891,15 +951,9 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
               ? [AppTheme.cyan, AppTheme.accent]
               : [AppTheme.accent, AppTheme.cyan],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: (aToB ? AppTheme.cyan : AppTheme.accent).withValues(alpha: 0.5),
-              blurRadius: 8,
-            ),
-          ],
           borderRadius: BorderRadius.circular(2),
         ),
-      ).animate().scaleX(begin: 0, end: 1, duration: 300.ms),
+      ),
     );
   }
 
@@ -1023,54 +1077,40 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
                 ),
               ),
               
-              // 2. Water Fill with Sloshing
-              AnimatedBuilder(
-                animation: _sloshController,
-                builder: (context, child) {
-                  // Subtle sloshing calculation
-                  double slosh = math.sin(_sloshController.value * 2 * math.pi) * 2 * (fillPercentage > 0 ? 1 : 0);
-                  
-                  return AnimatedContainer(
-                    duration: 600.ms,
-                    curve: Curves.easeInOutSine,
-                    width: 86,
-                    height: 156 * fillPercentage,
-                    margin: const EdgeInsets.only(bottom: 2),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          color.withValues(alpha: 0.6),
-                          color.withValues(alpha: 0.9),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: const Radius.circular(22),
-                        bottomRight: const Radius.circular(22),
-                        topLeft: Radius.circular(fillPercentage > 0.9 ? 22 : 4 + slosh.abs()),
-                        topRight: Radius.circular(fillPercentage > 0.9 ? 22 : 4 + slosh.abs()),
-                      ),
-                    ),
-                    child: child,
-                  );
-                },
+              // 2. Water Fill - uses a simple AnimatedContainer (no per-frame sloshing)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeInOutSine,
+                width: 86,
+                height: 156 * fillPercentage,
+                margin: const EdgeInsets.only(bottom: 2),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      color.withValues(alpha: 0.6),
+                      color.withValues(alpha: 0.9),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: const Radius.circular(22),
+                    bottomRight: const Radius.circular(22),
+                    topLeft: Radius.circular(fillPercentage > 0.9 ? 22 : 4),
+                    topRight: Radius.circular(fillPercentage > 0.9 ? 22 : 4),
+                  ),
+                ),
                 child: CustomPaint(
                   painter: _JugGlossPainter(),
                 ),
               ),
 
-              // 3. Capacity Markers
+              // 3. Capacity Markers (Optimized CustomPaint)
               Positioned.fill(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 20),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(max, (i) => Container(
-                      height: 1,
-                      width: 12,
-                      color: Colors.white.withValues(alpha: 0.1),
-                    )).reversed.toList(),
+                  child: CustomPaint(
+                    painter: _CapacityMarkersPainter(max: max),
                   ),
                 ),
               ),
@@ -1102,7 +1142,10 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
               Expanded(
                 flex: 3,
                 child: VisualizerControls(
-                  onSolve: () => solve(),
+                  onSolve: () {
+                    _sloshController.repeat();
+                    solve();
+                  },
                   onPauseResume: pauseResume,
                   onClear: _reset,
                   isSolving: isSolving,
@@ -1243,7 +1286,7 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
                 ),
               ],
             ),
-          ).animate().scale(curve: Curves.easeOutBack).fadeIn(),
+          ),
         );
       },
     );
@@ -1273,4 +1316,26 @@ class _JugGlossPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _CapacityMarkersPainter extends CustomPainter {
+  final int max;
+  _CapacityMarkersPainter({required this.max});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (max <= 0) return;
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.1)
+      ..strokeWidth = 1;
+    
+    final double spacing = size.height / (max + 1);
+    for (int i = 1; i <= max; i++) {
+      final y = size.height - (i * spacing);
+      canvas.drawLine(Offset((size.width - 12) / 2, y), Offset((size.width + 12) / 2, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CapacityMarkersPainter oldDelegate) => oldDelegate.max != max;
 }

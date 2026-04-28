@@ -61,17 +61,16 @@ Future<void> _streamInIsolate(_StreamRequest request) async {
     final SearchAlgorithm algorithm = AlgorithmRegistry.create(request.algorithmId);
 
     final List<AlgorithmStep> buffer = [];
-    const int batchSize = 100;
+    const int batchSize = 500;
 
     for (final step in algorithm.solve(problem)) {
       // Optimization: Only send full path for the goal or every N steps
-      // to reduce Isolate communication overhead (memory & CPU)
-      final isMajorStep = step.isGoalReached || (step.stepCount % 25 == 0);
+      final isMajorStep = step.isGoalReached || (step.stepCount % 50 == 0);
       
       final strippedStep = AlgorithmStep<dynamic>(
         newlyExplored: step.newlyExplored,
         currentState: step.currentState,
-        path: isMajorStep ? step.path : const [], // Strip path for minor steps
+        path: isMajorStep ? step.path : const [],
         stepCount: step.stepCount,
         isGoalReached: step.isGoalReached,
         frontierSize: step.frontierSize,
@@ -84,6 +83,8 @@ Future<void> _streamInIsolate(_StreamRequest request) async {
           _StreamMessage<dynamic>.batch(List.from(buffer)),
         );
         buffer.clear();
+        // Yield to let the main thread process the messages without flooding
+        await Future.delayed(Duration.zero);
       }
     }
 
@@ -124,6 +125,9 @@ class AlgorithmExecutor<State> with ChangeNotifier {
   final Set<State> _pathSet = {};
   List<State> _currentPath = [];
   int _frontierSize = 0;
+
+  // Cached settings for haptics (resolved once in _startPlayback)
+  AppSettings? _cachedSettings;
 
   // Result caching: Stores (History, Final Explored Set, Final Path)
   static final Map<
@@ -256,7 +260,7 @@ class AlgorithmExecutor<State> with ChangeNotifier {
           // Listen to the stream and collect history while playback happens
           final completer = Completer<void>();
           receivePort.listen((message) {
-            final streamMsg = message as _StreamMessage<State>;
+            final streamMsg = message as _StreamMessage<dynamic>;
 
             if (streamMsg.error != null) {
               _stepController.addError(streamMsg.error!);
@@ -286,7 +290,17 @@ class AlgorithmExecutor<State> with ChangeNotifier {
 
               completer.complete();
             } else if (streamMsg.batch != null) {
-              _fullHistory!.addAll(streamMsg.batch!);
+              final typedBatch = streamMsg.batch!.map((s) => AlgorithmStep<State>(
+                newlyExplored: s.newlyExplored.cast<State>(),
+                currentState: s.currentState as State?,
+                path: s.path.cast<State>(),
+                stepCount: s.stepCount,
+                isGoalReached: s.isGoalReached,
+                frontierSize: s.frontierSize,
+                message: s.message,
+              )).toList();
+
+              _fullHistory!.addAll(typedBatch);
 
               // Start playback immediately if not yet started
               if (_playbackTimer == null && !_isStopped && !_isPaused) {
@@ -341,6 +355,14 @@ class AlgorithmExecutor<State> with ChangeNotifier {
 
   void _startPlayback() {
     _playbackTimer?.cancel();
+
+    // Resolve settings once for the entire playback session
+    _cachedSettings = const AppSettings();
+    if (_problemSnapshot != null && _problemSnapshot.containsKey('settings')) {
+      _cachedSettings = AppSettings.fromJson(_problemSnapshot['settings']);
+    } else if (_problem is GridProblem) {
+      _cachedSettings = (_problem as GridProblem).settings;
+    }
 
     if (_stepDelay.inMilliseconds == 0) {
       if (_fullHistory != null && _fullHistory!.isNotEmpty) {
@@ -409,17 +431,12 @@ class AlgorithmExecutor<State> with ChangeNotifier {
   }
 
   void _handleHaptics() {
-    if (_lastStep == null) return;
+    if (_lastStep == null || _cachedSettings == null) return;
 
-    // Get settings from snapshot or problem
-    AppSettings settings = const AppSettings();
-    if (_problemSnapshot != null && _problemSnapshot.containsKey('settings')) {
-      settings = AppSettings.fromJson(_problemSnapshot['settings']);
-    } else if (_problem is GridProblem) {
-      settings = (_problem as GridProblem).settings;
-    }
+    final settings = _cachedSettings!;
 
-    if (settings.executionPulse && _currentIndex % 5 == 0) {
+    // Throttle haptics to avoid overwhelming the platform channel at high speeds
+    if (settings.executionPulse && _currentIndex % 15 == 0) {
       HapticFeedback.lightImpact();
     }
 

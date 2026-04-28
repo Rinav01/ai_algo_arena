@@ -22,13 +22,16 @@ class NQueensVisualizerScreen extends ConsumerStatefulWidget {
 }
 
 class _NQueensVisualizerScreenState extends ConsumerState<NQueensVisualizerScreen>
-    with SingleTickerProviderStateMixin, VisualizerBaseMixin<NQueensVisualizerScreen, QueensState> {
+    with TickerProviderStateMixin, VisualizerBaseMixin<NQueensVisualizerScreen, QueensState> {
   late QueensState currentState;
   NQueensSolver? solver;
   StreamSubscription<NQueensStep>? _stepSubscription;
 
   int boardSize = 8;
   NQueensSolverMode selectedMode = NQueensSolverMode.backtracking;
+
+  // Local throttle since NQueens uses its own solve loop, not the mixin's executor
+  DateTime _lastUiUpdate = DateTime.now();
 
   @override
   String get algorithmId => selectedMode.label;
@@ -145,8 +148,8 @@ class _NQueensVisualizerScreenState extends ConsumerState<NQueensVisualizerScree
 
       // Manual throttle for NQueens since it doesn't use the mixin's executor stream
       final now = DateTime.now();
-      if (now.difference(lastUiUpdate) >= const Duration(milliseconds: 32)) {
-        lastUiUpdate = now;
+      if (now.difference(_lastUiUpdate) >= const Duration(milliseconds: 32)) {
+        _lastUiUpdate = now;
         setState(() {});
       }
     });
@@ -408,13 +411,17 @@ class _NQueensVisualizerScreenState extends ConsumerState<NQueensVisualizerScree
                           message: statusMessage,
                           isSolved: isSolved,
                           isSolving: isSolving,
+                        ).animate(
+                          target: isSolved ? 1 : 0,
+                          onPlay: (c) => isSolved ? c.repeat(reverse: true) : c.stop(),
                         )
-                        .animate(target: isSolved ? 1 : 0, autoPlay: false)
-                        .scale(duration: 600.ms, curve: Curves.elasticOut)
-                        .shimmer(
-                          duration: 2.seconds,
-                          color: AppTheme.success.withValues(alpha: 0.3),
-                        ),
+                        .shimmer(duration: 1200.ms, color: AppTheme.success.withValues(alpha: 0.3))
+                        .animate(
+                          target: isSolving ? 1 : 0,
+                          onPlay: (c) => isSolving ? c.repeat(reverse: true) : c.stop(),
+                        )
+                        .shimmer(duration: 2.seconds, color: AppTheme.warning.withValues(alpha: 0.2))
+                        .shake(hz: 3, curve: Curves.easeInOut),
               ),
               const SizedBox(height: 20),
               _buildBoard(),
@@ -511,43 +518,36 @@ class _NQueensVisualizerScreenState extends ConsumerState<NQueensVisualizerScree
                         ),
                         child: hasQueen
                             ? Center(
-                                    child: SvgPicture.asset(
-                                      'assets/images/crown.svg',
-                                      width: 28,
-                                      height: 28,
-                                      colorFilter: ColorFilter.mode(
-                                        isConflict ? AppTheme.error : Colors.white,
-                                        BlendMode.srcIn,
-                                      ),
-                                    ).animate().scale(
-                                          duration: const Duration(milliseconds: 300),
-                                          curve: Curves.easeOutBack,
-                                        ),
-                                  )
-                                  .animate()
-                                  .scale(
-                                    duration: 200.ms,
-                                    curve: Curves.easeOut,
-                                  )
-                                  .animate(target: isSolved ? 1 : 0)
-                                  .shimmer(
-                                    duration: 1200.ms,
-                                    color: AppTheme.success.withValues(
-                                      alpha: 0.5,
+                                child: SvgPicture.asset(
+                                  'assets/images/crown.svg',
+                                  width: 28,
+                                  height: 28,
+                                  colorFilter: ColorFilter.mode(
+                                    isConflict ? AppTheme.error : Colors.white,
+                                    BlendMode.srcIn,
+                                  ),
+                                )
+                                    .animate(target: isSolving ? 1 : 0)
+                                    .tint(
+                                      color: AppTheme.accent.withValues(alpha: 0.1),
+                                      duration: 1.seconds,
+                                    )
+                                    .shake(hz: 2, rotation: 0.01, duration: 1.seconds)
+                                    .animate(
+                                      target: isSolved ? 1 : 0,
+                                      onPlay: (c) => isSolved ? c.repeat(reverse: true) : c.stop(),
+                                    )
+                                    .shimmer(
+                                      duration: 1.seconds,
+                                      color: AppTheme.success.withValues(alpha: 0.4),
+                                    )
+                                    .scale(
+                                      begin: const Offset(1, 1),
+                                      end: const Offset(1.1, 1.1),
+                                      duration: 1.seconds,
+                                      curve: Curves.easeInOut,
                                     ),
-                                  )
-                                  .shake(
-                                    duration: 400.ms,
-                                    hz: 4,
-                                    rotation: 0.05,
-                                    delay: (index * 20).ms,
-                                  )
-                                  .scale(
-                                    begin: const Offset(1, 1),
-                                    end: const Offset(1.2, 1.2),
-                                    duration: 400.ms,
-                                    curve: Curves.easeOutBack,
-                                  )
+                              )
                             : null,
                       ),
                     );

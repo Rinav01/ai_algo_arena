@@ -195,11 +195,12 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: color,
-      ),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-        child: Container(color: Colors.transparent),
+        gradient: RadialGradient(
+          colors: [
+            color,
+            color.withValues(alpha: 0.0),
+          ],
+        ),
       ),
     );
   }
@@ -214,7 +215,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
           ClipPath(
             clipper: HexagonClipper(),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -313,21 +314,21 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                   painter: LogoPainter(color: AppTheme.accent),
                 ),
                 
-                // Central Node
+                // Central Node with performant RadialGradient glow instead of BoxShadow
                 Center(
                   child: Container(
-                    width: size * 0.25 * _pulseAnimation.value,
-                    height: size * 0.25 * _pulseAnimation.value,
+                    width: size * 0.25 * _pulseAnimation.value * 1.5,
+                    height: size * 0.25 * _pulseAnimation.value * 1.5,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppTheme.accent,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.accent.withValues(alpha: 0.5),
-                          blurRadius: 15 * _pulseAnimation.value,
-                          spreadRadius: 2,
-                        ),
-                      ],
+                      gradient: RadialGradient(
+                        colors: [
+                          AppTheme.accent.withValues(alpha: 0.8),
+                          AppTheme.accent.withValues(alpha: 0.2),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.3, 0.6, 1.0],
+                      ),
                     ),
                   ),
                 ),
@@ -342,18 +343,18 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                     top: (size / 2) + (size * 0.35) * math.sin(angle) - (size * 0.1) + wobble,
                     left: (size / 2) + (size * 0.35) * math.cos(angle) - (size * 0.1) + wobble,
                     child: Container(
-                      width: size * 0.2 * (0.9 + 0.2 * math.sin(_glowAnimation.value * 2 + index)),
-                      height: size * 0.2 * (0.9 + 0.2 * math.sin(_glowAnimation.value * 2 + index)),
+                      width: size * 0.2 * (0.9 + 0.2 * math.sin(_glowAnimation.value * 2 + index)) * 1.5,
+                      height: size * 0.2 * (0.9 + 0.2 * math.sin(_glowAnimation.value * 2 + index)) * 1.5,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppTheme.accent,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.accent.withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            spreadRadius: 1,
-                          ),
-                        ],
+                        gradient: RadialGradient(
+                          colors: [
+                            AppTheme.accent.withValues(alpha: 0.9),
+                            AppTheme.accent.withValues(alpha: 0.3),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.4, 0.7, 1.0],
+                        ),
                       ),
                     ),
                   );
@@ -646,7 +647,7 @@ class DataStreamParticles extends StatefulWidget {
 
 class _DataStreamParticlesState extends State<DataStreamParticles> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  final List<Particle> _particles = List.generate(40, (index) => Particle());
+  final List<Particle> _particles = List.generate(20, (index) => Particle());
 
   @override
   void initState() {

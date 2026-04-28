@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -12,11 +13,12 @@ class ApiService {
   /// Saves a specific algorithm run to the backend.
   Future<void> saveRun(Map<String, dynamic> runData) async {
     try {
+      final jsonStr = await compute(jsonEncode, runData);
       final response = await http.post(
         Uri.parse("$baseUrl/runs"),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode(runData),
-      );
+        body: jsonStr,
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 201) {
         throw Exception("Failed to save run: ${response.statusCode} - ${response.body}");
@@ -47,10 +49,10 @@ class ApiService {
         url += "&date=$date";
       }
 
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
+        final body = await compute(jsonDecode, response.body);
         if (body is Map && body.containsKey('data')) {
           return body['data'] as List<dynamic>;
         }
@@ -66,7 +68,7 @@ class ApiService {
   /// Deletes a specific algorithm run from the backend.
   Future<void> deleteRun(String id) async {
     try {
-      final response = await http.delete(Uri.parse("$baseUrl/runs/$id"));
+      final response = await http.delete(Uri.parse("$baseUrl/runs/$id")).timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 200 && response.statusCode != 204) {
         throw Exception("Failed to delete run: ${response.statusCode}");
@@ -96,10 +98,10 @@ class ApiService {
       };
 
       final uri = Uri.parse("$_analyticsUrl/summary").replace(queryParameters: query);
-      final response = await http.get(uri);
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        return await compute(jsonDecode, response.body) as Map<String, dynamic>;
       } else {
         throw Exception("Failed to fetch summary: ${response.statusCode}");
       }
@@ -120,10 +122,10 @@ class ApiService {
       };
 
       final uri = Uri.parse("$_analyticsUrl/trends").replace(queryParameters: query);
-      final response = await http.get(uri);
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        return await compute(jsonDecode, response.body) as Map<String, dynamic>;
       } else {
         throw Exception("Failed to fetch trends: ${response.statusCode}");
       }
@@ -136,10 +138,10 @@ class ApiService {
   Future<Map<String, dynamic>> getDistribution() async {
     try {
       final uri = Uri.parse("$_analyticsUrl/distribution");
-      final response = await http.get(uri);
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        return await compute(jsonDecode, response.body) as Map<String, dynamic>;
       } else {
         throw Exception("Failed to fetch distribution: ${response.statusCode}");
       }
@@ -152,10 +154,10 @@ class ApiService {
   Future<Map<String, dynamic>> getBattleInsights() async {
     try {
       final uri = Uri.parse("$_analyticsUrl/battle-insights");
-      final response = await http.get(uri);
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        return await compute(jsonDecode, response.body) as Map<String, dynamic>;
       } else {
         throw Exception("Failed to fetch battle insights: ${response.statusCode}");
       }
@@ -168,10 +170,10 @@ class ApiService {
   Future<Map<String, dynamic>> getComplexity() async {
     try {
       final uri = Uri.parse("$_analyticsUrl/complexity");
-      final response = await http.get(uri);
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        return await compute(jsonDecode, response.body) as Map<String, dynamic>;
       } else {
         throw Exception("Failed to fetch complexity: ${response.statusCode}");
       }

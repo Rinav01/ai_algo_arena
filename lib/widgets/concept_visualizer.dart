@@ -102,6 +102,12 @@ class _EnhancedConceptPainter extends CustomPainter {
       case ConceptType.battleConcept:
         _drawBattle(canvas, size, center);
         break;
+      case ConceptType.waterJugBFS:
+        _drawWaterJug(canvas, size, center, isAStar: false);
+        break;
+      case ConceptType.waterJugAStar:
+        _drawWaterJug(canvas, size, center, isAStar: true);
+        break;
     }
   }
 
@@ -620,6 +626,152 @@ class _EnhancedConceptPainter extends CustomPainter {
       4,
       paint..style = PaintingStyle.fill,
     );
+  }
+
+  void _drawWaterJug(
+    Canvas canvas,
+    Size size,
+    Offset center, {
+    required bool isAStar,
+  }) {
+    final t = animation.value;
+    final paint = Paint()..style = PaintingStyle.fill;
+
+    // Jug dimensions
+    final jugWidth = size.width * 0.25;
+    final jugHeight = size.height * 0.45;
+    final jugA = Rect.fromLTWH(
+      size.width * 0.15,
+      size.height * 0.3,
+      jugWidth,
+      jugHeight,
+    );
+    final jugB = Rect.fromLTWH(
+      size.width * 0.6,
+      size.height * 0.3,
+      jugWidth,
+      jugHeight,
+    );
+
+    // Draw Jug Frames
+    final framePaint =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..color = Colors.white.withValues(alpha: 0.15);
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(jugA, const Radius.circular(8)),
+      framePaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(jugB, const Radius.circular(8)),
+      framePaint,
+    );
+
+    // Animate water levels
+    // Cycle: Fill A -> Pour A to B -> Empty B
+    double stage = (t * 3) % 3;
+    double levelA = 0;
+    double levelB = 0;
+    bool isPouring = false;
+
+    if (stage < 1) {
+      // Fill A
+      levelA = stage;
+      levelB = 0;
+    } else if (stage < 2) {
+      // Pour A to B
+      double p = stage - 1;
+      levelA = 1.0 - p;
+      levelB = p;
+      isPouring = true;
+    } else {
+      // Empty B
+      double p = stage - 2;
+      levelA = 0;
+      levelB = 1.0 - p;
+    }
+
+    // Draw Water
+    final waterColor = isAStar ? AppTheme.success : AppTheme.accent;
+    paint.color = waterColor.withValues(alpha: 0.6);
+
+    if (levelA > 0) {
+      final waterA = Rect.fromLTWH(
+        jugA.left + 2,
+        jugA.bottom - 2 - (jugHeight - 4) * levelA,
+        jugWidth - 4,
+        (jugHeight - 4) * levelA,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(waterA, const Radius.circular(4)),
+        paint,
+      );
+    }
+
+    if (levelB > 0) {
+      final waterB = Rect.fromLTWH(
+        jugB.left + 2,
+        jugB.bottom - 2 - (jugHeight - 4) * levelB,
+        jugWidth - 4,
+        (jugHeight - 4) * levelB,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(waterB, const Radius.circular(4)),
+        paint,
+      );
+    }
+
+    // Draw Pour Stream
+    if (isPouring) {
+      final streamPaint =
+          Paint()
+            ..color = waterColor.withValues(alpha: 0.4)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3
+            ..strokeCap = StrokeCap.round;
+
+      final start = Offset(jugA.right, jugA.top + 10);
+      final end = Offset(jugB.left, jugB.top + 10);
+      final control = Offset((start.dx + end.dx) / 2, start.dy - 20);
+
+      final path =
+          Path()
+            ..moveTo(start.dx, start.dy)
+            ..quadraticBezierTo(control.dx, control.dy, end.dx, end.dy);
+
+      canvas.drawPath(path, streamPaint);
+    }
+
+    // For A*, draw a "Target Line" and a "Heuristic Guided" icon
+    if (isAStar) {
+      final targetY = jugB.bottom - (jugHeight * 0.6);
+      final targetPaint =
+          Paint()
+            ..color = AppTheme.warning.withValues(alpha: 0.8)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1;
+
+      // Dashed line effect
+      for (double x = jugB.left - 5; x < jugB.right + 5; x += 6) {
+        canvas.drawLine(Offset(x, targetY), Offset(x + 3, targetY), targetPaint);
+      }
+
+      // Small pulse icon for A* (guided)
+      double pulse = math.sin(t * 15) * 0.2 + 0.8;
+      paint.color = AppTheme.warning.withValues(alpha: 0.4 * pulse);
+      canvas.drawCircle(Offset(jugB.center.dx, targetY - 15), 4 * pulse, paint);
+    } else {
+      // For BFS, draw some "Wavefront" ripples expanding from the jugs
+      final ripplePaint =
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1
+            ..color = AppTheme.accent.withValues(alpha: (1.0 - (t % 1.0)) * 0.3);
+
+      canvas.drawCircle(center, (t % 1.0) * size.width * 0.5, ripplePaint);
+    }
   }
 
   @override

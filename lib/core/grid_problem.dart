@@ -84,12 +84,12 @@ class GridProblem extends Problem<GridCoordinate> {
       _types = snapshot['types'] as Uint8List,
       _weights = snapshot['weights'] as Float32List,
       _start = GridCoordinate(
-        row: (snapshot['start'] as dynamic).row as int,
-        column: (snapshot['start'] as dynamic).column as int,
+        row: snapshot['start']['row'] as int,
+        column: snapshot['start']['column'] as int,
       ),
       _goal = GridCoordinate(
-        row: (snapshot['goal'] as dynamic).row as int,
-        column: (snapshot['goal'] as dynamic).column as int,
+        row: snapshot['goal']['row'] as int,
+        column: snapshot['goal']['column'] as int,
       ),
       settings = AppSettings.fromJson(
         snapshot['settings'] as Map<String, dynamic>,
@@ -139,8 +139,8 @@ class GridProblem extends Problem<GridCoordinate> {
       'columns': cols,
       'types': _types,
       'weights': _weights,
-      'start': (row: _start.row, column: _start.column),
-      'goal': (row: _goal.row, column: _goal.column),
+      'start': {'row': _start.row, 'column': _start.column},
+      'goal': {'row': _goal.row, 'column': _goal.column},
       'settings': settings.toJson(),
     };
   }

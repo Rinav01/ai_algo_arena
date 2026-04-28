@@ -20,7 +20,7 @@ class EightPuzzleVisualizerScreen extends ConsumerStatefulWidget {
 
 class _EightPuzzleVisualizerScreenState
     extends ConsumerState<EightPuzzleVisualizerScreen>
-    with SingleTickerProviderStateMixin, VisualizerBaseMixin<EightPuzzleVisualizerScreen, PuzzleState> {
+    with TickerProviderStateMixin, VisualizerBaseMixin<EightPuzzleVisualizerScreen, PuzzleState> {
   late AnimationController _victoryController;
   late EightPuzzleProblem problem;
   late PuzzleState currentState;
@@ -31,6 +31,29 @@ class _EightPuzzleVisualizerScreenState
   String selectedDifficulty = 'Medium';
   final Map<String, int> difficulties = {'Easy': 10, 'Medium': 25, 'Hard': 50};
   String selectedAlgorithm = 'A*';
+
+  // Widget caching: static sections only rebuild when config changes
+  Widget? _cachedHeader;
+  Widget? _cachedStatsRow;
+  Widget? _cachedConfigRow;
+  Widget? _cachedControls;
+  int _lastConfigHash = 0;
+
+  /// Hash of all config state that static widgets depend on
+  int get _configHash => Object.hash(
+    selectedDifficulty,
+    selectedAlgorithm,
+    isSolving,
+    isSolved,
+    stepCount,
+    executionSpeed,
+    executor?.frontierSize,
+    currentPath.length,
+    statusMessage,
+  );
+
+  // Deferred loading: prevent ANR by not building heavy widgets on first frame
+  bool _isContentReady = false;
 
   @override
   String get algorithmId => selectedAlgorithm;
@@ -44,6 +67,12 @@ class _EightPuzzleVisualizerScreenState
       value: 1.0,
     );
     _resetPuzzle();
+
+    // Defer heavy content build to avoid ANR during navigation transition.
+    // Use a 300ms delay to let the route transition animation finish first.
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _isContentReady = true);
+    });
   }
 
   @override
@@ -384,127 +413,189 @@ class _EightPuzzleVisualizerScreenState
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              VisualizerHeader(
-                title: '8-Puzzle Solver',
-                subtitle: 'SLIDING TILE VIZ',
-                onBackTap: () => Navigator.pop(context),
-                comparisonInfos: AlgoInfo.eightPuzzle,
-                initialKey: selectedAlgorithm,
-              ),
-              const SizedBox(height: 20),
+        child: _isContentReady
+            ? _buildFullContent()
+            : _buildLoadingSkeleton(),
+      ),
+    );
+  }
 
-              Row(
-                children: [
-                  Expanded(
-                    child: GlassStatCard(label: 'STEPS', value: stepCount),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: GlassStatCard(label: 'NODES', value: nodesExplored),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: GlassStatCard(
-                      label: 'FRONTIER',
-                      value: executor?.frontierSize ?? 0,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: GlassStatCard(
-                      label: 'DEPTH',
-                      value: currentPath.length - 1,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
+  /// Lightweight placeholder shown during the first frame to prevent ANR.
+  Widget _buildLoadingSkeleton() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppTheme.accent.withValues(alpha: 0.5),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Loading visualizer...',
+            style: TextStyle(
+              color: AppTheme.textMuted,
+              fontSize: 12,
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-              Center(
-                child:
-                    StatusBanner(
-                          message: statusMessage,
-                          isSolved: isSolved,
-                          isSolving: isSolving,
-                        )
-                        .animate(target: isSolved ? 1 : 0)
-                        .shimmer(
-                          duration: 3.seconds,
-                          color: AppTheme.success.withValues(alpha: 0.15),
-                        ),
-              ),
-              const SizedBox(height: 16),
+  /// Full content built after the defer period.
+  /// Uses ListView for viewport culling — off-screen sections don't build.
+  Widget _buildFullContent() {
+    // Rebuild cached widgets only when their dependencies change
+    final currentConfigHash = _configHash;
+    if (currentConfigHash != _lastConfigHash) {
+      _lastConfigHash = currentConfigHash;
+      _cachedHeader = _buildHeader();
+      _cachedStatsRow = _buildStatsRow();
+      _cachedConfigRow = _buildConfigRow();
+      _cachedControls = RepaintBoundary(child: _buildControls());
+    }
 
-              // Difficulty and Shuffle Row
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12.0),
-                      decoration: AppTheme.glassCard(radius: 12),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: selectedDifficulty,
-                          isExpanded: true,
-                          dropdownColor: AppTheme.surfaceHighest,
-                          style: TextStyle(color: Colors.white, fontSize: 13.0),
-                          items: difficulties.keys
-                              .map(
-                                (d) =>
-                                    DropdownMenuItem(value: d, child: Text(d)),
-                              )
-                              .toList(),
-                          onChanged: isSolving
-                              ? null
-                              : (v) {
-                                  if (v != null) {
-                                    setState(() => selectedDifficulty = v);
-                                  }
-                                },
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  ElevatedButton.icon(
-                    onPressed: isSolving ? null : _shuffle,
-                    icon: const Icon(Icons.shuffle, size: 18),
-                    label: const Text('SHUFFLE'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.surfaceHighest,
-                      foregroundColor: AppTheme.accentLight,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 16.0,
-                        vertical: 12.0,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.0),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+      children: [
+        _cachedHeader!,
+        const SizedBox(height: 20),
+        _cachedStatsRow!,
+        const SizedBox(height: 14),
+        _buildStatusSection(),
+        const SizedBox(height: 16),
+        _cachedConfigRow!,
+        const SizedBox(height: 20),
+        _buildPuzzleVisualization(),
+        const SizedBox(height: 24),
+        _cachedControls!,
+      ],
+    );
+  }
 
-              _buildPuzzleVisualization(),
-              const SizedBox(height: 24),
+  Widget _buildHeader() {
+    return VisualizerHeader(
+      title: '8-Puzzle Solver',
+      subtitle: 'SLIDING TILE VIZ',
+      onBackTap: () => Navigator.pop(context),
+      comparisonInfos: AlgoInfo.eightPuzzle,
+      initialKey: selectedAlgorithm,
+    );
+  }
 
-              VisualizerControls(
-                isSolving: isSolving,
-                isSolved: isSolved,
-                stepCount: stepCount,
-                onSolve: _showAISolveMenu,
-                onPauseResume: pauseResume,
-                onClear: _resetPuzzle,
-              ),
-            ],
+  Widget _buildStatsRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: GlassStatCard(label: 'STEPS', value: stepCount),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: GlassStatCard(label: 'NODES', value: nodesExplored),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: GlassStatCard(
+            label: 'FRONTIER',
+            value: executor?.frontierSize ?? 0,
           ),
         ),
-      ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: GlassStatCard(
+            label: 'DEPTH',
+            value: currentPath.length - 1,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusSection() {
+    return Center(
+      child: StatusBanner(
+        message: statusMessage,
+        isSolved: isSolved,
+        isSolving: isSolving,
+      ).animate(
+        target: isSolved ? 1 : 0,
+        onPlay: (c) => isSolved ? c.repeat(reverse: true) : c.stop(),
+      )
+       .shimmer(duration: 1200.ms, color: AppTheme.success.withValues(alpha: 0.3))
+       .animate(
+        target: isSolving ? 1 : 0,
+        onPlay: (c) => isSolving ? c.repeat(reverse: true) : c.stop(),
+      )
+       .shimmer(duration: 2.seconds, color: AppTheme.warning.withValues(alpha: 0.2))
+       .shake(hz: 3, curve: Curves.easeInOut),
+    );
+  }
+
+  Widget _buildConfigRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            decoration: AppTheme.glassCard(radius: 12),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: selectedDifficulty,
+                isExpanded: true,
+                dropdownColor: AppTheme.surfaceHighest,
+                style: const TextStyle(color: Colors.white, fontSize: 13.0),
+                items: difficulties.keys
+                    .map(
+                      (d) =>
+                          DropdownMenuItem(value: d, child: Text(d)),
+                    )
+                    .toList(),
+                onChanged: isSolving
+                    ? null
+                    : (v) {
+                        if (v != null) {
+                          setState(() => selectedDifficulty = v);
+                        }
+                      },
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        ElevatedButton.icon(
+          onPressed: isSolving ? null : _shuffle,
+          icon: const Icon(Icons.shuffle, size: 18),
+          label: const Text('SHUFFLE'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.surfaceHighest,
+            foregroundColor: AppTheme.accentLight,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 12.0,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.0),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildControls() {
+    return VisualizerControls(
+      isSolving: isSolving,
+      isSolved: isSolved,
+      stepCount: stepCount,
+      onSolve: _showAISolveMenu,
+      onPauseResume: pauseResume,
+      onClear: _resetPuzzle,
     );
   }
 
@@ -645,22 +736,29 @@ class _EightPuzzleVisualizerScreenState
                                 ),
                               ),
                             )
-                            .animate(target: isSolved ? 1 : 0)
+                            .animate(target: isSolving ? 1 : 0)
+                            .tint(color: AppTheme.accent.withValues(alpha: 0.1), duration: 1.seconds)
+                            .shake(hz: 2, rotation: 0.01, duration: 1.seconds)
+                            .animate(
+                              target: isSolved ? 1 : 0,
+                              onPlay: (c) => isSolved ? c.repeat(reverse: true) : c.stop(),
+                            )
                             .shimmer(
-                              duration: 3.seconds,
-                              color: AppTheme.success.withValues(alpha: 0.2),
+                              duration: 2.seconds,
+                              color: AppTheme.success.withValues(alpha: 0.3),
                             )
                             .moveY(
                               begin: 0,
-                              end: -4,
-                              duration: 1200.ms,
-                              curve: Curves.easeInOutSine,
+                              end: -5,
+                              duration: 1.seconds,
+                              curve: Curves.easeInOut,
                             )
+                            .then()
                             .scale(
                               begin: const Offset(1, 1),
-                              end: const Offset(1.02, 1.02),
-                              duration: 1200.ms,
-                              curve: Curves.easeInOutSine,
+                              end: const Offset(1.04, 1.04),
+                              duration: 1.seconds,
+                              curve: Curves.easeInOut,
                             ),
                   ),
                 );

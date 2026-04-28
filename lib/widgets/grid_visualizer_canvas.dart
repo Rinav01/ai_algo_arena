@@ -363,16 +363,15 @@ class _GridPainter extends CustomPainter {
 
     final paint = Paint()
       ..color = accentColor.withValues(alpha: 0.4)
-      ..style = PaintingStyle.fill;
+      ..strokeWidth = math.min(cellWidth, cellHeight) * 0.8
+      ..strokeCap = StrokeCap.square;
 
-    final path = Path();
     final count = exploredCount ?? explored.length;
-    
     int i = 0;
+    final points = <Offset>[];
     for (final state in explored) {
       if (i >= count) break;
       
-      // Safety check: sometimes nodes might be out of grid bounds during rapid changes
       if (state.row >= controller.rows || state.column >= controller.columns) {
         i++;
         continue;
@@ -383,16 +382,16 @@ class _GridPainter extends CustomPainter {
         continue;
       }
 
-      final rect = Rect.fromLTWH(
-        state.column * cellWidth + 0.5,
-        state.row * cellHeight + 0.5,
-        cellWidth - 1,
-        cellHeight - 1,
-      );
-      path.addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(2)));
+      points.add(Offset(
+        state.column * cellWidth + cellWidth / 2,
+        state.row * cellHeight + cellHeight / 2,
+      ));
       i++;
     }
-    canvas.drawPath(path, paint);
+    
+    if (points.isNotEmpty) {
+      canvas.drawPoints(ui.PointMode.points, points, paint);
+    }
   }
 
   void _drawPath(Canvas canvas, double cellWidth, double cellHeight) {
@@ -402,10 +401,6 @@ class _GridPainter extends CustomPainter {
     final paint = Paint()
       ..color = AppTheme.cyan
       ..style = PaintingStyle.fill;
-
-    final shadowPaint = Paint()
-      ..color = AppTheme.cyan.withValues(alpha: 0.3)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
 
     final path = Path();
     final count = pathCount ?? pathNodesList.length;
@@ -424,8 +419,6 @@ class _GridPainter extends CustomPainter {
       i++;
     }
     
-    canvas.drawShadow(path, AppTheme.cyan, 4, true);
-    canvas.drawPath(path, shadowPaint);
     canvas.drawPath(path, paint);
   }
 

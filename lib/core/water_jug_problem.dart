@@ -18,7 +18,7 @@ class WaterJugState {
           jugB == other.jugB;
 
   @override
-  int get hashCode => jugA.hashCode ^ jugB.hashCode;
+  int get hashCode => Object.hash(jugA, jugB);
 
   @override
   String toString() => '($jugA, $jugB) - $operation';

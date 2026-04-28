@@ -326,8 +326,8 @@ class GridController extends ChangeNotifier {
       'columns': columns,
       'types': types,
       'weights': weights,
-      'start': (row: _start.row, column: _start.column),
-      'goal': _goal != null ? (row: _goal!.row, column: _goal!.column) : null,
+      'start': {'row': _start.row, 'column': _start.column},
+      'goal': _goal != null ? {'row': _goal!.row, 'column': _goal!.column} : null,
       'settings': settings.toJson(),
     };
   }

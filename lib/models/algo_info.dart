@@ -11,6 +11,8 @@ enum ConceptType {
   puzzleAStar, // New: A* heuristic numbers
   puzzleGreedy, // New: Greedy jump
   battleConcept,
+  waterJugBFS,
+  waterJugAStar,
 }
 
 class AlgoInfo {
@@ -195,4 +197,33 @@ class AlgoInfo {
     isOptimal: true,
     conceptType: ConceptType.battleConcept,
   );
+
+  static const Map<String, AlgoInfo> waterJug = {
+    'BFS': AlgoInfo(
+      title: 'Breadth-First Search (BFS)',
+      description:
+          'Explores all possible water levels (states) layer-by-layer. It systematically checks all results of 1 action, then 2 actions, and so on.',
+      keyFeatures: [
+        'Guarantees the fewest steps to reach the target.',
+        'Explores the state space (Phase Space) uniformly.',
+        'No prior knowledge of the target is used.',
+      ],
+      complexity: 'O(V + E)',
+      isOptimal: true,
+      conceptType: ConceptType.waterJugBFS,
+    ),
+    'A*': AlgoInfo(
+      title: 'A* Search (Distance Heuristic)',
+      description:
+          'Uses a heuristic to prioritize states that seem closer to the target volume. It balances the steps taken with the estimated remaining distance.',
+      keyFeatures: [
+        'Uses min(|JugA - Target|, |JugB - Target|) as heuristic.',
+        'Prunes less promising paths in the Phase Space.',
+        'Typically explores fewer states than BFS.',
+      ],
+      complexity: 'O(V + E)',
+      isOptimal: true,
+      conceptType: ConceptType.waterJugAStar,
+    ),
+  };
 }

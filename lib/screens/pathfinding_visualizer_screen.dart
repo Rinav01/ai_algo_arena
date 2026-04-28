@@ -12,6 +12,7 @@ import 'package:algo_arena/core/app_theme.dart';
 import 'package:algo_arena/core/grid_problem.dart';
 import 'package:algo_arena/models/grid_node.dart';
 import 'package:algo_arena/state/grid_controller.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:algo_arena/state/settings_provider.dart';
 import 'package:algo_arena/models/algo_info.dart';
@@ -38,7 +39,7 @@ class PathfindingVisualizerScreen extends ConsumerStatefulWidget {
 
 class _PathfindingVisualizerScreenState
     extends ConsumerState<PathfindingVisualizerScreen>
-    with SingleTickerProviderStateMixin, VisualizerBaseMixin<PathfindingVisualizerScreen, GridCoordinate> {
+    with TickerProviderStateMixin, VisualizerBaseMixin<PathfindingVisualizerScreen, GridCoordinate> {
   late final GridController _controller;
   GridProblem? _problem;
 
@@ -52,6 +53,29 @@ class _PathfindingVisualizerScreenState
   static const Color exploredColor = AppTheme.cellExplored;
   static const Color pathColor = AppTheme.cellPath;
 
+  // Widget caching: static sections only rebuild when config changes
+  Widget? _cachedHeader;
+  Widget? _cachedStatsRow;
+  Widget? _cachedTools;
+  Widget? _cachedAnalytics;
+  Widget? _cachedControls;
+  int _lastConfigHash = 0;
+
+  /// Hash of all config state that static widgets depend on
+  int get _configHash => Object.hash(
+    widget.algorithmId,
+    isSolving,
+    isSolved,
+    stepCount,
+    executionSpeed,
+    _path.length,
+    statusMessage,
+    _controller.selectedTool,
+  );
+
+  // Deferred loading: prevent ANR by not building heavy widgets on first frame
+  bool _isContentReady = false;
+
   @override
   String get algorithmId => widget.algorithmId;
 
@@ -60,6 +84,11 @@ class _PathfindingVisualizerScreenState
     super.initState();
     _controller = GridController(rows: 15, columns: 25);
     _initializeProblem();
+
+    // Defer heavy content build to avoid ANR during navigation transition.
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) setState(() => _isContentReady = true);
+    });
   }
 
   @override
@@ -327,186 +356,264 @@ class _PathfindingVisualizerScreenState
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ── Header ──────────────────────────────────────────────────
-              VisualizerHeader(
-                title: widget.title,
-                subtitle: 'PATHFINDING VISUALIZER',
-                info: AlgoInfo.pathfinding[widget.algorithmId],
-              ),
-              const SizedBox(height: 20),
+        child: _isContentReady
+            ? _buildFullContent()
+            : _buildLoadingSkeleton(),
+      ),
+    );
+  }
 
-              // ── Stats ────────────────────────────────────────────────────
-              Row(
-                children: [
-                  Expanded(
-                    child: GlassStatCard(label: 'STEPS', value: stepCount),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GlassStatCard(
-                      label: 'EXPLORED',
-                      value: nodesExplored,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GlassStatCard(
-                      label: 'PATH LEN',
-                      value: _path.length,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
+  /// Lightweight placeholder shown during the first frame to prevent ANR.
+  Widget _buildLoadingSkeleton() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppTheme.accent.withValues(alpha: 0.5),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Preparing grid...',
+            style: TextStyle(
+              color: AppTheme.textMuted,
+              fontSize: 12,
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-              // ── Status ───────────────────────────────────────────────────
-              Center(
-                child: StatusBanner(
-                  message: statusMessage,
-                  isSolved: isSolved,
-                  isSolving: isSolving,
-                ),
-              ),
-              const SizedBox(height: 14),
+  /// Full content built after the defer period.
+  /// Uses ListView for viewport culling.
+  Widget _buildFullContent() {
+    // Rebuild cached widgets only when their dependencies change
+    final currentConfigHash = _configHash;
+    if (currentConfigHash != _lastConfigHash) {
+      _lastConfigHash = currentConfigHash;
+      _cachedHeader = _buildHeader();
+      _cachedStatsRow = _buildStatsRow();
+      _cachedTools = _buildToolsSection();
+      _cachedAnalytics = _buildAnalyticsSection();
+      _cachedControls = _buildControlsSection();
+    }
 
-              // ── Legend ───────────────────────────────────────────────────
-              GridLegend(exploredColor: exploredColor, pathColor: pathColor),
-              const SizedBox(height: 14),
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      children: [
+        const SizedBox(height: 20),
+        _cachedHeader!,
+        const SizedBox(height: 20),
+        _cachedStatsRow!,
+        const SizedBox(height: 14),
+        _buildStatusSection(),
+        const SizedBox(height: 14),
+        GridLegend(exploredColor: exploredColor, pathColor: pathColor),
+        const SizedBox(height: 14),
+        _cachedTools!,
+        const SizedBox(height: 16),
+        _buildAIRecommendation(),
+        const SizedBox(height: 16),
+        _buildGridSection(),
+        const SizedBox(height: 16),
+        _buildSpeedControl(),
+        const SizedBox(height: 14),
+        _cachedAnalytics!,
+        const SizedBox(height: 16),
+        _cachedControls!,
+        const SizedBox(height: 32),
+      ],
+    );
+  }
 
-              // ── Maze Generation ─────────────────────────────────────────
-              ToolButton(
-                label: 'Generate Maze (Randomized Prim\'s)',
-                icon: Icons.grain_rounded,
-                onPressed: _generateMaze,
-                color: AppTheme.warning,
-              ),
-              const SizedBox(height: 14),
+  Widget _buildHeader() {
+    return VisualizerHeader(
+      title: widget.title,
+      subtitle: 'PATHFINDING VISUALIZER',
+      info: AlgoInfo.pathfinding[widget.algorithmId],
+    );
+  }
 
-              // ── Tool Selector ───────────────────────────────────────────
-              ToolSelector(
-                selectedTool: _controller.selectedTool,
-                onToolSelected: (tool) {
-                  setState(() {
-                    if (tool is PaintTool) {
-                      _controller.setTool(tool);
-                    }
-                  });
-                },
-              ),
-              const SizedBox(height: 14),
-
-              // ── Persistence ───────────────────────────────────────────
-              Row(
-                children: [
-                  Expanded(
-                    child: ToolButton(
-                      label: 'Export Map',
-                      icon: Icons.ios_share_rounded,
-                      onPressed: _exportMap,
-                      color: AppTheme.accentLight,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ToolButton(
-                      label: 'Import Map',
-                      icon: Icons.file_download_rounded,
-                      onPressed: _importMap,
-                      color: AppTheme.success,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // ── AI Recommendation ────────────────────────────────────────
-              if (_problem != null)
-                AlgorithmRecommendationCard(
-                  problem: _problem!,
-                  onUseRecommended: _solvePuzzle,
-                ),
-              const SizedBox(height: 16),
-
-              // ── Grid ─────────────────────────────────────────────────────
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16.0),
-                child: Container(
-                  decoration: AppTheme.glassCardAccent(radius: 16),
-                  padding: EdgeInsets.all(8.0),
-                  child: AspectRatio(
-                    aspectRatio: 25 / 15, // Native ratio based on cols and rows
-                    child: GridVisualizerCanvas(
-                      controller: _controller,
-                      executor: executor,
-                      isInteractive: true,
-                      onPointerDown: _handlePointerDown,
-                      onPointerUpdate: _handlePointerUpdate,
-                      onPointerUp: _handlePointerUp,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // ── Speed ───────────────────────────────────────────────────
-              Container(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                decoration: AppTheme.glassCard(radius: 12),
-                child: SpeedControl(
-                  speed: executionSpeed,
-                  isSolving: isSolving,
-                  onChanged: (v) => setState(() => executionSpeed = v),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // ── Analytics ────────────────────────────────────────────────
-              PerformanceChart(
-                dataPoints: perfData,
-                accentColor: AppTheme.accent,
-              ),
-              const SizedBox(height: 16),
-
-              // ── Controls ─────────────────────────────────────────────────
-              VisualizerControls(
-                isSolving: isSolving,
-                isSolved: isSolved,
-                stepCount: stepCount,
-                onSolve: _solvePuzzle,
-                onPauseResume: pauseResume,
-                onClear: _clearWalls,
-                onVersus: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AlgorithmBattleScreen(
-                        initialGrid: _controller.grid,
-                        start: GridCoordinate(
-                          row: _controller.start.row,
-                          column: _controller.start.column,
-                        ),
-                        goal: _controller.goal != null
-                            ? GridCoordinate(
-                                row: _controller.goal!.row,
-                                column: _controller.goal!.column,
-                              )
-                            : GridCoordinate(
-                                row: -1,
-                                column: -1,
-                              ), // Should ideally handle null in BattleScreen
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
+  Widget _buildStatsRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: GlassStatCard(label: 'STEPS', value: stepCount),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: GlassStatCard(
+            label: 'EXPLORED',
+            value: nodesExplored,
           ),
         ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: GlassStatCard(
+            label: 'PATH LEN',
+            value: _path.length,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusSection() {
+    return StatusBanner(
+      message: statusMessage,
+      isSolved: isSolved,
+      isSolving: isSolving,
+    ).animate(
+      target: isSolved ? 1 : 0,
+      onPlay: (c) => isSolved ? c.repeat(reverse: true) : c.stop(),
+    )
+     .shimmer(duration: 1200.ms, color: AppTheme.success.withValues(alpha: 0.3))
+     .animate(
+      target: isSolving ? 1 : 0,
+      onPlay: (c) => isSolving ? c.repeat(reverse: true) : c.stop(),
+    )
+     .shimmer(duration: 2.seconds, color: AppTheme.warning.withValues(alpha: 0.2))
+     .shake(hz: 3, curve: Curves.easeInOut);
+  }
+
+  Widget _buildToolsSection() {
+    return Column(
+      children: [
+        ToolButton(
+          label: 'Generate Maze (Randomized Prim\'s)',
+          icon: Icons.grain_rounded,
+          onPressed: _generateMaze,
+          color: AppTheme.warning,
+        ),
+        const SizedBox(height: 14),
+        ToolSelector(
+          selectedTool: _controller.selectedTool,
+          onToolSelected: (tool) {
+            setState(() {
+              if (tool is PaintTool) {
+                _controller.setTool(tool);
+              }
+            });
+          },
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: ToolButton(
+                label: 'Export Map',
+                icon: Icons.ios_share_rounded,
+                onPressed: _exportMap,
+                color: AppTheme.accentLight,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ToolButton(
+                label: 'Import Map',
+                icon: Icons.file_download_rounded,
+                onPressed: _importMap,
+                color: AppTheme.success,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAIRecommendation() {
+    if (_problem == null) return const SizedBox.shrink();
+    return AlgorithmRecommendationCard(
+      problem: _problem!,
+      onUseRecommended: _solvePuzzle,
+    );
+  }
+
+  Widget _buildGridSection() {
+    return RepaintBoundary(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16.0),
+        child: Container(
+          decoration: AppTheme.glassCardAccent(radius: 16),
+          padding: const EdgeInsets.all(8.0),
+          child: AspectRatio(
+            aspectRatio: 25 / 15,
+            child: GridVisualizerCanvas(
+              controller: _controller,
+              executor: executor,
+              isInteractive: true,
+              onPointerDown: _handlePointerDown,
+              onPointerUpdate: _handlePointerUpdate,
+              onPointerUp: _handlePointerUp,
+            ),
+          ),
+        ).animate(
+          target: isSolving ? 1 : 0,
+          onPlay: (c) => isSolving ? c.repeat(reverse: true) : c.stop(),
+        )
+         .tint(color: AppTheme.accent.withValues(alpha: 0.05), duration: 1500.ms),
       ),
+    );
+  }
+
+  Widget _buildSpeedControl() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      decoration: AppTheme.glassCard(radius: 12),
+      child: SpeedControl(
+        speed: executionSpeed,
+        isSolving: isSolving,
+        onChanged: (v) => setState(() => executionSpeed = v),
+      ),
+    );
+  }
+
+  Widget _buildAnalyticsSection() {
+    return PerformanceChart(
+      dataPoints: perfData,
+      accentColor: AppTheme.accent,
+    );
+  }
+
+  Widget _buildControlsSection() {
+    return VisualizerControls(
+      isSolving: isSolving,
+      isSolved: isSolved,
+      stepCount: stepCount,
+      onSolve: _solvePuzzle,
+      onPauseResume: pauseResume,
+      onClear: _clearWalls,
+      onVersus: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AlgorithmBattleScreen(
+              initialGrid: _controller.grid,
+              start: GridCoordinate(
+                row: _controller.start.row,
+                column: _controller.start.column,
+              ),
+              goal: _controller.goal != null
+                  ? GridCoordinate(
+                      row: _controller.goal!.row,
+                      column: _controller.goal!.column,
+                    )
+                  : GridCoordinate(
+                      row: -1,
+                      column: -1,
+                    ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

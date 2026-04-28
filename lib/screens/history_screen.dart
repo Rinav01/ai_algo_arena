@@ -337,24 +337,31 @@ class HistoryScreen extends ConsumerWidget {
       }).toList();
     }
 
+    // Pre-calculate values for sorting to avoid parsing overhead during O(n log n) sort
+    final sortCache = <dynamic, dynamic>{};
+    for (var r in processed) {
+      final meta = r['metadata'] as Map<String, dynamic>?;
+      if (sortMode == SortMode.latest) {
+        sortCache[r] = DateTime.tryParse(r['timestamp'] ?? '')?.millisecondsSinceEpoch ?? 0;
+      } else if (sortMode == SortMode.time) {
+        sortCache[r] = (meta?['durationMs'] as num? ?? 999999).toInt();
+      } else if (sortMode == SortMode.efficiency) {
+        sortCache[r] = (meta?['steps'] as num? ?? 999999).toInt();
+      }
+    }
+
     // Sort
     processed.sort((a, b) {
-      final metaA = a['metadata'] as Map<String, dynamic>?;
-      final metaB = b['metadata'] as Map<String, dynamic>?;
-
       switch (sortMode) {
         case SortMode.latest:
-          final dateA = DateTime.parse(a['timestamp'] ?? DateTime.now().toIso8601String());
-          final dateB = DateTime.parse(b['timestamp'] ?? DateTime.now().toIso8601String());
-          return dateB.compareTo(dateA);
+          final valA = sortCache[a] as int;
+          final valB = sortCache[b] as int;
+          return valB.compareTo(valA);
         case SortMode.time:
-          final timeA = (metaA?['durationMs'] as num? ?? 999999).toInt();
-          final timeB = (metaB?['durationMs'] as num? ?? 999999).toInt();
-          return timeA.compareTo(timeB);
         case SortMode.efficiency:
-          final stepsA = (metaA?['steps'] as num? ?? 999999).toInt();
-          final stepsB = (metaB?['steps'] as num? ?? 999999).toInt();
-          return stepsA.compareTo(stepsB);
+          final valA = sortCache[a] as int;
+          final valB = sortCache[b] as int;
+          return valA.compareTo(valB);
       }
     });
 
