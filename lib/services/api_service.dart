@@ -78,6 +78,19 @@ class ApiService {
     }
   }
 
+  /// Deletes all algorithm runs from the backend.
+  Future<void> deleteAllRuns() async {
+    try {
+      final response = await http.delete(Uri.parse("$baseUrl/runs")).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception("Failed to delete all runs: ${response.statusCode}");
+      }
+    } catch (e) {
+      throw Exception("Network error while deleting all runs: $e");
+    }
+  }
+
   // --- Analytics API ---
 
   String get _analyticsUrl => "$baseUrl/analytics";
@@ -92,8 +105,8 @@ class ApiService {
     try {
       final query = {
         if (algorithm != null && algorithm != "All") "algorithm": algorithm,
-        if (startDate != null) "startDate": startDate,
-        if (endDate != null) "endDate": endDate,
+        "startDate":? startDate,
+        "endDate":? endDate,
         if (tags != null && tags.isNotEmpty) "tags": tags.join(","),
       };
 
@@ -114,11 +127,15 @@ class ApiService {
   Future<Map<String, dynamic>> getTrends({
     String? algorithm,
     String? metric, // "nodes" or "time"
+    String? startDate,
+    String? endDate,
   }) async {
     try {
       final query = {
         if (algorithm != null && algorithm != "All") "algorithm": algorithm,
-        if (metric != null) "metric": metric,
+        "metric":? metric,
+        "startDate":? startDate,
+        "endDate":? endDate,
       };
 
       final uri = Uri.parse("$_analyticsUrl/trends").replace(queryParameters: query);
@@ -135,9 +152,16 @@ class ApiService {
   }
 
   /// Fetches algorithm usage distribution.
-  Future<Map<String, dynamic>> getDistribution() async {
+  Future<Map<String, dynamic>> getDistribution({
+    String? startDate,
+    String? endDate,
+  }) async {
     try {
-      final uri = Uri.parse("$_analyticsUrl/distribution");
+      final query = {
+        "startDate":? startDate,
+        "endDate":? endDate,
+      };
+      final uri = Uri.parse("$_analyticsUrl/distribution").replace(queryParameters: query);
       final response = await http.get(uri).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {

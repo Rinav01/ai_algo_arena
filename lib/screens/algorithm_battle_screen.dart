@@ -18,8 +18,9 @@ import 'package:algo_arena/state/settings_provider.dart';
 import 'package:algo_arena/models/algo_info.dart';
 import 'package:algo_arena/services/maze_generator.dart';
 import 'package:algo_arena/services/api_service.dart';
+import 'package:algo_arena/state/api_provider.dart';
 import 'package:algo_arena/services/run_optimizer.dart';
-import 'package:algo_arena/screens/history_screen.dart';
+
 
 class AlgorithmBattleScreen extends ConsumerStatefulWidget {
   final List<List<GridNode>>? initialGrid;

@@ -245,22 +245,26 @@ class _GridPainter extends CustomPainter {
     final cellWidth = size.width / controller.columns;
     final cellHeight = size.height / controller.rows;
 
+    // Define the visible viewport. For now, it's the full size, 
+    // but this logic allows for easy integration with zooming/panning.
+    final viewport = Offset.zero & size;
+
     // 1. Draw or Create Static Content (Background and Walls)
     if (staticPicture != null) {
       canvas.drawPicture(staticPicture!);
     } else {
       final recorder = ui.PictureRecorder();
       final staticCanvas = Canvas(recorder);
-      _drawStaticGrid(staticCanvas, size, cellWidth, cellHeight);
+      _drawStaticGrid(staticCanvas, size, cellWidth, cellHeight, viewport);
       final picture = recorder.endRecording();
       onPictureCreated(picture);
       canvas.drawPicture(picture);
     }
 
     // 2. Draw Dynamic Content (Explored Set and Path)
-    _drawExploredStates(canvas, cellWidth, cellHeight);
-    _drawPath(canvas, cellWidth, cellHeight);
-    _drawCurrentNode(canvas, cellWidth, cellHeight);
+    _drawExploredStates(canvas, cellWidth, cellHeight, viewport);
+    _drawPath(canvas, cellWidth, cellHeight, viewport);
+    _drawCurrentNode(canvas, cellWidth, cellHeight, viewport);
   }
 
   void _drawStaticGrid(
@@ -268,6 +272,7 @@ class _GridPainter extends CustomPainter {
     Size size,
     double cellWidth,
     double cellHeight,
+    Rect viewport,
   ) {
     final paint = Paint()
       ..style = PaintingStyle.fill
@@ -275,11 +280,17 @@ class _GridPainter extends CustomPainter {
 
     // Background
     paint.color = AppTheme.surfaceLow;
-    canvas.drawRect(Offset.zero & size, paint);
+    canvas.drawRect(size.shortestSide > 0 ? (Offset.zero & size) : Rect.zero, paint);
+
+    // Viewport Culling: Calculate visible range
+    final startCol = (viewport.left / cellWidth).floor().clamp(0, controller.columns - 1);
+    final endCol = (viewport.right / cellWidth).ceil().clamp(0, controller.columns - 1);
+    final startRow = (viewport.top / cellHeight).floor().clamp(0, controller.rows - 1);
+    final endRow = (viewport.bottom / cellHeight).ceil().clamp(0, controller.rows - 1);
 
     // Draw grid nodes (primarily walls and anchors)
-    for (int r = 0; r < controller.rows; r++) {
-      for (int c = 0; c < controller.columns; c++) {
+    for (int r = startRow; r <= endRow; r++) {
+      for (int c = startCol; c <= endCol; c++) {
         final node = controller.grid[r][c];
         final rect = Rect.fromLTWH(
           c * cellWidth + 0.5,
@@ -357,7 +368,12 @@ class _GridPainter extends CustomPainter {
     }
   }
 
-  void _drawExploredStates(Canvas canvas, double cellWidth, double cellHeight) {
+  void _drawExploredStates(
+    Canvas canvas,
+    double cellWidth,
+    double cellHeight,
+    Rect viewport,
+  ) {
     final explored = exploredNodes ?? executor?.exploredSet;
     if (explored == null || explored.isEmpty) return;
 
@@ -377,15 +393,20 @@ class _GridPainter extends CustomPainter {
         continue;
       }
 
+      // Viewport culling
+      final x = state.column * cellWidth + cellWidth / 2;
+      final y = state.row * cellHeight + cellHeight / 2;
+      if (!viewport.contains(Offset(x, y))) {
+        i++;
+        continue;
+      }
+
       if (controller.grid[state.row][state.column].type != NodeType.empty) {
         i++;
         continue;
       }
 
-      points.add(Offset(
-        state.column * cellWidth + cellWidth / 2,
-        state.row * cellHeight + cellHeight / 2,
-      ));
+      points.add(Offset(x, y));
       i++;
     }
     
@@ -394,7 +415,12 @@ class _GridPainter extends CustomPainter {
     }
   }
 
-  void _drawPath(Canvas canvas, double cellWidth, double cellHeight) {
+  void _drawPath(
+    Canvas canvas,
+    double cellWidth,
+    double cellHeight,
+    Rect viewport,
+  ) {
     final pathNodesList = pathNodes ?? executor?.pathSet;
     if (pathNodesList == null || pathNodesList.isEmpty) return;
 
@@ -409,6 +435,15 @@ class _GridPainter extends CustomPainter {
     for (final state in pathNodesList) {
       if (i >= count) break;
 
+      final x = state.column * cellWidth + cellWidth / 2;
+      final y = state.row * cellHeight + cellHeight / 2;
+
+      // Viewport culling
+      if (!viewport.contains(Offset(x, y))) {
+        i++;
+        continue;
+      }
+
       final rect = Rect.fromLTWH(
         state.column * cellWidth + 1.5,
         state.row * cellHeight + 1.5,
@@ -422,7 +457,12 @@ class _GridPainter extends CustomPainter {
     canvas.drawPath(path, paint);
   }
 
-  void _drawCurrentNode(Canvas canvas, double cellWidth, double cellHeight) {
+  void _drawCurrentNode(
+    Canvas canvas,
+    double cellWidth,
+    double cellHeight,
+    Rect viewport,
+  ) {
     final current = executor?.lastStep?.currentState;
     if (current == null) return;
 

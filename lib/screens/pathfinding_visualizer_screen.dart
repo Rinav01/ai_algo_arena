@@ -1,3 +1,4 @@
+import 'package:algo_arena/screens/visualizer_base_mixin.dart';
 import 'package:algo_arena/services/maze_generator.dart';
 import 'package:algo_arena/services/map_persistence.dart';
 import 'package:algo_arena/widgets/algorithm_recommendation_card.dart';
@@ -19,9 +20,11 @@ import 'package:algo_arena/state/settings_provider.dart';
 import 'package:algo_arena/models/algo_info.dart';
 import 'package:algo_arena/services/api_service.dart';
 import 'package:algo_arena/services/run_optimizer.dart';
-import 'package:algo_arena/screens/history_screen.dart';
-import 'package:algo_arena/screens/visualizer_base_mixin.dart';
+import 'package:algo_arena/state/api_provider.dart';
+import 'package:algo_arena/state/performance_provider.dart';
+import 'package:algo_arena/services/performance_monitor.dart';
 import 'dart:typed_data';
+
 
 class PathfindingVisualizerScreen extends ConsumerStatefulWidget {
   final String algorithmId;
@@ -40,7 +43,9 @@ class PathfindingVisualizerScreen extends ConsumerStatefulWidget {
 
 class _PathfindingVisualizerScreenState
     extends ConsumerState<PathfindingVisualizerScreen>
-    with TickerProviderStateMixin, VisualizerBaseMixin<PathfindingVisualizerScreen, GridCoordinate> {
+    with
+        TickerProviderStateMixin,
+        VisualizerBaseMixin<PathfindingVisualizerScreen, GridCoordinate> {
   late final GridController _controller;
   GridProblem? _problem;
 
@@ -172,12 +177,17 @@ class _PathfindingVisualizerScreenState
 
   Future<void> _autoSaveRun() async {
     if (executor == null) return;
-    
-    debugPrint('Auto-save triggered for ${widget.algorithmId} with Phase 2 optimizations...');
+
+    debugPrint(
+      'Auto-save triggered for ${widget.algorithmId} with Phase 2 optimizations...',
+    );
     try {
       final cols = _controller.columns;
       final totalCells = _controller.rows * cols;
-      final wallCount = _controller.grid.expand((r) => r).where((n) => n.type == NodeType.wall).length;
+      final wallCount = _controller.grid
+          .expand((r) => r)
+          .where((n) => n.type == NodeType.wall)
+          .length;
       final density = wallCount / totalCells;
 
       final runData = {
@@ -190,7 +200,9 @@ class _PathfindingVisualizerScreenState
           'foundPath': isSolved,
           'pathLength': _path.length,
           'nodesExplored': nodesExplored,
-          'heuristic': ref.read(settingsProvider).allowDiagonalMoves ? 'Octile' : 'Manhattan',
+          'heuristic': ref.read(settingsProvider).allowDiagonalMoves
+              ? 'Octile'
+              : 'Manhattan',
         },
         'steps': RunOptimizer.optimizeSteps(
           executor!.history!.cast<AlgorithmStep<GridCoordinate>>(),
@@ -204,7 +216,7 @@ class _PathfindingVisualizerScreenState
 
       debugPrint('Sending optimized run data to: ${ApiService.baseUrl}/runs');
       await ApiService().saveRun(runData);
-      
+
       if (mounted) {
         ref.invalidate(runsProvider);
       }
@@ -349,7 +361,7 @@ class _PathfindingVisualizerScreenState
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: !isShellReady 
+        child: !isShellReady
             ? const Center(child: CircularProgressIndicator())
             : _buildFullContent(),
       ),
@@ -414,17 +426,11 @@ class _PathfindingVisualizerScreenState
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: GlassStatCard(
-            label: 'EXPLORED',
-            value: nodesExplored,
-          ),
+          child: GlassStatCard(label: 'EXPLORED', value: nodesExplored),
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: GlassStatCard(
-            label: 'PATH LEN',
-            value: _path.length,
-          ),
+          child: GlassStatCard(label: 'PATH LEN', value: _path.length),
         ),
       ],
     );
@@ -432,20 +438,27 @@ class _PathfindingVisualizerScreenState
 
   Widget _buildStatusSection() {
     return StatusBanner(
-      message: statusMessage,
-      isSolved: isSolved,
-      isSolving: isSolving,
-    ).animate(
-      target: isSolved ? 1 : 0,
-      onPlay: (c) => isSolved ? c.repeat(reverse: true) : c.stop(),
-    )
-     .shimmer(duration: 1200.ms, color: AppTheme.success.withValues(alpha: 0.3))
-     .animate(
-      target: isSolving ? 1 : 0,
-      onPlay: (c) => isSolving ? c.repeat(reverse: true) : c.stop(),
-    )
-     .shimmer(duration: 2.seconds, color: AppTheme.warning.withValues(alpha: 0.2))
-     .shake(hz: 3, curve: Curves.easeInOut);
+          message: statusMessage,
+          isSolved: isSolved,
+          isSolving: isSolving,
+        )
+        .animate(
+          target: isSolved ? 1 : 0,
+          onPlay: (c) => isSolved ? c.repeat(reverse: true) : c.stop(),
+        )
+        .shimmer(
+          duration: 1200.ms,
+          color: AppTheme.success.withValues(alpha: 0.3),
+        )
+        .animate(
+          target: isSolving ? 1 : 0,
+          onPlay: (c) => isSolving ? c.repeat(reverse: true) : c.stop(),
+        )
+        .shimmer(
+          duration: 2.seconds,
+          color: AppTheme.warning.withValues(alpha: 0.2),
+        )
+        .shake(hz: 3, curve: Curves.easeInOut);
   }
 
   Widget _buildToolsSection() {
@@ -503,30 +516,44 @@ class _PathfindingVisualizerScreenState
   }
 
   Widget _buildGridSection() {
+    final quality = ref.watch(qualityLevelProvider);
+    final isLowFidelity = quality == QualityLevel.performance;
+
     return RepaintBoundary(
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16.0),
-        child: Container(
-          decoration: AppTheme.glassCardAccent(radius: 16),
-          padding: const EdgeInsets.all(8.0),
-          child: AspectRatio(
-            aspectRatio: 25 / 15,
-            child: !isGridReady 
-                ? SkeletonGrid(rows: _controller.rows, columns: _controller.columns)
-                : GridVisualizerCanvas(
-                    controller: _controller,
-                    executor: executor,
-                    isInteractive: true,
-                    onPointerDown: _handlePointerDown,
-                    onPointerUpdate: _handlePointerUpdate,
-                    onPointerUp: _handlePointerUp,
-                  ).animate().fadeIn(duration: 400.ms),
-          ),
-        ).animate(
-          target: isSolving ? 1 : 0,
-          onPlay: (c) => isSolving ? c.repeat(reverse: true) : c.stop(),
-        )
-         .tint(color: AppTheme.accent.withValues(alpha: 0.05), duration: 1500.ms),
+        child:
+            Container(
+                  decoration: AppTheme.glassCardAccent(
+                    radius: 16,
+                    lowFidelity: isLowFidelity,
+                  ),
+                  padding: const EdgeInsets.all(8.0),
+                  child: AspectRatio(
+                    aspectRatio: 25 / 15,
+                    child: !isGridReady
+                        ? SkeletonGrid(
+                            rows: _controller.rows,
+                            columns: _controller.columns,
+                          )
+                        : GridVisualizerCanvas(
+                            controller: _controller,
+                            executor: executor,
+                            isInteractive: true,
+                            onPointerDown: _handlePointerDown,
+                            onPointerUpdate: _handlePointerUpdate,
+                            onPointerUp: _handlePointerUp,
+                          ).animate().fadeIn(duration: 400.ms),
+                  ),
+                )
+                .animate(
+                  target: isSolving ? 1 : 0,
+                  onPlay: (c) => isSolving ? c.repeat(reverse: true) : c.stop(),
+                )
+                .tint(
+                  color: AppTheme.accent.withValues(alpha: 0.05),
+                  duration: 1500.ms,
+                ),
       ),
     );
   }
@@ -544,10 +571,7 @@ class _PathfindingVisualizerScreenState
   }
 
   Widget _buildAnalyticsSection() {
-    return PerformanceChart(
-      dataPoints: perfData,
-      accentColor: AppTheme.accent,
-    );
+    return PerformanceChart(dataPoints: perfData, accentColor: AppTheme.accent);
   }
 
   Widget _buildControlsSection() {
@@ -573,10 +597,7 @@ class _PathfindingVisualizerScreenState
                       row: _controller.goal!.row,
                       column: _controller.goal!.column,
                     )
-                  : GridCoordinate(
-                      row: -1,
-                      column: -1,
-                    ),
+                  : GridCoordinate(row: -1, column: -1),
             ),
           ),
         );

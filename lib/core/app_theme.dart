@@ -62,15 +62,16 @@ abstract class AppTheme {
     Color? borderColor,
     Color? glowColor,
     double borderWidth = 1.0,
+    bool lowFidelity = false,
   }) {
     return BoxDecoration(
-      color: surfaceVariant.withValues(alpha: 0.88),
+      color: surfaceVariant.withValues(alpha: lowFidelity ? 0.98 : 0.88),
       borderRadius: BorderRadius.circular(radius),
       border: Border.all(
         color: borderColor ?? Colors.white.withValues(alpha: 0.12),
         width: borderWidth,
       ),
-      boxShadow: [
+      boxShadow: lowFidelity ? [] : [
         BoxShadow(
           color: Colors.black.withValues(alpha: 0.25),
           blurRadius: 8,
@@ -92,10 +93,14 @@ abstract class AppTheme {
   static BoxDecoration get glassDecorationAccent => glassCardAccent();
 
   /// Glass card with violet accent glow.
-  static BoxDecoration glassCardAccent({double radius = 16}) => glassCard(
+  static BoxDecoration glassCardAccent({
+    double radius = 16,
+    bool lowFidelity = false,
+  }) => glassCard(
     radius: radius,
     borderColor: accent.withValues(alpha: 0.35),
-    glowColor: accent,
+    glowColor: lowFidelity ? null : accent,
+    lowFidelity: lowFidelity,
   );
 
   /// "Ghost border" — outline_variant at 15% opacity (accessibility fallback)

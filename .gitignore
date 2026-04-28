@@ -1,7 +1,6 @@
 # Miscellaneous
 analyze_output.txt
 devtools_options.yaml
-PROJECT_GUIDE.md
 *.class
 *.log
 *.pyc

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:isolate';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:algo_arena/core/grid_problem.dart';
 import 'package:algo_arena/core/water_jug_problem.dart';
@@ -355,6 +356,8 @@ class AlgorithmExecutor<State> with ChangeNotifier {
 
   void _startPlayback() {
     _playbackTimer?.cancel();
+    _stopwatch.reset();
+    _stopwatch.start();
 
     // Resolve settings once for the entire playback session
     _cachedSettings = const AppSettings();
@@ -366,7 +369,6 @@ class AlgorithmExecutor<State> with ChangeNotifier {
 
     if (_stepDelay.inMilliseconds == 0) {
       if (_fullHistory != null && _fullHistory!.isNotEmpty) {
-        // Explored and Path already handled in start() for efficiency
         _currentIndex = _fullHistory!.length - 1;
         _lastStep = _fullHistory![_currentIndex];
         _frontierSize = _lastStep!.frontierSize ?? 0;
@@ -377,58 +379,69 @@ class AlgorithmExecutor<State> with ChangeNotifier {
       return;
     }
 
-    // Throttling Logic: If delay is too short, we process multiple steps per tick
-    final minDelay = const Duration(milliseconds: 16);
-    final Duration timerDuration;
-    final int stepsPerTick;
+    _scheduleNextFrame();
+  }
 
-    if (_stepDelay < minDelay) {
-      timerDuration = minDelay;
-      stepsPerTick = (minDelay.inMicroseconds / _stepDelay.inMicroseconds)
-          .ceil();
-    } else {
-      timerDuration = _stepDelay;
-      stepsPerTick = 1;
-    }
-
-    _playbackTimer = Timer.periodic(timerDuration, (timer) {
-      if (_isPaused || _isStopped) {
-        timer.cancel();
-        return;
-      }
-
-      if (_fullHistory == null || _currentIndex >= _fullHistory!.length) {
-        _finishPlayback();
-        return;
-      }
-
-      // Batch process steps for performance
-      for (int i = 0; i < stepsPerTick; i++) {
-        if (_currentIndex >= _fullHistory!.length) break;
-
-        _lastStep = _fullHistory![_currentIndex];
-        _exploredSet.addAll(_lastStep!.newlyExplored);
-        _currentPath = _lastStep!.path;
-        _pathSet.clear();
-        _pathSet.addAll(_currentPath);
-        _frontierSize = _lastStep!.frontierSize ?? 0;
-
-        // Notify UI on the last step of the batch
-        if (i == stepsPerTick - 1 ||
-            _currentIndex == _fullHistory!.length - 1) {
-          _stepController.add(_lastStep!);
-          _handleHaptics();
-          notifyListeners();
-        }
-
-        _currentIndex++;
-      }
-
-      if (_currentIndex >= _fullHistory!.length) {
-        _finishPlayback();
-      }
+  void _scheduleNextFrame() {
+    if (_isPaused || _isStopped) return;
+    
+    SchedulerBinding.instance.scheduleFrameCallback((_) {
+      _processFrameBudget();
     });
   }
+
+  void _processFrameBudget() {
+    if (_isPaused || _isStopped) return;
+    if (_fullHistory == null || _currentIndex >= _fullHistory!.length) {
+      _finishPlayback();
+      return;
+    }
+
+    final frameStart = DateTime.now();
+    // Use 12ms instead of 16ms to leave some overhead for the OS and UI build phase
+    const frameBudget = Duration(milliseconds: 12);
+    
+    bool processedAny = false;
+    
+    while (_currentIndex < _fullHistory!.length) {
+      // Check if we've exceeded the budget for this frame
+      if (processedAny && DateTime.now().difference(frameStart) > frameBudget) {
+        break;
+      }
+
+      // Check if it's actually time to process the next step based on _stepDelay
+      // This allows both ultra-fast playback (multiple per frame) and slow playback (one every N frames)
+      if (_stopwatch.elapsed < _stepDelay) {
+        break; 
+      }
+
+      _lastStep = _fullHistory![_currentIndex];
+      _exploredSet.addAll(_lastStep!.newlyExplored);
+      _currentPath = _lastStep!.path;
+      _pathSet.clear();
+      _pathSet.addAll(_currentPath);
+      _frontierSize = _lastStep!.frontierSize ?? 0;
+      
+      _currentIndex++;
+      processedAny = true;
+      _stopwatch.reset();
+      _stopwatch.start();
+    }
+
+    if (processedAny) {
+      _stepController.add(_lastStep!);
+      _handleHaptics();
+      notifyListeners();
+    }
+
+    if (_currentIndex < _fullHistory!.length) {
+      _scheduleNextFrame();
+    } else {
+      _finishPlayback();
+    }
+  }
+
+  final Stopwatch _stopwatch = Stopwatch();
 
   void _handleHaptics() {
     if (_lastStep == null || _cachedSettings == null) return;

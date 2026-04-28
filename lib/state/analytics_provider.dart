@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/api_service.dart';
+import 'package:algo_arena/state/api_provider.dart';
 import '../models/analytics_models.dart';
-
-final apiServiceProvider = Provider((ref) => ApiService());
 
 // ─── Filters State ───────────────────────────────────────────────────────────
 
@@ -23,16 +21,18 @@ class AnalyticsFilters {
   AnalyticsFilters copyWith({
     String? algorithm,
     String? metric,
-    String? startDate,
-    String? endDate,
+    Object? startDate = _sentinel,
+    Object? endDate = _sentinel,
   }) {
     return AnalyticsFilters(
       algorithm: algorithm ?? this.algorithm,
       metric: metric ?? this.metric,
-      startDate: startDate ?? this.startDate,
-      endDate: endDate ?? this.endDate,
+      startDate: startDate == _sentinel ? this.startDate : startDate as String?,
+      endDate: endDate == _sentinel ? this.endDate : endDate as String?,
     );
   }
+
+  static const _sentinel = Object();
 }
 
 final analyticsFiltersProvider = StateProvider<AnalyticsFilters>((ref) => AnalyticsFilters());
@@ -129,6 +129,8 @@ final trendsProvider = FutureProvider<AnalyticsResponse<TrendData>>((ref) async 
   final res = await api.getTrends(
     algorithm: filters.algorithm,
     metric: filters.metric,
+    startDate: filters.startDate,
+    endDate: filters.endDate,
   );
 
   final rawData = res['data'];
@@ -160,8 +162,12 @@ final trendsProvider = FutureProvider<AnalyticsResponse<TrendData>>((ref) async 
 
 final distributionProvider = FutureProvider<AnalyticsResponse<DistributionData>>((ref) async {
   final api = ref.watch(apiServiceProvider);
+  final filters = ref.watch(analyticsFiltersProvider);
   
-  final res = await api.getDistribution();
+  final res = await api.getDistribution(
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+  );
 
   final rawData = res['data'];
   debugPrint('Analytics Summary rawData: $rawData');

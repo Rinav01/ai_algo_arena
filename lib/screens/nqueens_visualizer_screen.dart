@@ -408,7 +408,7 @@ class _NQueensVisualizerScreenState extends ConsumerState<NQueensVisualizerScree
               Expanded(
                 child: GlassStatCard(
                   label: 'ROW',
-                  value: currentState.placement.indexOf(-1) == -1 ? boardSize : currentState.placement.indexOf(-1) + 1,
+                  value: !currentState.placement.contains(-1) ? boardSize : currentState.placement.indexOf(-1) + 1,
                 ),
               ),
             ],

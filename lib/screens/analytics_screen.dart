@@ -259,7 +259,7 @@ class _GeneralTab extends ConsumerWidget {
                         metric: filters.metric ?? 'nodes',
                       ),
                       loading: () => const _SkeletonPlaceholder(height: 350),
-                      error: (_, __) => const SizedBox.shrink(),
+                      error: (err, stack) => const SizedBox.shrink(),
                     ),
                     const SizedBox(height: 32),
 
@@ -269,7 +269,7 @@ class _GeneralTab extends ConsumerWidget {
                     distributionAsync.when(
                       data: (distRes) => DistributionPieChart(data: distRes.data),
                       loading: () => const _SkeletonPlaceholder(height: 300),
-                      error: (_, __) => const SizedBox.shrink(),
+                      error: (err, stack) => const SizedBox.shrink(),
                     ),
                     const SizedBox(height: 100),
                   ]),
@@ -428,9 +428,9 @@ void _showInsightDetails(BuildContext context, Insight insight) {
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.65,
         decoration: BoxDecoration(
-          color: AppTheme.surface.withOpacity(0.85),
+          color: AppTheme.surface.withValues(alpha: 0.85),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         ),
         child: ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
@@ -457,7 +457,7 @@ void _showInsightDetails(BuildContext context, Insight insight) {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: insight.getSeverityColor().withOpacity(0.1),
+                          color: insight.getSeverityColor().withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Icon(
@@ -497,7 +497,7 @@ void _showInsightDetails(BuildContext context, Insight insight) {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.05),
+                      color: Colors.white.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(
@@ -523,7 +523,7 @@ void _showInsightDetails(BuildContext context, Insight insight) {
                   Text(
                     insight.reason ?? "No detailed reason provided for this insight.",
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                       fontSize: 15,
                       height: 1.5,
                     ),

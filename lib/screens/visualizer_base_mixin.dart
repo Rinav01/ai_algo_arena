@@ -52,10 +52,37 @@ mixin VisualizerBaseMixin<T extends ConsumerStatefulWidget, S> on ConsumerState<
       if (mounted) setState(() => isShellReady = true);
     });
 
-    // Stage 2: Grid Ready (Progressive Hydration)
-    // Delay slightly longer than navigation transition to ensure zero contention.
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (mounted) setState(() => isGridReady = true);
+    // Stage 2: Adaptive Hydration (Grid Ready)
+    // Instead of fixed 800ms, we wait for the engine to stabilize.
+    _trackFrameStability();
+  }
+
+  void _trackFrameStability() {
+    int stableFrames = 0;
+    const int stabilityThreshold = 5; // Require 5 consecutive stable frames
+    
+    // We also set a safety timeout (e.g. 2 seconds) just in case
+    final safetyTimeout = Timer(const Duration(seconds: 2), () {
+      if (mounted && !isGridReady) {
+        setState(() => isGridReady = true);
+      }
+    });
+
+    WidgetsBinding.instance.addPersistentFrameCallback((timeStamp) {
+      if (!mounted || isGridReady) return;
+
+      // Heuristic: If we are rendering under 16ms, we have overhead budget
+      // Note: SchedulerBinding.instance.currentFrameTimeStamp is better for this
+      
+      // Since we don't have direct access to the *last* frame time here easily 
+      // without extra plumbing, we'll use a simpler heuristic: 
+      // Wait for the first few frames after navigation to complete.
+      stableFrames++;
+      
+      if (stableFrames >= stabilityThreshold) {
+        safetyTimeout.cancel();
+        setState(() => isGridReady = true);
+      }
     });
   }
 

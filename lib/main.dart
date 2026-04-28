@@ -22,12 +22,12 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
-
+  
   // Pre-warm fonts to avoid jank on first render
   unawaited(GoogleFonts.pendingFonts());
 
   final prefs = await SharedPreferences.getInstance();
-
+  
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

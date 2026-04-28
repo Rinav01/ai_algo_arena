@@ -5,6 +5,8 @@ import 'package:algo_arena/widgets/bottom_nav_bar.dart';
 import 'package:algo_arena/state/settings_provider.dart';
 import 'package:algo_arena/services/stats_service.dart';
 
+import 'package:algo_arena/state/api_provider.dart';
+
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -103,14 +105,14 @@ class SettingsScreen extends ConsumerWidget {
                   const SizedBox(height: 12),
                   _buildSectionHeader('DATA MANAGEMENT'),
                   _buildSettingTile(
-                    title: 'Clear Battle History',
-                    subtitle: 'Reset all comparison winners and records',
+                    title: 'Delete Everything',
+                    subtitle: 'Wipe all runs, statistics, and history',
                     trailing: IconButton(
                       icon: const Icon(
-                        Icons.delete_outline_rounded,
+                        Icons.delete_forever_rounded,
                         color: AppTheme.error,
                       ),
-                      onPressed: () => _confirmResetStats(context, ref),
+                      onPressed: () => _confirmDeleteEverything(context, ref),
                     ),
                   ),
                 ],
@@ -232,14 +234,14 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _confirmResetStats(BuildContext context, WidgetRef ref) {
+  void _confirmDeleteEverything(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.surfaceHigh,
-        title: const Text('Clear History?'),
+        title: const Text('Delete All Data?'),
         content: const Text(
-          'This will permanently delete all battle statistics and records.',
+          'This will permanently delete all algorithm runs, battle statistics, and execution history from the server and this device.',
         ),
         actions: [
           TextButton(
@@ -247,14 +249,36 @@ class SettingsScreen extends ConsumerWidget {
             child: const Text('CANCEL'),
           ),
           TextButton(
-            onPressed: () {
-              ref.read(arenaStatsProvider.notifier).resetStats();
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Statistics cleared')),
-              );
+            onPressed: () async {
+              try {
+                // 1. Reset local stats
+                await ref.read(arenaStatsProvider.notifier).resetStats();
+                
+                // 2. Delete backend data
+                await ref.read(apiServiceProvider).deleteAllRuns();
+                
+                // 3. Invalidate runs provider
+                ref.invalidate(runsProvider);
+                
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('All history and statistics wiped')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: AppTheme.error,
+                    ),
+                  );
+                }
+              }
             },
-            child: const Text('CLEAR', style: TextStyle(color: AppTheme.error)),
+            child: const Text('DELETE ALL', style: TextStyle(color: AppTheme.error)),
           ),
         ],
       ),

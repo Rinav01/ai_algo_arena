@@ -731,26 +731,41 @@ class ParticlePainter extends CustomPainter {
 }
 /// Invisible widget that renders common expensive UI elements once
 /// during the splash screen to pre-compile GPU shaders.
-class _ShaderPrewarmer extends StatelessWidget {
+class _ShaderPrewarmer extends StatefulWidget {
   const _ShaderPrewarmer();
+
+  @override
+  State<_ShaderPrewarmer> createState() => _ShaderPrewarmerState();
+}
+
+class _ShaderPrewarmerState extends State<_ShaderPrewarmer> {
+  bool _shouldRenderBlur = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Delay the most expensive operation (blur) by 500ms
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) setState(() => _shouldRenderBlur = true);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Opacity(
-      opacity: 0.001, // Nearly invisible but still part of the paint tree
+      opacity: 0.001,
       child: SizedBox(
         width: 1,
         height: 1,
         child: Stack(
           children: [
-            // Prewarm Glass Shader
             Container(decoration: AppTheme.glassDecoration),
-            // Prewarm Accent Glass Shader
             Container(decoration: AppTheme.glassDecorationAccent),
-            // Prewarm standard glass card
-            Container(decoration: AppTheme.glassCard()),
-            // Prewarm a blur filter
-            BackdropFilter(filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), child: Container()),
+            if (_shouldRenderBlur)
+              BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                child: Container(),
+              ),
           ],
         ),
       ),

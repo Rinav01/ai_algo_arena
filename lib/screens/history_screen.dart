@@ -1,18 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:algo_arena/core/app_theme.dart';
-import 'package:algo_arena/services/api_service.dart';
+import 'package:algo_arena/state/api_provider.dart';
 import 'package:algo_arena/widgets/bottom_nav_bar.dart';
-
-final apiServiceProvider = Provider((ref) => ApiService());
-
-final runsProvider = FutureProvider<List<dynamic>>((ref) async {
-  final api = ref.watch(apiServiceProvider);
-  debugPrint('Fetching run history...');
-  final runs = await api.getRuns();
-  debugPrint('Fetched ${runs.length} runs');
-  return runs;
-});
 
 enum SortMode { latest, time, efficiency }
 enum FilterType { all, single, battle }
@@ -22,15 +12,81 @@ final sortModeProvider = StateProvider<SortMode>((ref) => SortMode.latest);
 final filterTypeProvider = StateProvider<FilterType>((ref) => FilterType.all);
 final filterGridSizeProvider = StateProvider<GridSize>((ref) => GridSize.all);
 
+/// Reactive provider that handles filtering and sorting off the main thread
+final processedRunsProvider = Provider<AsyncValue<List<dynamic>>>((ref) {
+  final runsAsync = ref.watch(runsProvider);
+  final sortMode = ref.watch(sortModeProvider);
+  final filterType = ref.watch(filterTypeProvider);
+  final gridSize = ref.watch(filterGridSizeProvider);
+
+  return runsAsync.whenData((runs) {
+    // This logic is now cached and only re-runs when inputs change
+    return _processRunsInternal(runs, sortMode, filterType, gridSize);
+  });
+});
+
+/// Extracted static logic for processing
+List<dynamic> _processRunsInternal(
+  List<dynamic> runs,
+  SortMode sortMode,
+  FilterType filterType,
+  GridSize gridSizeFilter,
+) {
+  var processed = List<dynamic>.from(runs);
+
+  // Filter by Type
+  if (filterType != FilterType.all) {
+    processed = processed.where((r) {
+      final isBattle = r['type'] == 'battle';
+      return filterType == FilterType.battle ? isBattle : !isBattle;
+    }).toList();
+  }
+
+  // Filter by Grid Size
+  if (gridSizeFilter != GridSize.all) {
+    processed = processed.where((r) {
+      final meta = r['metadata'] as Map<String, dynamic>?;
+      final size = (meta?['gridSize'] as String?) ?? '';
+      if (size.contains('x')) {
+        final parts = size.split('x');
+        final area = (int.tryParse(parts[0]) ?? 0) * (int.tryParse(parts[1]) ?? 0);
+        if (gridSizeFilter == GridSize.small) return area < 225;
+        if (gridSizeFilter == GridSize.medium) return area >= 225 && area <= 900;
+        if (gridSizeFilter == GridSize.large) return area > 900;
+      }
+      return false;
+    }).toList();
+  }
+
+  // Pre-calculate values for sorting to avoid parsing overhead during O(n log n) sort
+  final sortCache = <dynamic, dynamic>{};
+  for (var r in processed) {
+    final meta = r['metadata'] as Map<String, dynamic>?;
+    if (sortMode == SortMode.latest) {
+      sortCache[r] = DateTime.tryParse(r['timestamp'] ?? '')?.millisecondsSinceEpoch ?? 0;
+    } else if (sortMode == SortMode.time) {
+      sortCache[r] = (meta?['durationMs'] as num? ?? 999999).toInt();
+    } else if (sortMode == SortMode.efficiency) {
+      sortCache[r] = (meta?['steps'] as num? ?? 999999).toInt();
+    }
+  }
+
+  processed.sort((a, b) {
+    final valA = sortCache[a] as int;
+    final valB = sortCache[b] as int;
+    return sortMode == SortMode.latest ? valB.compareTo(valA) : valA.compareTo(valB);
+  });
+
+  return processed;
+}
+
 class HistoryScreen extends ConsumerWidget {
   const HistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final processedRunsAsync = ref.watch(processedRunsProvider);
     final runsAsync = ref.watch(runsProvider);
-    final sortMode = ref.watch(sortModeProvider);
-    final filterType = ref.watch(filterTypeProvider);
-    final gridSize = ref.watch(filterGridSizeProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -46,9 +102,8 @@ class HistoryScreen extends ConsumerWidget {
             slivers: [
               _buildHeader(context, runsAsync),
               _buildControlBar(context, ref),
-              runsAsync.when(
-                data: (runs) {
-                  final processedRuns = _getProcessedRuns(runs, sortMode, filterType, gridSize);
+              processedRunsAsync.when(
+                data: (processedRuns) {
                   return _buildRunsList(context, processedRuns, ref);
                 },
                 loading: () => const SliverFillRemaining(
@@ -145,7 +200,7 @@ class HistoryScreen extends ConsumerWidget {
                   runsAsync.when(
                     data: (runs) => _buildSummarySection(context, runs),
                     loading: () => const SizedBox(height: 80),
-                    error: (_, __) => const SizedBox(),
+                    error: (err, stack) => const SizedBox(),
                   ),
                 ],
               ),
@@ -160,14 +215,12 @@ class HistoryScreen extends ConsumerWidget {
     if (runs.isEmpty) return const SizedBox();
 
     final totalRuns = runs.length;
-    
-    // Most used algo
     final algoCounts = <String, int>{};
     int totalSteps = 0;
+    
     for (var r in runs) {
       final name = r['algorithm'] ?? 'Unknown';
       algoCounts[name] = (algoCounts[name] ?? 0) + 1;
-      
       final meta = r['metadata'] as Map<String, dynamic>?;
       totalSteps += (meta?['steps'] as num? ?? 0).toInt();
     }
@@ -193,9 +246,9 @@ class HistoryScreen extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.03),
+          color: Colors.white.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,7 +256,7 @@ class HistoryScreen extends ConsumerWidget {
             Text(
               label.toUpperCase(),
               style: TextStyle(
-                color: AppTheme.accentLight.withOpacity(0.6),
+                color: AppTheme.accentLight.withValues(alpha: 0.6),
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1,
@@ -227,16 +280,14 @@ class HistoryScreen extends ConsumerWidget {
   }
 
   Widget _buildControlBar(BuildContext context, WidgetRef ref) {
-    ref.watch(sortModeProvider);
-    
     return SliverToBoxAdapter(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: Colors.white.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         ),
         child: Row(
           children: [
@@ -255,7 +306,7 @@ class HistoryScreen extends ConsumerWidget {
             Container(
               height: 24,
               width: 1,
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               margin: const EdgeInsets.symmetric(horizontal: 8),
             ),
             IconButton(
@@ -279,16 +330,16 @@ class HistoryScreen extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         margin: const EdgeInsets.only(right: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.accent.withOpacity(0.2) : Colors.transparent,
+          color: isSelected ? AppTheme.accent.withValues(alpha: 0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected ? AppTheme.accent.withOpacity(0.5) : Colors.transparent,
+            color: isSelected ? AppTheme.accent.withValues(alpha: 0.5) : Colors.transparent,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.white.withOpacity(0.5),
+            color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.5),
             fontSize: 13,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
@@ -303,69 +354,6 @@ class HistoryScreen extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       builder: (context) => _FilterSheet(ref: ref),
     );
-  }
-
-  List<dynamic> _getProcessedRuns(
-    List<dynamic> runs,
-    SortMode sortMode,
-    FilterType filterType,
-    GridSize gridSizeFilter,
-  ) {
-    var processed = List<dynamic>.from(runs);
-
-    // Filter by Type
-    if (filterType != FilterType.all) {
-      processed = processed.where((r) {
-        final isBattle = r['type'] == 'battle';
-        return filterType == FilterType.battle ? isBattle : !isBattle;
-      }).toList();
-    }
-
-    // Filter by Grid Size
-    if (gridSizeFilter != GridSize.all) {
-      processed = processed.where((r) {
-        final meta = r['metadata'] as Map<String, dynamic>?;
-        final size = (meta?['gridSize'] as String?) ?? '';
-        if (size.contains('x')) {
-          final parts = size.split('x');
-          final area = (int.tryParse(parts[0]) ?? 0) * (int.tryParse(parts[1]) ?? 0);
-          if (gridSizeFilter == GridSize.small) return area < 225; // 15x15
-          if (gridSizeFilter == GridSize.medium) return area >= 225 && area <= 900; // 30x30
-          if (gridSizeFilter == GridSize.large) return area > 900;
-        }
-        return false;
-      }).toList();
-    }
-
-    // Pre-calculate values for sorting to avoid parsing overhead during O(n log n) sort
-    final sortCache = <dynamic, dynamic>{};
-    for (var r in processed) {
-      final meta = r['metadata'] as Map<String, dynamic>?;
-      if (sortMode == SortMode.latest) {
-        sortCache[r] = DateTime.tryParse(r['timestamp'] ?? '')?.millisecondsSinceEpoch ?? 0;
-      } else if (sortMode == SortMode.time) {
-        sortCache[r] = (meta?['durationMs'] as num? ?? 999999).toInt();
-      } else if (sortMode == SortMode.efficiency) {
-        sortCache[r] = (meta?['steps'] as num? ?? 999999).toInt();
-      }
-    }
-
-    // Sort
-    processed.sort((a, b) {
-      switch (sortMode) {
-        case SortMode.latest:
-          final valA = sortCache[a] as int;
-          final valB = sortCache[b] as int;
-          return valB.compareTo(valA);
-        case SortMode.time:
-        case SortMode.efficiency:
-          final valA = sortCache[a] as int;
-          final valB = sortCache[b] as int;
-          return valA.compareTo(valB);
-      }
-    });
-
-    return processed;
   }
 
   Widget _buildRunsList(BuildContext context, List<dynamic> runs, WidgetRef ref) {
@@ -468,9 +456,9 @@ class _RunCard extends ConsumerWidget {
       padding: const EdgeInsets.only(bottom: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.03),
+          color: Colors.white.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -501,7 +489,7 @@ class _RunCard extends ConsumerWidget {
                             Text(
                               isBattle ? 'BATTLE ARENA' : 'SOLO EXECUTION',
                               style: TextStyle(
-                                color: (isBattle ? AppTheme.error : AppTheme.accent).withOpacity(0.7),
+                                color: (isBattle ? AppTheme.error : AppTheme.accent).withValues(alpha: 0.7),
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1.5,
@@ -511,7 +499,7 @@ class _RunCard extends ConsumerWidget {
                             Text(
                               _formatDate(timestamp),
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.3),
+                                color: Colors.white.withValues(alpha: 0.3),
                                 fontSize: 10,
                                 fontFamily: 'monospace',
                               ),
@@ -533,9 +521,9 @@ class _RunCard extends ConsumerWidget {
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             margin: const EdgeInsets.only(bottom: 12),
                             decoration: BoxDecoration(
-                              color: AppTheme.accent.withOpacity(0.1),
+                              color: AppTheme.accent.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppTheme.accent.withOpacity(0.2)),
+                              border: Border.all(color: AppTheme.accent.withValues(alpha: 0.2)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -572,8 +560,8 @@ class _RunCard extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.02),
-                    border: Border(left: BorderSide(color: Colors.white.withOpacity(0.05))),
+                    color: Colors.white.withValues(alpha: 0.02),
+                    border: Border(left: BorderSide(color: Colors.white.withValues(alpha: 0.05))),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -583,7 +571,7 @@ class _RunCard extends ConsumerWidget {
                         onPressed: () => Navigator.pushNamed(context, '/replay', arguments: run),
                       ),
                       IconButton(
-                        icon: Icon(Icons.delete_outline_rounded, color: AppTheme.error.withOpacity(0.5), size: 20),
+                        icon: Icon(Icons.delete_outline_rounded, color: AppTheme.error.withValues(alpha: 0.5), size: 20),
                         onPressed: () => _confirmDelete(context, ref),
                       ),
                     ],
@@ -603,7 +591,7 @@ class _RunCard extends ConsumerWidget {
       children: [
         Row(
           children: [
-            Icon(icon, size: 12, color: Colors.white.withOpacity(0.4)),
+            Icon(icon, size: 12, color: Colors.white.withValues(alpha: 0.4)),
             const SizedBox(width: 4),
             Text(
               value,
@@ -613,7 +601,7 @@ class _RunCard extends ConsumerWidget {
         ),
         Text(
           label.toUpperCase(),
-          style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 9, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 9, fontWeight: FontWeight.bold),
         ),
       ],
     );
@@ -677,9 +665,9 @@ class _FilterSheet extends ConsumerWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.background.withOpacity(0.95),
+        color: AppTheme.background.withValues(alpha: 0.95),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 40),
       child: Column(
@@ -691,7 +679,7 @@ class _FilterSheet extends ConsumerWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -750,14 +738,14 @@ class _FilterSheet extends ConsumerWidget {
               onSelected: (selected) {
                 if (selected) onSelected(opt.value);
               },
-              backgroundColor: Colors.white.withOpacity(0.05),
-              selectedColor: AppTheme.accent.withOpacity(0.3),
+              backgroundColor: Colors.white.withValues(alpha: 0.05),
+              selectedColor: AppTheme.accent.withValues(alpha: 0.3),
               labelStyle: TextStyle(
                 color: opt.isSelected ? Colors.white : Colors.white60,
                 fontSize: 13,
               ),
               side: BorderSide(
-                color: opt.isSelected ? AppTheme.accent.withOpacity(0.5) : Colors.white.withOpacity(0.1),
+                color: opt.isSelected ? AppTheme.accent.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.1),
               ),
             );
           }).toList(),
