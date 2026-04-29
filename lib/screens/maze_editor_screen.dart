@@ -197,6 +197,12 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
               onTap: () => _controller.setTool(PaintTool.goal),
             ),
             _buildToolButton(
+              icon: Icons.monitor_weight_outlined,
+              label: 'Weight',
+              isSelected: _controller.selectedTool == PaintTool.weight,
+              onTap: () => _controller.setTool(PaintTool.weight),
+            ),
+            _buildToolButton(
               icon: Icons.delete_outline,
               label: 'Clear',
               isSelected: _controller.selectedTool == PaintTool.erase,
@@ -223,6 +229,18 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
             ),
           ],
         ),
+        if (_controller.selectedTool == PaintTool.weight)
+          Padding(
+            padding: const EdgeInsets.only(top: 12.0),
+            child: Text(
+              'TIP: Tap weight nodes multiple times to cycle cost (2x → 5x → 10x)',
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.orange[300],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
       ],
     );
   }

@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:algo_arena/widgets/premium_glass_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:algo_arena/core/app_theme.dart';
 import 'package:algo_arena/core/grid_problem.dart';
 import 'package:algo_arena/core/problem_definition.dart';
@@ -20,7 +21,6 @@ import 'package:algo_arena/services/maze_generator.dart';
 import 'package:algo_arena/services/api_service.dart';
 import 'package:algo_arena/state/api_provider.dart';
 import 'package:algo_arena/services/run_optimizer.dart';
-
 
 class AlgorithmBattleScreen extends ConsumerStatefulWidget {
   final List<List<GridNode>>? initialGrid;
@@ -90,6 +90,18 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
     };
   }
 
+  double _calculatePathCost(List<GridCoordinate> path) {
+    if (path.isEmpty) return double.infinity;
+    double total = 0;
+    // We skip the first node (start) as its arrival cost is 0.
+    // Every subsequent node's weight is added as the cost to enter that node.
+    for (int i = 1; i < path.length; i++) {
+      final coord = path[i];
+      total += _controller.grid[coord.row][coord.column].weight;
+    }
+    return total;
+  }
+
   Future<void> _runBattle() async {
     if (_isRunning) return;
 
@@ -122,12 +134,14 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
     _executorA = AlgorithmExecutor<GridCoordinate>(
       algorithm: _getAlgorithm(_algoAId),
       problemSnapshot: snapshot,
-      stepDelayMs: _stepDelay.inMilliseconds, algorithmId: '',
+      stepDelayMs: _stepDelay.inMilliseconds,
+      algorithmId: _algoAId,
     );
     _executorB = AlgorithmExecutor<GridCoordinate>(
       algorithm: _getAlgorithm(_algoBId),
       problemSnapshot: snapshot,
-      stepDelayMs: _stepDelay.inMilliseconds, algorithmId: '',
+      stepDelayMs: _stepDelay.inMilliseconds,
+      algorithmId: _algoBId,
     );
 
     final completerA = Completer<void>();
@@ -147,18 +161,25 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
           stopwatchA.stop();
           final finalStep = lastStepA;
           if (mounted && finalStep != null) {
+            final history = _executorA!.history ?? [];
+            final fullExplored = history
+                .expand((s) => s.newlyExplored)
+                .toList();
             setState(() {
               _stepA = finalStep;
               _metricsA = AlgorithmMetrics(
                 algorithmName: _algoAId,
-                exploredStates: _executorA!.exploredSet.toList(),
-                path: _executorA!.currentPath,
+                exploredStates: fullExplored,
+                path: finalStep.path,
                 totalSteps: finalStep.stepCount,
                 executionTime: stopwatchA.elapsed,
-                pathCost: _executorA!.currentPath.length.toDouble(),
+                pathCost: _calculatePathCost(finalStep.path),
                 foundPath: finalStep.isGoalReached,
-                history: _executorA!.history ?? [],
+                history: history,
                 problemSnapshot: snapshot,
+              );
+              debugPrint(
+                'Battle Stats [A]: ${_metricsA!.algorithmName} - Cost: ${_metricsA!.pathCost}, Nodes: ${_metricsA!.exploredStates.length}, Found: ${_metricsA!.foundPath}',
               );
             });
           }
@@ -178,18 +199,25 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
           stopwatchB.stop();
           final finalStep = lastStepB;
           if (mounted && finalStep != null) {
+            final history = _executorB!.history ?? [];
+            final fullExplored = history
+                .expand((s) => s.newlyExplored)
+                .toList();
             setState(() {
               _stepB = finalStep;
               _metricsB = AlgorithmMetrics(
                 algorithmName: _algoBId,
-                exploredStates: _executorB!.exploredSet.toList(),
-                path: _executorB!.currentPath,
+                exploredStates: fullExplored,
+                path: finalStep.path,
                 totalSteps: finalStep.stepCount,
                 executionTime: stopwatchB.elapsed,
-                pathCost: _executorB!.currentPath.length.toDouble(),
+                pathCost: _calculatePathCost(finalStep.path),
                 foundPath: finalStep.isGoalReached,
-                history: _executorB!.history ?? [],
+                history: history,
                 problemSnapshot: snapshot,
+              );
+              debugPrint(
+                'Battle Stats [B]: ${_metricsB!.algorithmName} - Cost: ${_metricsB!.pathCost}, Nodes: ${_metricsB!.exploredStates.length}, Found: ${_metricsB!.foundPath}',
               );
             });
           }
@@ -249,17 +277,7 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
     if (sanitized['weights'] is Float32List) {
       sanitized['weights'] = (sanitized['weights'] as Float32List).toList();
     }
-    
-    // Convert Records to Maps for JSON serialization
-    if (sanitized['start'] != null) {
-      final s = sanitized['start'];
-      sanitized['start'] = {'row': s.row, 'column': s.column};
-    }
-    if (sanitized['goal'] != null) {
-      final g = sanitized['goal'];
-      sanitized['goal'] = {'row': g.row, 'column': g.column};
-    }
-    
+
     return sanitized;
   }
 
@@ -268,19 +286,28 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
     try {
       final cols = _controller.columns;
       final totalCells = _controller.rows * cols;
-      final wallCount = _controller.grid.expand((r) => r).where((n) => n.type == NodeType.wall).length;
+      final wallCount = _controller.grid
+          .expand((r) => r)
+          .where((n) => n.type == NodeType.wall)
+          .length;
       final density = wallCount / totalCells;
 
-      final nodeDiff = (result.algorithm1.totalSteps - result.algorithm2.totalSteps).abs();
-      final timeDiff = (result.algorithm1.executionTime.inMilliseconds - result.algorithm2.executionTime.inMilliseconds).abs();
+      final nodeDiff =
+          (result.algorithm1.totalSteps - result.algorithm2.totalSteps).abs();
+      final timeDiff =
+          (result.algorithm1.executionTime.inMilliseconds -
+                  result.algorithm2.executionTime.inMilliseconds)
+              .abs();
 
       final runData = {
-        'algorithm': '${result.algorithm1.algorithmName} vs ${result.algorithm2.algorithmName}',
+        'algorithm':
+            '${result.algorithm1.algorithmName} vs ${result.algorithm2.algorithmName}',
         'type': 'battle',
         'isBattle': true, // Legacy support
         'snapshot': _sanitizeSnapshot(result.algorithm1.problemSnapshot),
         'totalSteps': result.winner.totalSteps, // Summary for list view
-        'durationMs': result.winner.executionTime.inMilliseconds, // Summary for list view
+        'durationMs':
+            result.winner.executionTime.inMilliseconds, // Summary for list view
         'metadata': {
           'winner': result.winner.algorithmName,
           'obstacleDensity': density,
@@ -288,6 +315,7 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
           'timeDiff': timeDiff,
           'nodesExplored': result.winner.exploredStates.length,
           'pathLength': result.winner.path.length,
+          'pathCost': result.winner.pathCost,
         },
         'competitors': [
           RunOptimizer.optimizeCompetitor(
@@ -313,7 +341,7 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
 
       debugPrint('Sending optimized battle data...');
       await ApiService().saveRun(runData);
-      
+
       if (mounted) {
         ref.invalidate(runsProvider);
       }
@@ -406,6 +434,30 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
                         ),
                       ),
                     ),
+                  ),
+                  ListenableBuilder(
+                    listenable: _controller,
+                    builder: (context, _) {
+                      if (_controller.selectedTool != PaintTool.weight)
+                        return const SizedBox.shrink();
+                      return Animate(
+                        effects: const [
+                          FadeEffect(),
+                          SlideEffect(begin: Offset(0, 0.5)),
+                        ],
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            'TIP: Tap weight nodes multiple times to cycle cost (2x → 5x → 10x)',
+                            style: AppTheme.labelStyle.copyWith(
+                              fontSize: 9,
+                              color: AppTheme.warning.withValues(alpha: 0.8),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 24),
                   AnimatedBuilder(
@@ -782,13 +834,9 @@ class _BattleAnalyticsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return PremiumGlassContainer(
+      radius: 32,
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceLow,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

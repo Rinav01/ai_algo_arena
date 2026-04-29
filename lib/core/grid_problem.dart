@@ -78,23 +78,64 @@ class GridProblem extends Problem<GridCoordinate> {
   }
 
   /// Reconstruct from a background processing snapshot
-  GridProblem.fromSnapshot(Map<String, dynamic> snapshot)
-    : rows = snapshot['rows'] as int,
-      cols = snapshot['columns'] as int,
-      _types = snapshot['types'] as Uint8List,
-      _weights = snapshot['weights'] as Float32List,
-      _start = GridCoordinate(
-        row: snapshot['start']['row'] as int,
-        column: snapshot['start']['column'] as int,
-      ),
-      _goal = GridCoordinate(
-        row: snapshot['goal']['row'] as int,
-        column: snapshot['goal']['column'] as int,
-      ),
-      settings = AppSettings.fromJson(
-        snapshot['settings'] as Map<String, dynamic>,
-      ),
-      _grid = null;
+  factory GridProblem.fromSnapshot(Map<String, dynamic> snapshot) {
+    final rows = (snapshot['rows'] ?? snapshot['row_count']) as int;
+    final cols = (snapshot['columns'] ?? snapshot['cols'] ?? snapshot['column_count']) as int;
+    
+    // Safety check for start/goal nodes
+    final startJson = snapshot['start'] as Map<String, dynamic>?;
+    final goalJson = snapshot['goal'] as Map<String, dynamic>?;
+    
+    final start = startJson != null 
+      ? GridCoordinate(row: startJson['row'] as int, column: startJson['column'] as int)
+      : const GridCoordinate(row: 0, column: 0);
+      
+    final goal = goalJson != null
+      ? GridCoordinate(row: goalJson['row'] as int, column: goalJson['column'] as int)
+      : GridCoordinate(row: rows - 1, column: cols - 1);
+
+    // Resilience: backend/serialization might convert typed data to regular lists
+    Uint8List types;
+    if (snapshot['types'] is Uint8List) {
+      types = snapshot['types'] as Uint8List;
+    } else {
+      types = Uint8List.fromList((snapshot['types'] as List).cast<int>());
+    }
+
+    Float32List weights;
+    if (snapshot['weights'] is Float32List) {
+      weights = snapshot['weights'] as Float32List;
+    } else {
+      weights = Float32List.fromList((snapshot['weights'] as List).cast<double>());
+    }
+
+    return GridProblem._internal(
+      rows: rows,
+      cols: cols,
+      types: types,
+      weights: weights,
+      start: start,
+      goal: goal,
+      settings: snapshot['settings'] != null 
+        ? AppSettings.fromJson(snapshot['settings'] as Map<String, dynamic>)
+        : const AppSettings(),
+    );
+  }
+
+  // Internal constructor for fromSnapshot factory
+  GridProblem._internal({
+    required this.rows,
+    required this.cols,
+    required Uint8List types,
+    required Float32List weights,
+    required GridCoordinate start,
+    required GridCoordinate goal,
+    required this.settings,
+  }) : _types = types,
+       _weights = weights,
+       _start = start,
+       _goal = goal,
+       _grid = null;
 
   @override
   bool operator ==(Object other) =>

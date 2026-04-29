@@ -173,7 +173,18 @@ class GridLegend extends StatelessWidget {
             color: AppTheme.cellWall.withValues(alpha: 1),
             label: 'Wall',
           ),
-          _LegendDot(color: AppTheme.cellWeight, label: 'Weight'),
+          _LegendDot(
+            color: AppTheme.cellWeight.withValues(alpha: 0.2),
+            label: '2x',
+          ),
+          _LegendDot(
+            color: AppTheme.cellWeight.withValues(alpha: 0.5),
+            label: '5x',
+          ),
+          _LegendDot(
+            color: AppTheme.cellWeight.withValues(alpha: 0.9),
+            label: '10x',
+          ),
           _LegendDot(color: exploredColor, label: 'Explored'),
           _LegendDot(color: pathColor, label: 'Path'),
         ],
@@ -672,108 +683,142 @@ class PerformanceChart extends StatelessWidget {
     super.key,
     required this.dataPoints,
     required this.accentColor,
+    this.onExpand,
   });
 
   final List<FlSpot> dataPoints;
   final Color accentColor;
+  final VoidCallback? onExpand;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 200.0,
-      padding: EdgeInsets.fromLTRB(16.0, 16.0, 24.0, 8.0),
-      decoration: AppTheme.glassCard(radius: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'COMPUTATIONAL TREND',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: AppTheme.accentLight,
-                  letterSpacing: 1.5,
-                ),
-              ),
-              Icon(Icons.query_stats_rounded, color: accentColor, size: 16.0),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    strokeWidth: 1,
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  show: true,
-                  rightTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 30,
-                      getTitlesWidget: (val, meta) => Text(
-                        val.toInt().toString(),
-                        style: TextStyle(
-                          color: AppTheme.textMuted,
-                          fontSize: 10.0,
-                        ),
+    return GestureDetector(
+      onTap: onExpand,
+      child: Container(
+        height: 200.0,
+        padding: const EdgeInsets.fromLTRB(16.0, 16.0, 24.0, 8.0),
+        decoration: AppTheme.glassCard(radius: 16).copyWith(
+          color: AppTheme.surfaceVariant.withValues(alpha: 0.4),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'COMPUTATIONAL TREND',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppTheme.accentLight,
+                        letterSpacing: 1.5,
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.open_in_full_rounded,
+                      size: 12,
+                      color: AppTheme.accentLight.withValues(alpha: 0.5),
+                    ),
+                  ],
+                ),
+                Icon(Icons.query_stats_rounded, color: accentColor, size: 16.0),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: LineChart(
+                LineChartData(
+                  lineTouchData: LineTouchData(
+                    touchTooltipData: LineTouchTooltipData(
+                      getTooltipColor: (spot) => AppTheme.surfaceHigh,
+                      getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
+                        return touchedBarSpots.map((barSpot) {
+                          return LineTooltipItem(
+                            'Step: ${barSpot.x.toInt()}\nExplored: ${barSpot.y.toInt()}',
+                            const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          );
+                        }).toList();
+                      },
+                    ),
                   ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (val, meta) => Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Text(
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (value) => FlLine(
+                      color: Colors.white.withValues(alpha: 0.05),
+                      strokeWidth: 1,
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    show: true,
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 30,
+                        getTitlesWidget: (val, meta) => Text(
                           val.toInt().toString(),
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppTheme.textMuted,
                             fontSize: 10.0,
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: dataPoints,
-                    isCurved: true,
-                    color: accentColor,
-                    barWidth: 3,
-                    isStrokeCapRound: true,
-                    dotData: FlDotData(show: dataPoints.length < 10),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          accentColor.withValues(alpha: 0.2),
-                          accentColor.withValues(alpha: 0.0),
-                        ],
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (val, meta) => Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            val.toInt().toString(),
+                            style: const TextStyle(
+                              color: AppTheme.textMuted,
+                              fontSize: 10.0,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ],
+                  borderData: FlBorderData(show: false),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: dataPoints,
+                      isCurved: true,
+                      color: accentColor,
+                      barWidth: 3,
+                      isStrokeCapRound: true,
+                      dotData: FlDotData(show: dataPoints.length < 10),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            accentColor.withValues(alpha: 0.2),
+                            accentColor.withValues(alpha: 0.0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

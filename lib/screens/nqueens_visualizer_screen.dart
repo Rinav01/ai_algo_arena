@@ -433,7 +433,7 @@ class _NQueensVisualizerScreenState extends ConsumerState<NQueensVisualizerScree
           ),
           const SizedBox(height: 20),
           !isGridReady 
-              ? SkeletonGrid(rows: boardSize, columns: boardSize)
+              ? SkeletonGrid(rows: boardSize, columns: boardSize, aspectRatio: 1.0)
               : _buildBoard().animate().fadeIn(duration: 400.ms),
           const SizedBox(height: 24),
           VisualizerControls(

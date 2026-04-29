@@ -25,6 +25,8 @@ class RunOptimizer {
         'c': step.currentState != null ? compress(step.currentState!, cols) : null,
         's': step.stepCount,
         if (step.isGoalReached) 'g': true,
+        if (step.reason != null) 'r': step.reason,
+        if (step.meta != null) 'm': step.meta,
       };
     }).toList();
   }

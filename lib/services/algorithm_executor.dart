@@ -76,6 +76,8 @@ Future<void> _streamInIsolate(_StreamRequest request) async {
         isGoalReached: step.isGoalReached,
         frontierSize: step.frontierSize,
         message: step.message,
+        reason: step.reason,
+        meta: step.meta,
       );
 
       buffer.add(strippedStep);
@@ -299,6 +301,8 @@ class AlgorithmExecutor<State> with ChangeNotifier {
                 isGoalReached: s.isGoalReached,
                 frontierSize: s.frontierSize,
                 message: s.message,
+                reason: s.reason,
+                meta: s.meta,
               )).toList();
 
               _fullHistory!.addAll(typedBatch);
@@ -371,6 +375,20 @@ class AlgorithmExecutor<State> with ChangeNotifier {
       if (_fullHistory != null && _fullHistory!.isNotEmpty) {
         _currentIndex = _fullHistory!.length - 1;
         _lastStep = _fullHistory![_currentIndex];
+        
+        // Instant update: accumulate everything
+        _exploredSet.addAll(_fullHistory!.expand((s) => s.newlyExplored));
+        
+        // Find the last non-empty path
+        for (int i = _fullHistory!.length - 1; i >= 0; i--) {
+          if (_fullHistory![i].path.isNotEmpty) {
+            _currentPath = _fullHistory![i].path;
+            _pathSet.clear();
+            _pathSet.addAll(_currentPath);
+            break;
+          }
+        }
+        
         _frontierSize = _lastStep!.frontierSize ?? 0;
         _stepController.add(_lastStep!);
         notifyListeners();
@@ -417,9 +435,14 @@ class AlgorithmExecutor<State> with ChangeNotifier {
 
       _lastStep = _fullHistory![_currentIndex];
       _exploredSet.addAll(_lastStep!.newlyExplored);
-      _currentPath = _lastStep!.path;
-      _pathSet.clear();
-      _pathSet.addAll(_currentPath);
+      
+      // Optimization: Only update currentPath if the step contains one (major steps)
+      if (_lastStep!.path.isNotEmpty) {
+        _currentPath = _lastStep!.path;
+        _pathSet.clear();
+        _pathSet.addAll(_currentPath);
+      }
+      
       _frontierSize = _lastStep!.frontierSize ?? 0;
       
       _currentIndex++;
@@ -494,6 +517,29 @@ class AlgorithmExecutor<State> with ChangeNotifier {
       _currentIndex++;
       notifyListeners();
     }
+  }
+
+  /// Find the most relevant step for a given state
+  AlgorithmStep<State>? getStepForState(State state) {
+    if (_fullHistory == null) return null;
+    
+    // For pathfinding, we want the step where the node was actually explored (currentState)
+    // We search backwards or find the one with lowest f/cost if applicable.
+    
+    AlgorithmStep<State>? bestStep;
+    
+    for (final step in _fullHistory!) {
+      if (step.currentState == state) {
+        // If we already found a step, and this algorithm is A* or Dijkstra,
+        // we might want to keep the one with the best metrics.
+        // For now, the first time it's explored as 'currentState' is usually the decision point.
+        if (bestStep == null || (step.stepCount < bestStep.stepCount)) {
+           bestStep = step;
+        }
+      }
+    }
+    
+    return bestStep;
   }
 
   /// Stop execution instantly

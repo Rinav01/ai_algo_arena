@@ -75,7 +75,18 @@ class GridController extends ChangeNotifier {
       case PaintTool.goal:
         _moveAnchor(isStart: false, row: row, column: column);
       case PaintTool.weight:
-        _setNodeType(row, column, NodeType.weight, weight: 5.0);
+        final currentWeight = _grid[row][column].weight;
+        double nextWeight;
+        if (currentWeight < 2.0) {
+          nextWeight = 2.0;
+        } else if (currentWeight < 5.0) {
+          nextWeight = 5.0;
+        } else if (currentWeight < 10.0) {
+          nextWeight = 10.0;
+        } else {
+          nextWeight = 1.0;
+        }
+        _setNodeType(row, column, NodeType.weight, weight: nextWeight);
     }
 
     notifyListeners();

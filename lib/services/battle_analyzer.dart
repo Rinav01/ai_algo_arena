@@ -81,34 +81,33 @@ class BattleResult {
 
   /// Winner: prioritized by Path Cost (Optimality) then Explored Nodes (Efficiency)
   AlgorithmMetrics get winner {
-    // First, both must have found paths
+    // 1. Path Existence (Primary)
     if (algorithm1.foundPath && !algorithm2.foundPath) return algorithm1;
     if (algorithm2.foundPath && !algorithm1.foundPath) return algorithm2;
-
-    // If neither found, return arbitrary
     if (!algorithm1.foundPath && !algorithm2.foundPath) return algorithm1;
 
-    // Both found: Primary metric is Path Cost (is it optimal?)
-    if (algorithm1.pathCost < algorithm2.pathCost) {
+    // 2. Path Cost (Optimality) - Using epsilon for double precision
+    const double epsilon = 0.001;
+    if (algorithm1.pathCost < algorithm2.pathCost - epsilon) {
       return algorithm1;
-    } else if (algorithm2.pathCost < algorithm1.pathCost) {
+    } else if (algorithm2.pathCost < algorithm1.pathCost - epsilon) {
       return algorithm2;
     }
 
-    // Tie-breaker: Who explored fewer nodes?
+    // 3. Explored Nodes (Efficiency Tie-breaker)
     if (algorithm1.exploredStates.length < algorithm2.exploredStates.length) {
       return algorithm1;
-    } else if (algorithm2.exploredStates.length <
-        algorithm1.exploredStates.length) {
+    } else if (algorithm2.exploredStates.length < algorithm1.exploredStates.length) {
       return algorithm2;
     }
 
-    // Secondary tie-breaker: execution time
+    // 4. Execution Time (Performance Tie-breaker)
     if (algorithm1.executionTime < algorithm2.executionTime) {
       return algorithm1;
     }
 
-    return algorithm2;
+    // Default to first if everything is truly equal
+    return algorithm1;
   }
 
   /// Loser

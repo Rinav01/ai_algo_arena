@@ -36,11 +36,12 @@ class AlgoInfo {
     'BFS': AlgoInfo(
       title: 'Breadth-First Search (BFS)',
       description:
-          'BFS explores the neighbor nodes first, before moving to the next level of neighbors. It treats all edges as having equal weight.',
+          'A fundamental graph traversal algorithm that explores the search space level-by-level. It is mathematically guaranteed to find the shortest path in unweighted environments by maintaining a strict frontier of discovered nodes.',
       keyFeatures: [
-        'Guarantees the shortest path in unweighted grids.',
-        'Explores layers level by level.',
-        'Uses a Queue (First-In, First-Out).',
+        'Strict layer-by-level discovery.',
+        'Guarantees optimality in unweighted grids.',
+        'Uses FIFO (First-In, First-Out) queue strategy.',
+        'Explores 360° wavefront from the origin.',
       ],
       complexity: 'O(V + E)',
       isOptimal: true,
@@ -49,11 +50,12 @@ class AlgoInfo {
     'DFS': AlgoInfo(
       title: 'Depth-First Search (DFS)',
       description:
-          'DFS explores as far as possible along each branch before backtracking. It is efficient for memory but poor for finding shortest paths.',
+          'A memory-efficient search strategy that dives as deep as possible into a branch before backtracking. While not optimal for pathfinding, it is exceptionally powerful for maze generation and connectivity analysis.',
       keyFeatures: [
-        'Excellent for maze exploration.',
-        'Does NOT guarantee the shortest path.',
-        'Uses a Stack or Recursion (Last-In, First-Out).',
+        'Minimal memory overhead per level.',
+        'Excellent for exhaustive maze exploration.',
+        'Uses LIFO (Last-In, First-Out) stack strategy.',
+        'Non-optimal: may return a significantly longer path.',
       ],
       complexity: 'O(V + E)',
       isOptimal: false,
@@ -62,11 +64,12 @@ class AlgoInfo {
     'Dijkstra': AlgoInfo(
       title: "Dijkstra's Algorithm",
       description:
-          "Dijkstra's explores paths in strictly increasing order of cost. It is the gold standard for finding shortest paths in weighted environments.",
+          "The definitive algorithm for finding shortest paths in weighted graphs. It expands the search frontier in order of increasing cumulative cost, ensuring that once a node is visited, the path to it is the cheapest possible.",
       keyFeatures: [
-        'Guarantees the shortest path.',
-        'Handles varying weights (terrain cost).',
-        'Uses a Priority Queue.',
+        'Weighted optimality guarantee.',
+        'Dynamic cost-aware exploration.',
+        'Priority-based frontier management.',
+        'Foundation for modern GPS routing.',
       ],
       complexity: 'O(E log V)',
       isOptimal: true,
@@ -75,11 +78,12 @@ class AlgoInfo {
     'Greedy': AlgoInfo(
       title: 'Greedy Best-First Search',
       description:
-          'Greedy search uses a heuristic to "guess" which node is closest to the goal. It is very fast but often takes sub-optimal paths.',
+          'A high-speed search algorithm that prioritizes exploration based purely on a heuristic estimate of the distance to the goal. It sacrifices optimality for extreme execution speed.',
       keyFeatures: [
-        'Extremely fast execution.',
-        'Can be easily fooled by obstacles.',
-        'Focuses purely on the goal distance.',
+        'Heuristic-driven directional search.',
+        'Highly efficient execution time.',
+        'Prone to local optima and "stalling" at walls.',
+        'Pure goal-oriented behavior.',
       ],
       complexity: 'O(b^m)',
       isOptimal: false,
@@ -88,11 +92,12 @@ class AlgoInfo {
     'A*': AlgoInfo(
       title: 'A* Search Algorithm',
       description:
-          'A* combines the precision of Dijkstra\'s with the speed of Greedy search. It uses both path cost and a heuristic to find the optimal path efficiently.',
+          'The industry standard for pathfinding. A* intelligently balances path cost (g) and heuristic distance (h) to find the optimal path with minimal exploration. It is functionally superior to both Dijkstra and Greedy search.',
       keyFeatures: [
-        'The most popular pathfinding algorithm.',
-        'Guaranteed optimal if using an admissible heuristic.',
-        'Balances exploration and exploitation.',
+        'Balanced f(n) = g(n) + h(n) evaluation.',
+        'Provably optimal with admissible heuristics.',
+        'Minimal node expansion for optimal solutions.',
+        'Widely used in robotics and game AI.',
       ],
       complexity: 'O(E log V)',
       isOptimal: true,
@@ -102,13 +107,14 @@ class AlgoInfo {
 
   static const Map<String, AlgoInfo> nQueens = {
     'Backtracking': AlgoInfo(
-      title: 'N-Queens: Backtracking',
+      title: 'Backtracking Search',
       description:
-          'Explores the board row-by-row. If a row has no valid column for a queen, it returns to the previous row and tries a different column.',
+          'A recursive "trial and error" strategy that systematically builds a solution row-by-row. It uses depth-first exploration with pruning to discard invalid board configurations as early as possible.',
       keyFeatures: [
-        'Classic Depth-First Search strategy.',
-        'Uses pruning to avoid exploring invalid sub-trees.',
-        'Foundational algorithm for constraint problems.',
+        'Systematic row-wise placement.',
+        'Recursive state-space exploration.',
+        'Pruning of invalid candidate branches.',
+        'Guaranteed to find all possible solutions.',
       ],
       complexity: 'O(N!)',
       isOptimal: true,
@@ -117,24 +123,26 @@ class AlgoInfo {
     'Backtracking + MRV': AlgoInfo(
       title: 'Backtracking with MRV',
       description:
-          'Selects the "most constrained" row first—the one with the fewest remaining legal positions. This reduces the search space significantly.',
+          'An optimized search that employs the Minimum Remaining Values (MRV) heuristic. It prioritizes the most constrained variables first, dramatically reducing the branching factor and search time.',
       keyFeatures: [
-        'Uses Minimum Remaining Values (MRV) heuristic.',
-        'Dramatically reduces the number of backtracks.',
-        'Prioritizes difficult choices early.',
+        '"Most Constrained Variable" prioritization.',
+        'Early conflict detection and resolution.',
+        'Significantly reduced recursive depth.',
+        'Dynamic row selection based on safety.',
       ],
-      complexity: 'O(N!) (Faster in practice)',
+      complexity: 'O(N!) (Optimized)',
       isOptimal: true,
       conceptType: ConceptType.nQueensMRV,
     ),
     'Forward Checking': AlgoInfo(
       title: 'Forward Checking',
       description:
-          'Whenever a queen is placed, it proactively removes illegal positions from all future rows. If a row’s domain becomes empty, it backtracks immediately.',
+          'A proactive constraint propagation technique. Every time a queen is placed, it "looks ahead" and eliminates illegal positions in future rows, allowing the search to fail faster and avoid useless work.',
       keyFeatures: [
-        'Proactive constraint propagation.',
-        'Senses "failure" before it happens.',
-        'Maintains domains for unassigned variables.',
+        'Proactive domain reduction.',
+        'Early failure detection via look-ahead.',
+        'Maintains a "safe-zone" heatmap.',
+        'Intelligent pruning of future search space.',
       ],
       complexity: 'O(N!)',
       isOptimal: true,
@@ -144,13 +152,14 @@ class AlgoInfo {
 
   static const Map<String, AlgoInfo> eightPuzzle = {
     'A*': AlgoInfo(
-      title: 'A* Search (Manhattan)',
+      title: 'A* (Manhattan Distance)',
       description:
-          'Uses the Manhattan distance heuristic to guide the search toward the goal. It evaluates states based on (moves made + estimated moves remaining).',
+          'Solves the sliding puzzle by using the sum of Manhattan distances of all tiles from their goal positions as a heuristic. This provides a high-fidelity estimate that guides the search optimally.',
       keyFeatures: [
-        'Guarantees the shortest solution path.',
-        'Efficiently solves complex puzzle boards.',
-        'Uses Priority Queue to manage the Open Set.',
+        'Optimal move-count guarantee.',
+        'Informed state-space traversal.',
+        'Uses admissible Manhattan heuristic.',
+        'Efficiently solves complex shuffles.',
       ],
       complexity: 'O(b^d)',
       isOptimal: true,
@@ -159,24 +168,26 @@ class AlgoInfo {
     'BFS': AlgoInfo(
       title: 'Breadth-First Search',
       description:
-          'Explores every possible board state level-by-level. It checks all possible 1-move states, then all 2-move states, and so on.',
+          'An uninformed search that explores every possible move combination level-by-level. While it guarantees the shortest solution, the exponential state-space growth makes it highly resource intensive.',
       keyFeatures: [
-        'Guarantees the shortest path.',
-        'Extremely memory intensive.',
-        'Exhaustive search without heuristics.',
+        'Blind, level-by-level exploration.',
+        'Guarantees minimal move count.',
+        'Memory-heavy state storage.',
+        'No heuristic guidance (Uninformed).',
       ],
       complexity: 'O(b^d)',
       isOptimal: true,
       conceptType: ConceptType.puzzleBFS,
     ),
     'Greedy': AlgoInfo(
-      title: 'Greedy Search',
+      title: 'Greedy Search (Heuristic)',
       description:
-          'Focuses only on the heuristic cost (distance to goal). It always picks the move that looks best "right now," which can lead to longer paths.',
+          'Prioritizes puzzle states based purely on how many tiles are out of place. It moves aggressively toward the goal but may take a circuitous path to get there.',
       keyFeatures: [
-        'Usually faster to find A solution.',
-        'Does NOT guarantee the shortest path.',
-        'Susceptible to being trapped in local optima.',
+        'Direct goal-seeking behavior.',
+        'Faster to reach a solution (usually).',
+        'Non-optimal path length.',
+        'Subject to local minima in state space.',
       ],
       complexity: 'O(b^m)',
       isOptimal: false,
@@ -187,11 +198,12 @@ class AlgoInfo {
   static const AlgoInfo battleArena = AlgoInfo(
     title: 'Algorithm Battle Arena',
     description:
-        'A real-time race between two search algorithms. Watch how different strategies handle the same obstacles and grid layout.',
+        'A high-stakes comparison of two search strategies operating on identical grid conditions. The arena measures not just speed, but computational efficiency and path optimality under pressure.',
     keyFeatures: [
-      'Compares search speed (nodes per second).',
-      'Visualizes path optimality side-by-side.',
-      'Displays computational efficiency trends.',
+      'Real-time NPS (Nodes Per Second) tracking.',
+      'Side-by-side path optimality analysis.',
+      'Hardware-aware performance metrics.',
+      'Direct comparison of Informed vs Uninformed.',
     ],
     complexity: 'N/A',
     isOptimal: true,
@@ -200,26 +212,28 @@ class AlgoInfo {
 
   static const Map<String, AlgoInfo> waterJug = {
     'BFS': AlgoInfo(
-      title: 'Breadth-First Search (BFS)',
+      title: 'BFS: State-Space Search',
       description:
-          'Explores all possible water levels (states) layer-by-layer. It systematically checks all results of 1 action, then 2 actions, and so on.',
+          'Treats the water jug problem as a traversal of the Phase Space of all possible volume combinations. BFS explores every possible action sequence to find the absolute minimum steps required.',
       keyFeatures: [
-        'Guarantees the fewest steps to reach the target.',
-        'Explores the state space (Phase Space) uniformly.',
-        'No prior knowledge of the target is used.',
+        'Optimal action-count guarantee.',
+        'Exhaustive state-space discovery.',
+        'Phase-space layer traversal.',
+        'Uniform exploration of possibilities.',
       ],
       complexity: 'O(V + E)',
       isOptimal: true,
       conceptType: ConceptType.waterJugBFS,
     ),
     'A*': AlgoInfo(
-      title: 'A* Search (Distance Heuristic)',
+      title: 'A*: Heuristic Phase Search',
       description:
-          'Uses a heuristic to prioritize states that seem closer to the target volume. It balances the steps taken with the estimated remaining distance.',
+          'Enhances the Phase Space search by using a mathematical heuristic representing the distance from the current volumes to the target. It prunes non-promising state transitions to solve the problem faster.',
       keyFeatures: [
-        'Uses min(|JugA - Target|, |JugB - Target|) as heuristic.',
-        'Prunes less promising paths in the Phase Space.',
-        'Typically explores fewer states than BFS.',
+        'Heuristic-guided state traversal.',
+        'Pruning of distant phase-states.',
+        'Balanced exploration of volumes.',
+        'Typically explores 40-60% fewer states.',
       ],
       complexity: 'O(V + E)',
       isOptimal: true,

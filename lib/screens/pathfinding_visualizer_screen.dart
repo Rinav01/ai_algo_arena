@@ -24,6 +24,8 @@ import 'package:algo_arena/state/api_provider.dart';
 import 'package:algo_arena/state/performance_provider.dart';
 import 'package:algo_arena/services/performance_monitor.dart';
 import 'dart:typed_data';
+import 'package:algo_arena/widgets/explanation_bottom_sheet.dart';
+import 'package:algo_arena/widgets/performance_details_modal.dart';
 
 
 class PathfindingVisualizerScreen extends ConsumerStatefulWidget {
@@ -162,16 +164,6 @@ class _PathfindingVisualizerScreenState
       sanitized['weights'] = (sanitized['weights'] as Float32List).toList();
     }
 
-    // Convert Records to Maps for JSON serialization
-    if (sanitized['start'] != null) {
-      final s = sanitized['start'];
-      sanitized['start'] = {'row': s.row, 'column': s.column};
-    }
-    if (sanitized['goal'] != null) {
-      final g = sanitized['goal'];
-      sanitized['goal'] = {'row': g.row, 'column': g.column};
-    }
-
     return sanitized;
   }
 
@@ -308,8 +300,20 @@ class _PathfindingVisualizerScreenState
   void _handlePointerDown(int row, int col) {
     if (isSolving && !isSolved) return;
 
-    // Check for anchor dragging
     final node = _controller.grid[row][col];
+    
+    // If visualization is finished or paused, and user taps an explored node
+    if ((isSolved || !isSolving) && stepCount > 0) {
+      final tappedCoord = GridCoordinate(row: row, column: col);
+      final step = executor?.getStepForState(tappedCoord);
+      
+      if (step != null && step.reason != null) {
+        HapticFeedback.mediumImpact();
+        _showExplanation(step);
+        return;
+      }
+    }
+
     if (node.type == NodeType.start) {
       setState(() => _isDraggingStart = true);
     } else if (node.type == NodeType.goal) {
@@ -317,6 +321,18 @@ class _PathfindingVisualizerScreenState
     } else {
       _controller.handleCellInteraction(row, col);
     }
+  }
+
+  void _showExplanation(AlgorithmStep<GridCoordinate> step) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => ExplanationBottomSheet<GridCoordinate>(
+        step: step,
+        stateFormatter: (coord) => '(${coord.row}, ${coord.column})',
+      ),
+    );
   }
 
   void _handlePointerUpdate(int row, int col) {
@@ -481,6 +497,18 @@ class _PathfindingVisualizerScreenState
             });
           },
         ),
+        if (_controller.selectedTool == PaintTool.weight)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              'TIP: Tap weight nodes multiple times to cycle cost (2x → 5x → 10x)',
+              style: AppTheme.labelStyle.copyWith(
+                fontSize: 9,
+                color: AppTheme.warning.withValues(alpha: 0.8),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ).animate().fadeIn().slideY(begin: 0.5),
         const SizedBox(height: 14),
         Row(
           children: [
@@ -570,8 +598,14 @@ class _PathfindingVisualizerScreenState
     );
   }
 
+
+
   Widget _buildAnalyticsSection() {
-    return PerformanceChart(dataPoints: perfData, accentColor: AppTheme.accent);
+    return PerformanceChart(
+      dataPoints: perfData,
+      accentColor: AppTheme.accent,
+      onExpand: () => PerformanceDetailsModal.show(context, perfData, AppTheme.accent),
+    );
   }
 
   Widget _buildControlsSection() {

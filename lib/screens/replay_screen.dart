@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:algo_arena/core/grid_problem.dart';
 import 'package:algo_arena/core/problem_definition.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:algo_arena/core/app_theme.dart';
 import 'package:algo_arena/widgets/grid_visualizer_canvas.dart';
@@ -12,6 +13,11 @@ import 'package:algo_arena/state/replay_provider.dart';
 import 'package:algo_arena/services/run_optimizer.dart';
 import 'package:algo_arena/widgets/trend_line.dart';
 import 'package:algo_arena/widgets/visualizer_widgets.dart';
+import 'package:algo_arena/widgets/explanation_bottom_sheet.dart';
+import '../services/insight_service.dart';
+import '../models/algo_info.dart';
+import '../widgets/info_cards.dart';
+
 
 class ReplayScreen extends ConsumerStatefulWidget {
   const ReplayScreen({super.key});
@@ -25,12 +31,14 @@ class ReplayLoadResult {
   final List<GridCoordinate> fullExploredList;
   final List<int> exploredCountAtStep;
   final List<double> trend;
+  final Map<GridCoordinate, int> stateToStep;
 
   ReplayLoadResult({
     required this.steps,
     required this.fullExploredList,
     required this.exploredCountAtStep,
     required this.trend,
+    required this.stateToStep,
   });
 }
 
@@ -58,10 +66,12 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
   final Map<int, List<GridCoordinate>> _fullExploredLists = {};
   final Map<int, List<int>> _exploredCountsAtStep = {};
   final Map<int, List<double>> _competitorTrends = {};
+  final Map<int, Map<GridCoordinate, int>> _stateToStepMaps = {};
 
   bool _isBattle = false;
   bool _isSideBySide = false;
   List<dynamic> _competitors = [];
+  Map<String, dynamic>? _metadata;
   int _selectedCompetitorIndex = 0;
 
   static ReplayLoadResult _processAlgorithmData(Map<String, dynamic> params) {
@@ -75,6 +85,7 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
         fullExploredList: [],
         exploredCountAtStep: [0],
         trend: [],
+        stateToStep: {},
       );
     }
 
@@ -84,6 +95,7 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
     List<AlgorithmStep<GridCoordinate>> steps = [];
     List<GridCoordinate> fullExplored = [];
     List<int> exploredCounts = [0];
+    Map<GridCoordinate, int> stateToStep = {};
 
     if (!isOptimized) {
       steps = stepsRaw
@@ -95,9 +107,17 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
           )
           .toList();
       
-      for (final step in steps) {
+      for (int i = 0; i < steps.length; i++) {
+        final step = steps[i];
         fullExplored.addAll(step.newlyExplored);
         exploredCounts.add(fullExplored.length);
+        if (step.currentState != null) {
+          stateToStep[step.currentState!] = i;
+        }
+        // Also map newly explored if not already mapped (first discovery)
+        for (final e in step.newlyExplored) {
+          stateToStep.putIfAbsent(e, () => i);
+        }
       }
     } else {
       final List<GridCoordinate> finalPath = finalPathRaw != null
@@ -106,7 +126,8 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
                 .toList()
           : [];
 
-      for (final s in stepsRaw) {
+      for (int i = 0; i < stepsRaw.length; i++) {
+        final s = stepsRaw[i];
         final map = s as Map<String, dynamic>;
         final explored = (map['e'] as List)
             .map((v) => RunOptimizer.decompress(v as int, cols))
@@ -119,14 +140,29 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
         final step = AlgorithmStep<GridCoordinate>(
           newlyExplored: explored,
           currentState: current,
-          path: isGoal ? finalPath : [],
-          stepCount: map['s'] ?? 0,
+          path: isGoal ? finalPath : const [],
+          stepCount: map['s'] as int,
           isGoalReached: isGoal,
+          message: null, // Message is not currently optimized/stored
+          reason: map['r'] as String?,
+          meta: map['m'] != null ? Map<String, dynamic>.from(map['m'] as Map) : null,
         );
         
         steps.add(step);
         fullExplored.addAll(explored);
         exploredCounts.add(fullExplored.length);
+        
+        if (current != null) {
+          stateToStep[current] = i;
+        }
+        for (final e in explored) {
+          stateToStep.putIfAbsent(e, () => i);
+        }
+      }
+
+      // Best effort: if the last step has no path but we have a final path, attach it
+      if (steps.isNotEmpty && steps.last.path.isEmpty && finalPath.isNotEmpty) {
+        steps[steps.length - 1] = steps.last.copyWith(path: finalPath);
       }
     }
 
@@ -146,6 +182,7 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
       fullExploredList: fullExplored,
       exploredCountAtStep: exploredCounts,
       trend: trend,
+      stateToStep: stateToStep,
     );
   }
 
@@ -175,6 +212,7 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
           _fullExploredLists[i] = result.fullExploredList;
           _exploredCountsAtStep[i] = result.exploredCountAtStep;
           _competitorTrends[i] = result.trend;
+          _stateToStepMaps[i] = result.stateToStep;
         }
       } else {
         final result = await compute(_processAlgorithmData, {
@@ -187,6 +225,7 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
         _fullExploredLists[0] = result.fullExploredList;
         _exploredCountsAtStep[0] = result.exploredCountAtStep;
         _competitorTrends[0] = result.trend;
+        _stateToStepMaps[0] = result.stateToStep;
       }
 
       if (mounted) {
@@ -195,6 +234,7 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
           _isSideBySide = isBattle;
           _algoName = args['algorithm'] as String?;
           _competitors = isBattle ? (args['competitors'] as List<dynamic>? ?? []) : [];
+          _metadata = args['metadata'] as Map<String, dynamic>?;
 
           final notifier = ref.read(replayProvider.notifier);
           if (isBattle) {
@@ -246,8 +286,93 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
     }
   }
 
+  void _showNodeExplanation(int row, int col, {required int competitorIndex}) {
+    final coord = GridCoordinate(row: row, column: col);
+    final map = _stateToStepMaps[competitorIndex];
+    final steps = _isBattle 
+        ? (_allCompetitorSteps[competitorIndex] ?? []) 
+        : _runSteps;
+
+    if (map != null && map.containsKey(coord)) {
+      final stepIndex = map[coord]!;
+      final step = steps[stepIndex];
+      
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        barrierColor: AppTheme.barrier,
+        builder: (context) => ExplanationBottomSheet(
+          step: step,
+          onJumpToStep: () {
+            ref.read(replayProvider.notifier).seek(stepIndex + 1);
+          },
+          stateFormatter: (p1) => '(${p1.row}, ${p1.column})',
+        ),
+      );
+    } else {
+      // Check if it's the start or goal
+      final isStart = _controller.start.row == row && _controller.start.column == col;
+      final isGoal = _controller.goal?.row == row && _controller.goal?.column == col;
+
+      if (isStart) {
+        _showStaticExplanation('START NODE', 'The algorithm began its search here.');
+      } else if (isGoal) {
+        _showStaticExplanation('GOAL NODE', 'The target destination of the search.');
+      }
+    }
+  }
+
+  void _showStaticExplanation(String title, String explanation) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: AppTheme.barrier,
+      builder: (context) => ExplanationBottomSheet(
+        step: AlgorithmStep<GridCoordinate>(
+          newlyExplored: [],
+          stepCount: 0,
+          message: title,
+          reason: explanation,
+          path: [],
+        ),
+        stateFormatter: (p1) => '(${p1.row}, ${p1.column})',
+      ),
+    );
+  }
+
+
+  void _showAlgorithmInfo() {
+    AlgoInfo? info;
+    if (_isBattle) {
+      info = AlgoInfo.battleArena;
+    } else {
+      info = AlgoInfo.pathfinding[_algoName];
+    }
+
+    if (info == null) return;
+
+    showDialog(
+      context: context,
+      barrierColor: AppTheme.barrier,
+      builder: (context) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Material(
+            color: Colors.transparent,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: AlgorithmInfoCard(info: info!),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
+
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -307,8 +432,25 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
                           ],
                         ),
                       ),
-                      if (_isBattle)
+                      GestureDetector(
+                        onTap: _showAlgorithmInfo,
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: AppTheme.glassCard(radius: 10).copyWith(
+                            color: AppTheme.accent.withValues(alpha: 0.1),
+                          ),
+                          child: const Icon(
+                            Icons.info_outline_rounded,
+                            size: 18,
+                            color: AppTheme.accentLight,
+                          ),
+                        ),
+                      ).animate().fadeIn(delay: 500.ms).scale(delay: 600.ms),
+                      if (_isBattle) ...[
+                        const SizedBox(width: 8),
                         IconButton(
+
                           icon: Icon(
                             _isSideBySide
                                 ? Icons.view_agenda_rounded
@@ -325,6 +467,7 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
                           },
                           tooltip: 'Toggle Side-by-Side',
                         ),
+                      ],
                     ],
                   ),
                 ),
@@ -376,6 +519,15 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
                       ),
                     ),
                   ),
+
+                // Upgrade: Global Insight Card
+                if (replayState.currentStep >= _runSteps.length - 1 && _runSteps.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: _buildGlobalInsightCard(),
+                  ),
+
+
 
                 if (_isBattle && _isSideBySide && _allCompetitorSteps.isNotEmpty)
                   Padding(
@@ -570,7 +722,7 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
                 borderRadius: BorderRadius.circular(isMini ? 10 : 16),
                 child: GridVisualizerCanvas(
                   controller: _controller,
-                  isInteractive: false,
+                  isInteractive: true,
                   showHeuristics: showHeuristics,
                   accentColor: color,
                   exploredNodes: index == null
@@ -584,6 +736,7 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
                           ]
                         : 0,
                   pathNodes: step?.path ?? [],
+                  onPointerDown: (row, col) => _showNodeExplanation(row, col, competitorIndex: index ?? 0),
                 ),
               ),
             ),
@@ -616,8 +769,10 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
         const SizedBox(width: 8),
         Expanded(
           child: GlassStatCard(
-            label: 'PATH',
-            value: step?.path.length ?? 0,
+            label: 'COST',
+            value: (step?.meta?['g'] ?? 
+                    step?.meta?['distance'] ?? 
+                    (step != null && step.path.isNotEmpty ? step.path.length - 1 : 0)).toDouble(),
           ),
         ),
         if (index == null) ...[
@@ -630,4 +785,206 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
     );
   }
 
+  Widget _buildGlobalInsightCard() {
+    final totalNodes = _controller.rows * _controller.columns;
+    
+    num? pathCost;
+    if (_isBattle && _selectedCompetitorIndex < _competitors.length) {
+      final comp = _competitors[_selectedCompetitorIndex];
+      pathCost = comp['pathCost'] as num?;
+      
+      // Fallback for legacy runs: calculate cost from length
+      if (pathCost == null) {
+        final pathLength = comp['pathLength'] as num?;
+        if (pathLength != null) {
+          pathCost = pathLength.toInt() - 1;
+        }
+      }
+    } else {
+      pathCost = _metadata?['pathCost'] as num?;
+      
+      if (pathCost == null) {
+        final pathLength = _metadata?['pathLength'] as num?;
+        if (pathLength != null) {
+          pathCost = pathLength.toInt() - 1;
+        }
+      }
+    }
+
+    final insight = InsightService.generateGlobalInsight(
+      algorithmName: _algoName ?? 'Algorithm',
+      steps: _runSteps,
+      totalWalkableNodes: totalNodes,
+      knownPathLength: pathCost?.toInt(),
+    );
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: AppTheme.glassCard(radius: 20).copyWith(
+        border: Border.all(color: AppTheme.accent.withValues(alpha: 0.2)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.accent.withValues(alpha: 0.05),
+            Colors.transparent,
+          ],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accent.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.psychology, color: AppTheme.accent, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'ANALYTICAL INTELLIGENCE',
+                    style: AppTheme.labelStyle.copyWith(
+                      color: AppTheme.accent,
+                      letterSpacing: 1.2,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const Icon(Icons.info_outline, color: Colors.white24, size: 16),
+            ],
+          ),
+          const SizedBox(height: 24),
+          ..._buildFormattedInsight(insight),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.03),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.verified_user, color: Colors.white24, size: 14),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Analysis generated via frontier expansion & heuristic telemetry.',
+                    style: AppTheme.bodyStyle.copyWith(
+                      fontSize: 11,
+                      color: Colors.white38,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, curve: Curves.easeOutCubic);
+  }
+
+  List<Widget> _buildFormattedInsight(String text) {
+    final sections = text.split('\n\n');
+    final widgets = <Widget>[];
+
+    for (final section in sections) {
+      if (section.isEmpty) continue;
+
+      final lines = section.split('\n');
+      final header = lines[0].trim();
+      
+      IconData icon;
+      Color color;
+      
+      if (header.startsWith('PERFORMANCE')) {
+        icon = Icons.speed;
+        color = Colors.blueAccent;
+      } else if (header.startsWith('PATH RESULT')) {
+        icon = Icons.route;
+        color = Colors.greenAccent;
+      } else if (header.startsWith('ANALYSIS')) {
+        icon = Icons.analytics;
+        color = Colors.orangeAccent;
+      } else if (header.startsWith('INSIGHT')) {
+        icon = Icons.tips_and_updates;
+        color = AppTheme.accent;
+      } else {
+        widgets.add(Text(section, style: AppTheme.bodyStyle));
+        continue;
+      }
+
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, color: color.withValues(alpha: 0.7), size: 14),
+                  const SizedBox(width: 8),
+                  Text(
+                    header.replaceAll(':', ''),
+                    style: AppTheme.labelStyle.copyWith(
+                      color: color.withValues(alpha: 0.8),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ...lines.skip(1).map((line) => Padding(
+                padding: const EdgeInsets.only(left: 22, bottom: 4),
+                child: _buildRichLine(line),
+              )),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return widgets;
+  }
+
+  Widget _buildRichLine(String line) {
+    final content = line.startsWith('• ') ? line.substring(2) : line;
+    
+    // Simple regex-like splitting to bold numbers and percentages
+    final words = content.split(' ');
+    final spans = <TextSpan>[];
+
+    for (final word in words) {
+      final isMetric = RegExp(r'^-?\d+(\.\d+)?%?$').hasMatch(word.replaceAll(RegExp(r'[(),]'), ''));
+      spans.add(TextSpan(
+        text: '$word ',
+        style: TextStyle(
+          color: isMetric ? Colors.white : Colors.white70,
+          fontWeight: isMetric ? FontWeight.bold : FontWeight.normal,
+          fontSize: 14,
+        ),
+      ));
+    }
+
+    return RichText(
+      text: TextSpan(
+        children: [
+          if (line.startsWith('• ')) 
+            const TextSpan(text: '• ', style: TextStyle(color: Colors.white24)),
+          ...spans,
+        ],
+        style: AppTheme.bodyStyle,
+      ),
+    );
+  }
 }

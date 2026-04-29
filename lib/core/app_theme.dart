@@ -40,6 +40,8 @@ abstract class AppTheme {
   static const Color warning = Color(0xFFF59E0B);
   static const Color error = Color(0xFFFFB4AB);
   static const Color errorContainer = Color(0xFF93000A);
+  
+  static const Color barrier = Color.fromARGB(240, 0, 0, 0); // Significantly darker barrier
 
   // ── Grid cell colors ───────────────────────────────────────────────────────
   static const Color cellStart = Color(0xFF10B981); // emerald — start
@@ -121,6 +123,30 @@ abstract class AppTheme {
     boxShadow: const [
       BoxShadow(color: Color(0x66000000), blurRadius: 40, spreadRadius: 0),
     ],
+  );
+
+  // ── Typography Getters ──────────────────────────────────────────────────────
+  static TextStyle get titleStyle => const TextStyle(
+    fontSize: 16.0,
+    fontWeight: FontWeight.w700,
+    color: onBackground,
+    fontFamily: 'Manrope',
+  );
+
+  static TextStyle get bodyStyle => const TextStyle(
+    fontSize: 15.0,
+    fontWeight: FontWeight.w400,
+    color: onBackground,
+    height: 1.6,
+    fontFamily: 'Manrope',
+  );
+
+  static TextStyle get labelStyle => const TextStyle(
+    fontSize: 11.0,
+    fontWeight: FontWeight.w600,
+    color: accentLight,
+    letterSpacing: 1.0,
+    fontFamily: 'SpaceGrotesk',
   );
 
   // ── Button styles ──────────────────────────────────────────────────────────

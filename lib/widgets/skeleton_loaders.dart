@@ -4,22 +4,28 @@ import 'package:algo_arena/core/app_theme.dart';
 class SkeletonGrid extends StatelessWidget {
   final int rows;
   final int columns;
+  final double aspectRatio;
 
   const SkeletonGrid({
     super.key,
     required this.rows,
     required this.columns,
+    this.aspectRatio = 25 / 15, // Default pathfinding ratio
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: AppTheme.glassDecoration,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: CustomPaint(
-          painter: _SkeletonGridPainter(rows: rows, columns: columns),
-          child: const SizedBox.expand(),
+    return AspectRatio(
+      aspectRatio: aspectRatio,
+      child: Container(
+        decoration: AppTheme.glassDecoration,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: RepaintBoundary(
+            child: CustomPaint(
+              painter: _SkeletonGridPainter(rows: rows, columns: columns),
+            ),
+          ),
         ),
       ),
     );

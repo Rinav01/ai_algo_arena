@@ -334,7 +334,9 @@ class _GridPainter extends CustomPainter {
             paint,
           );
         } else if (node.type == NodeType.weight) {
-          paint.color = AppTheme.cellWeight;
+          // Opacity increases with weight: 2.0 -> 0.3, 5.0 -> 0.6, 10.0 -> 0.9
+          final weightOpacity = (node.weight / 11.0).clamp(0.2, 0.9);
+          paint.color = AppTheme.cellWeight.withValues(alpha: weightOpacity);
           canvas.drawRRect(
             RRect.fromRectAndRadius(rect, const Radius.circular(2)),
             paint,

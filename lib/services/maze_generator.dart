@@ -78,7 +78,14 @@ class MazeGenerator {
 
     if (includeWeights && random.nextDouble() < 0.25) {
       type = NodeType.weight;
-      weight = 5.0; // Standard weight cost
+      final roll = random.nextDouble();
+      if (roll < 0.6) {
+        weight = 2.0; // Most common (60% of weighted nodes)
+      } else if (roll < 0.9) {
+        weight = 5.0; // Less common (30% of weighted nodes)
+      } else {
+        weight = 10.0; // Rarest (10% of weighted nodes)
+      }
     }
 
     controller.setNodeType(r, c, type, weight: weight);

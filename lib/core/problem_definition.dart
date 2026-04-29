@@ -10,6 +10,8 @@ class AlgorithmStep<State> {
   final List<State> path;
   final int stepCount;
   final String? message;
+  final String? reason;
+  final Map<String, dynamic>? meta;
   final DateTime timestamp;
   final bool isGoalReached;
   final int? frontierSize;
@@ -20,6 +22,8 @@ class AlgorithmStep<State> {
     required this.path,
     required this.stepCount,
     this.message,
+    this.reason,
+    this.meta,
     DateTime? timestamp,
     this.isGoalReached = false,
     this.frontierSize,
@@ -31,8 +35,11 @@ class AlgorithmStep<State> {
     List<State>? path,
     int? stepCount,
     String? message,
+    String? reason,
+    Map<String, dynamic>? meta,
     DateTime? timestamp,
     bool? isGoalReached,
+    int? frontierSize,
   }) {
     return AlgorithmStep<State>(
       newlyExplored: newlyExplored ?? this.newlyExplored,
@@ -40,9 +47,11 @@ class AlgorithmStep<State> {
       path: path ?? this.path,
       stepCount: stepCount ?? this.stepCount,
       message: message ?? this.message,
+      reason: reason ?? this.reason,
+      meta: meta ?? this.meta,
       timestamp: timestamp ?? this.timestamp,
       isGoalReached: isGoalReached ?? this.isGoalReached,
-      frontierSize: frontierSize ?? frontierSize,
+      frontierSize: frontierSize ?? this.frontierSize,
     );
   }
 
@@ -52,6 +61,8 @@ class AlgorithmStep<State> {
     'path': path.map((s) => stateSerializer(s)).toList(),
     'stepCount': stepCount,
     'message': message,
+    'reason': reason,
+    'meta': meta,
     'timestamp': timestamp.toIso8601String(),
     'isGoalReached': isGoalReached,
     'frontierSize': frontierSize,
@@ -64,6 +75,8 @@ class AlgorithmStep<State> {
       path: (json['path'] as List).map((s) => stateDeserializer(s)).toList(),
       stepCount: json['stepCount'],
       message: json['message'],
+      reason: json['reason'],
+      meta: json['meta'] != null ? Map<String, dynamic>.from(json['meta']) : null,
       timestamp: DateTime.parse(json['timestamp']),
       isGoalReached: json['isGoalReached'] ?? false,
       frontierSize: json['frontierSize'],

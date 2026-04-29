@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:algo_arena/models/analytics_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,9 +13,27 @@ import 'package:algo_arena/widgets/bottom_nav_bar.dart';
 import 'package:algo_arena/widgets/analytics/versus_tab_widgets.dart';
 import 'package:algo_arena/widgets/analytics/complexity_tab_widgets.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:algo_arena/widgets/info_cards.dart';
+import 'package:algo_arena/widgets/premium_glass_container.dart';
 
 class AnalyticsScreen extends ConsumerWidget {
   const AnalyticsScreen({super.key});
+  
+  void _showDashboardInfo(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierColor: AppTheme.barrier,
+      builder: (context) => const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24),
+          child: Material(
+            color: Colors.transparent,
+            child: DashboardInfoCard(),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -45,23 +62,33 @@ class AnalyticsScreen extends ConsumerWidget {
                 SafeArea(
                   child: Padding(
                     padding: const EdgeInsetsDirectional.fromSTEB(72, 24, 20, 0),
-                    child: Column(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          "Analytics Dashboard",
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: AppTheme.onBackground,
-                                letterSpacing: -0.5,
-                              ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Analytics Dashboard",
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.onBackground,
+                                    letterSpacing: -0.5,
+                                  ),
+                            ),
+                            Text(
+                              "Algorithm Performance Metrics",
+                              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                    color: AppTheme.textSecondary,
+                                    letterSpacing: 1.2,
+                                  ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          "Algorithm Performance Metrics",
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                color: AppTheme.textSecondary,
-                                letterSpacing: 1.2,
-                              ),
+                        IconButton(
+                          icon: const Icon(Icons.info_outline_rounded, color: AppTheme.accentLight),
+                          onPressed: () => _showDashboardInfo(context),
                         ),
                       ],
                     ),
@@ -425,22 +452,13 @@ void _showInsightDetails(BuildContext context, Insight insight) {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
+      builder: (context) => PremiumGlassContainer(
+        radius: 32,
         height: MediaQuery.of(context).size.height * 0.65,
-        decoration: BoxDecoration(
-          color: AppTheme.surface.withValues(alpha: 0.85),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-        ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                   Center(
                     child: Container(
                       width: 40,
@@ -555,9 +573,6 @@ void _showInsightDetails(BuildContext context, Insight insight) {
                 ],
               ),
             ),
-          ),
-        ),
-      ),
     );
   }
 
