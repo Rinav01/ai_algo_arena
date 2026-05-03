@@ -3,7 +3,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/app_theme.dart';
-import 'home_screen.dart';
+import 'auth_screen.dart';
+
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -78,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
     _progressController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        _navigateToHome();
+        _navigateToAuth();
       }
     });
 
@@ -89,17 +91,22 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _progressController.forward();
   }
 
-  void _navigateToHome() {
+  void _navigateToAuth() {
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 1200),
-      ),
-    );
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && !user.isAnonymous) {
+      Navigator.of(context).pushReplacementNamed('/home');
+    } else {
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => const AuthScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 1200),
+        ),
+      );
+    }
   }
 
   @override
@@ -247,52 +254,59 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
           ),
 
           // Content inside Hexagon
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: width * 0.12,
-              vertical: height * 0.1,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildLogo(width * 0.2),
-                SizedBox(height: height * 0.03),
-                
-                Text(
-                  "QUANTUM PROTOCOL",
-                  style: GoogleFonts.spaceGrotesk(
-                    fontSize: (width * 0.045).clamp(10.0, 14.0),
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 4.0,
-                    color: AppTheme.onBackground.withValues(alpha: 0.7),
+          Positioned.fill(
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: width * 0.12,
+                vertical: height * 0.1,
+              ),
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildLogo(width * 0.2),
+                      SizedBox(height: height * 0.03),
+                      
+                      Text(
+                        "QUANTUM PROTOCOL",
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: (width * 0.045).clamp(10.0, 14.0),
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 4.0,
+                          color: AppTheme.onBackground.withValues(alpha: 0.7),
+                        ),
+                      ),
+                      SizedBox(height: height * 0.04),
+                      
+                      Text(
+                        "ALGO\nARENA",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: (width * 0.12).clamp(24.0, 42.0),
+                          fontWeight: FontWeight.w800,
+                          height: 1.0,
+                          letterSpacing: -1.0,
+                          color: AppTheme.onBackground,
+                        ),
+                      ),
+                      SizedBox(height: height * 0.05),
+                      
+                      Text(
+                        "Symphonizing complex search heuristics through the kinetic observation of neural data streams.",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.manrope(
+                          fontSize: (width * 0.04).clamp(11.0, 14.0),
+                          fontWeight: FontWeight.w400,
+                          height: 1.6,
+                          color: AppTheme.onBackground.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                SizedBox(height: height * 0.04),
-                
-                Text(
-                  "ALGO\nARENA",
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.spaceGrotesk(
-                    fontSize: (width * 0.12).clamp(24.0, 42.0),
-                    fontWeight: FontWeight.w800,
-                    height: 1.0,
-                    letterSpacing: -1.0,
-                    color: AppTheme.onBackground,
-                  ),
-                ),
-                SizedBox(height: height * 0.05),
-                
-                Text(
-                  "Symphonizing complex search heuristics through the kinetic observation of neural data streams.",
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.manrope(
-                    fontSize: (width * 0.04).clamp(11.0, 14.0),
-                    fontWeight: FontWeight.w400,
-                    height: 1.6,
-                    color: AppTheme.onBackground.withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ],

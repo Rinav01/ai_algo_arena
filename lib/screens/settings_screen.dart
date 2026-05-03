@@ -4,8 +4,10 @@ import 'package:algo_arena/core/app_theme.dart';
 import 'package:algo_arena/widgets/bottom_nav_bar.dart';
 import 'package:algo_arena/state/settings_provider.dart';
 import 'package:algo_arena/services/stats_service.dart';
-
 import 'package:algo_arena/state/api_provider.dart';
+import 'package:algo_arena/state/auth_provider.dart';
+import 'package:algo_arena/services/auth_service.dart';
+import 'package:algo_arena/screens/auth_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -14,6 +16,8 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     final notifier = ref.read(settingsProvider.notifier);
+    final authUser = ref.watch(authStateProvider).value;
+
 
     return Scaffold(
       body: CustomScrollView(
@@ -103,11 +107,38 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  _buildSectionHeader('ACCOUNT & SESSIONS'),
+                  _buildSettingTile(
+                    title: authUser != null && !authUser.isAnonymous ? 'Account' : 'Sign In',
+                    subtitle: authUser != null && !authUser.isAnonymous
+                        ? 'Authenticated as ${authUser.email}'
+                        : 'Sign in via email magic link to sync runs',
+                    trailing: authUser != null && !authUser.isAnonymous
+                        ? IconButton(
+                            icon: const Icon(
+                              Icons.logout_rounded,
+                              color: AppTheme.error,
+                            ),
+                            onPressed: () => AuthService.signOut(),
+                          )
+                        : IconButton(
+                            icon: const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              color: AppTheme.accent,
+                            ),
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const AuthScreen()),
+                            ),
+                          ),
+                  ),
+                  const SizedBox(height: 12),
                   _buildSectionHeader('DATA MANAGEMENT'),
                   _buildSettingTile(
                     title: 'Delete Everything',
                     subtitle: 'Wipe all runs, statistics, and history',
                     trailing: IconButton(
+
                       icon: const Icon(
                         Icons.delete_forever_rounded,
                         color: AppTheme.error,

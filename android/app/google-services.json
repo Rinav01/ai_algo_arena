@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "492670365608",
+    "project_id": "ai-algo-arena",
+    "storage_bucket": "ai-algo-arena.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:492670365608:android:deedfe642f3a260609f79d",
+        "android_client_info": {
+          "package_name": "com.example.ai_algo_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZxMTPxMlPIEBoG052XKeJNBMpDWTzvlA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:492670365608:android:32ca66e102dbc7a609f79d",
+        "android_client_info": {
+          "package_name": "com.vaishrinav.aialgoarena"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZxMTPxMlPIEBoG052XKeJNBMpDWTzvlA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

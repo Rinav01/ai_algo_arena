@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -15,13 +17,19 @@ import 'screens/replay_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/analytics_screen.dart';
 import 'screens/water_jug_visualizer_screen.dart';
+import 'screens/auth_screen.dart';
 import 'services/stats_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'services/api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await dotenv.load(fileName: ".env");
+  await ApiService.init();
   
   // Pre-warm fonts to avoid jank on first render
   unawaited(GoogleFonts.pendingFonts());
@@ -117,6 +125,7 @@ class AlgoArenaApp extends StatelessWidget {
         '/history': (_) => const HistoryScreen(),
         '/analytics': (_) => const AnalyticsScreen(),
         '/waterjug': (_) => const WaterJugVisualizerScreen(),
+        '/auth': (_) => const AuthScreen(),
       },
       // Named routes that need parameters use onGenerateRoute
       onGenerateRoute: (settings) {
