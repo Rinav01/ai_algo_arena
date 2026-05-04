@@ -564,61 +564,77 @@ class _EightPuzzleVisualizerScreenState
   }
 
   Widget _buildPuzzleVisualization() {
+    final isNarrow = MediaQuery.of(context).size.width < 600;
+    final currentWidget = Column(
+      children: [
+        Text(
+          'Current State',
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
+        ),
+        const SizedBox(height: 12),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16.0),
+          child: Container(
+            padding: const EdgeInsets.all(12.0),
+            decoration: AppTheme.glassCardAccent(radius: 16),
+            child: !isGridReady 
+                ? const SkeletonEightPuzzle()
+                : _buildPuzzleGrid(currentState, isInteractive: true)
+                  .animate()
+                  .fadeIn(duration: 400.ms),
+          ),
+        ),
+      ],
+    );
+
+    final goalWidget = Column(
+      children: [
+        Text(
+          'Goal',
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(8.0),
+          decoration: AppTheme.glassCard(radius: 12),
+          child: _buildPuzzleGrid(
+            problem.goalState,
+            isInteractive: false,
+          ),
+        ),
+      ],
+    );
+
+    if (isNarrow) {
+      return Column(
+        children: [
+          currentWidget,
+          const SizedBox(height: 24),
+          goalWidget,
+        ],
+      );
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           flex: 2,
-          child: Column(
-            children: [
-              Text(
-                'Current State',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
-              ),
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16.0),
-                child: Container(
-                  padding: EdgeInsets.all(12.0),
-                  decoration: AppTheme.glassCardAccent(radius: 16),
-                  child: !isGridReady 
-                      ? const SkeletonEightPuzzle()
-                      : _buildPuzzleGrid(currentState, isInteractive: true)
-                        .animate()
-                        .fadeIn(duration: 400.ms),
-                ),
-              ),
-            ],
-          ),
+          child: currentWidget,
         ),
         const SizedBox(width: 24),
         Expanded(
           flex: 1,
-          child: Column(
-            children: [
-              Text(
-                'Goal',
-                style: Theme.of(
-                  context,
-                ).textTheme.labelSmall?.copyWith(color: AppTheme.textMuted),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: EdgeInsets.all(8.0),
-                decoration: AppTheme.glassCard(radius: 12),
-                child: _buildPuzzleGrid(
-                  problem.goalState,
-                  isInteractive: false,
-                ),
-              ),
-            ],
-          ),
+          child: goalWidget,
         ),
       ],
     );
   }
+
 
   Widget _buildPuzzleGrid(PuzzleState state, {required bool isInteractive}) {
     return LayoutBuilder(

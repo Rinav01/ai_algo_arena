@@ -392,7 +392,10 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
     // This prevents all sections from being laid out + painted on every frame
     // during scroll, which was the root cause of ANR on high-res debug builds.
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.symmetric(
+        horizontal: MediaQuery.of(context).size.width * 0.05,
+        vertical: 20,
+      ),
       children: [
         _cachedAlgoSelector!,
         const SizedBox(height: 20),
@@ -958,83 +961,151 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
   }
 
   Widget _buildPhaseSpaceAndStats() {
+    final bool isNarrow = MediaQuery.of(context).size.width < 400;
+    
     return Container(
-      height: 180,
+      height: isNarrow ? 260 : 180,
       decoration: AppTheme.glassCard(radius: 24),
-      child: Row(
-        children: [
-          // 1. Phase Space Map
-          Expanded(
-            flex: 2,
-            child: InkWell(
-              onTap: _showExpandedPhaseSpace,
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.hub_rounded, color: AppTheme.accent, size: 14),
-                        const SizedBox(width: 8),
-                        Text(
-                          'PHASE SPACE MAP',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: AppTheme.textMuted,
-                            letterSpacing: 1.5,
+      child: isNarrow 
+          ? Column(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: _showExpandedPhaseSpace,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.hub_rounded, color: AppTheme.accent, size: 14),
+                              const SizedBox(width: 8),
+                              Text(
+                                'PHASE SPACE MAP',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: AppTheme.textMuted,
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                              const Spacer(),
+                              const Icon(Icons.fullscreen_rounded, color: AppTheme.textMuted, size: 14),
+                            ],
                           ),
-                        ),
-                        const Spacer(),
-                        const Icon(Icons.fullscreen_rounded, color: AppTheme.textMuted, size: 14),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: CustomPaint(
-                          painter: PhaseSpacePainter(
-                            capacityA: capacityA,
-                            capacityB: capacityB,
-                            exploredStates: exploredStates,
-                            currentPath: historyPath,
-                            currentState: historyPath.isNotEmpty ? historyPath.last : null,
-                            target: target,
+                          const SizedBox(height: 10),
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: CustomPaint(
+                                painter: PhaseSpacePainter(
+                                  capacityA: capacityA,
+                                  capacityB: capacityB,
+                                  exploredStates: exploredStates,
+                                  currentPath: historyPath,
+                                  currentState: historyPath.isNotEmpty ? historyPath.last : null,
+                                  target: target,
+                                ),
+                                size: Size.infinite,
+                              ),
+                            ),
                           ),
-                          size: Size.infinite,
-                        ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                Container(height: 1, color: Colors.white.withValues(alpha: 0.05)),
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildLegendItem('Path', AppTheme.accent),
+                      _buildLegendItem('Explored', Colors.white.withValues(alpha: 0.2)),
+                      _buildLegendItem('Target', AppTheme.warning.withValues(alpha: 0.3)),
+                    ],
+                  ),
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                // 1. Phase Space Map
+                Expanded(
+                  flex: 2,
+                  child: InkWell(
+                    onTap: _showExpandedPhaseSpace,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.hub_rounded, color: AppTheme.accent, size: 14),
+                              const SizedBox(width: 8),
+                              Text(
+                                'PHASE SPACE MAP',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: AppTheme.textMuted,
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                              const Spacer(),
+                              const Icon(Icons.fullscreen_rounded, color: AppTheme.textMuted, size: 14),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: CustomPaint(
+                                painter: PhaseSpacePainter(
+                                  capacityA: capacityA,
+                                  capacityB: capacityB,
+                                  exploredStates: exploredStates,
+                                  currentPath: historyPath,
+                                  currentState: historyPath.isNotEmpty ? historyPath.last : null,
+                                  target: target,
+                                ),
+                                size: Size.infinite,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                
+                // 2. Legend / Side Info
+                Container(width: 1, color: Colors.white.withValues(alpha: 0.05)),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildLegendItem('Path', AppTheme.accent),
+                        const SizedBox(height: 8),
+                        _buildLegendItem('Explored', Colors.white.withValues(alpha: 0.2)),
+                        const SizedBox(height: 8),
+                        _buildLegendItem('Target', AppTheme.warning.withValues(alpha: 0.3)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-          
-          // 2. Legend / Side Info
-          Container(width: 1, color: Colors.white.withValues(alpha: 0.05)),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildLegendItem('Path', AppTheme.accent),
-                  const SizedBox(height: 8),
-                  _buildLegendItem('Explored', Colors.white.withValues(alpha: 0.2)),
-                  const SizedBox(height: 8),
-                  _buildLegendItem('Target', AppTheme.warning.withValues(alpha: 0.3)),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

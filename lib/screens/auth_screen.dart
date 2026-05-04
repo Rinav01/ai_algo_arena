@@ -15,7 +15,7 @@ class AuthScreen extends ConsumerStatefulWidget {
 }
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _otpController = TextEditingController();
   final FocusNode _otpFocusNode = FocusNode();
   
@@ -23,20 +23,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool _isOtpLoading = false;
   String? _errorMessage;
   bool _otpSent = false;
+  String? _verificationId;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _phoneController.dispose();
     _otpController.dispose();
     _otpFocusNode.dispose();
     super.dispose();
   }
 
   Future<void> _handleSendOtp() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
+    final phone = _phoneController.text.trim();
+    if (phone.isEmpty || !phone.startsWith('+')) {
       setState(() {
-        _errorMessage = 'Please enter a valid email address';
+        _errorMessage = 'Please enter a valid phone number including country code (e.g. +1234567890)';
       });
       return;
     }
@@ -47,14 +48,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     });
 
     try {
-      final serverOtp = await AuthService.sendOtp(email);
-      setState(() {
-        _otpSent = true;
-        if (serverOtp != null) {
-          _otpController.text = serverOtp;
-          _errorMessage = "Development Mode: Code automatically populated below.";
-        }
-      });
+      await AuthService.verifyPhoneNumber(
+        phoneNumber: phone,
+        onCodeSent: (verificationId) {
+          setState(() {
+            _verificationId = verificationId;
+            _otpSent = true;
+          });
+        },
+        onVerificationFailed: (errorMessage) {
+          setState(() {
+            _errorMessage = errorMessage;
+          });
+        },
+        onAutoVerificationCompleted: (user) {
+          if (user != null && mounted) {
+            _onSuccess();
+          }
+        },
+      );
     } catch (e) {
       setState(() {
         _errorMessage = e.toString().replaceAll("Exception: ", "");
@@ -66,12 +78,29 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
   }
 
+  void _onSuccess() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Successfully authenticated!')),
+    );
+    if (Navigator.of(context).canPop()) {
+      Navigator.pop(context);
+    } else {
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+    }
+  }
+
   Future<void> _handleVerifyOtp() async {
     final otp = _otpController.text.trim();
-    final email = _emailController.text.trim();
     if (otp.isEmpty || otp.length < 6) {
       setState(() {
-        _errorMessage = 'Please enter the 6-digit code sent to your email';
+        _errorMessage = 'Please enter the 6-digit verification code';
+      });
+      return;
+    }
+
+    if (_verificationId == null) {
+      setState(() {
+        _errorMessage = 'Verification ID not found. Please try sending the code again.';
       });
       return;
     }
@@ -82,17 +111,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     });
 
     try {
-      final user = await AuthService.verifyOtp(email, otp);
+      final user = await AuthService.signInWithSmsCode(_verificationId!, otp);
       if (user != null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Successfully authenticated!')),
-          );
-          if (Navigator.of(context).canPop()) {
-            Navigator.pop(context);
-          } else {
-            Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-          }
+          _onSuccess();
         }
       } else {
         setState(() {
@@ -175,7 +197,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding: EdgeInsets.symmetric(
+                horizontal: MediaQuery.of(context).size.width * 0.06,
+                vertical: 16.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -311,7 +336,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 const Text(
-                                  'AUTHORIZED EMAIL ADDRESS',
+                                  'AUTHORIZED PHONE NUMBER',
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
@@ -322,15 +347,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 ),
                                 const SizedBox(height: 12),
                                 TextField(
-                                  controller: _emailController,
-                                  keyboardType: TextInputType.emailAddress,
+                                  controller: _phoneController,
+                                  keyboardType: TextInputType.phone,
                                   style: const TextStyle(color: Colors.white, fontSize: 15),
                                   decoration: InputDecoration(
-                                    hintText: 'architect@kinetic-observatory.net',
+                                    hintText: '+1234567890',
                                     hintStyle: const TextStyle(color: Color(0xFF475569)),
                                     filled: true,
                                     fillColor: const Color(0xFF0F121D),
-                                    prefixIcon: const Icon(Icons.alternate_email_rounded, color: Color(0xFF475569), size: 18),
+                                    prefixIcon: const Icon(Icons.phone_outlined, color: Color(0xFF475569), size: 18),
                                     contentPadding: const EdgeInsets.symmetric(vertical: 14.0),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
@@ -468,7 +493,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                       },
                                       icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFFD0BCFF), size: 12),
                                       label: const Text(
-                                        'CHANGE EMAIL',
+                                        'CHANGE PHONE',
                                         style: TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
@@ -482,7 +507,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 ),
                                 const SizedBox(height: 6),
                                 const Text(
-                                  '6-digit cryptographic hash sent to your secure inbox.',
+                                  '6-digit cryptographic hash sent via SMS.',
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: Color(0xFF64748B),

@@ -196,7 +196,10 @@ class _GeneralTab extends ConsumerWidget {
               final topInsight = allInsights.isNotEmpty && allInsights.first.severity == 'high' ? allInsights.first : null;
 
               return SliverPadding(
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.symmetric(
+                  horizontal: MediaQuery.of(context).size.width * 0.05,
+                  vertical: 20,
+                ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     // ─── Insight Section ─────────────────────────────────────────

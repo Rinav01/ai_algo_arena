@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
@@ -135,8 +134,54 @@ class AuthService {
     return null;
   }
 
+  /// Initiates verification of the phone number via Firebase Phone Auth.
+  static Future<void> verifyPhoneNumber({
+    required String phoneNumber,
+    required Function(String verificationId) onCodeSent,
+    required Function(String errorMessage) onVerificationFailed,
+    required Function(User? user) onAutoVerificationCompleted,
+  }) async {
+    try {
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          try {
+            final userCredential = await _auth.signInWithCredential(credential);
+            onAutoVerificationCompleted(userCredential.user);
+          } catch (e) {
+            onVerificationFailed(e.toString());
+          }
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          onVerificationFailed(e.message ?? e.toString());
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          onCodeSent(verificationId);
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {},
+      );
+    } catch (e) {
+      onVerificationFailed(e.toString());
+    }
+  }
+
+  /// Verifies the SMS code and signs the user in via phone auth.
+  static Future<User?> signInWithSmsCode(String verificationId, String smsCode) async {
+    try {
+      final credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+      final userCredential = await _auth.signInWithCredential(credential);
+      return userCredential.user;
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
   /// Logs the current user out.
   static Future<void> signOut() async {
     await _auth.signOut();
   }
 }
+

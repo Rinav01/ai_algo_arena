@@ -389,29 +389,42 @@ class _NQueensVisualizerScreenState extends ConsumerState<NQueensVisualizerScree
             initialKey: selectedMode.label,
           ),
           const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: GlassStatCard(
+          Builder(
+            builder: (context) {
+              final isSmall = MediaQuery.of(context).size.width < 500;
+              final cards = [
+                GlassStatCard(
                   label: 'STEPS',
                   value: stepCount,
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: GlassStatCard(
+                GlassStatCard(
                   label: 'BACKTRACKS',
                   value: solver != null ? nodesExplored - stepCount : 0,
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: GlassStatCard(
+                GlassStatCard(
                   label: 'ROW',
                   value: !currentState.placement.contains(-1) ? boardSize : currentState.placement.indexOf(-1) + 1,
                 ),
-              ),
-            ],
+              ];
+
+              if (isSmall) {
+                return Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: cards.map((c) => SizedBox(
+                    width: (MediaQuery.of(context).size.width - 50) / 2,
+                    child: c,
+                  )).toList(),
+                );
+              }
+
+              return Row(
+                children: cards.map((c) => Expanded(child: Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: c,
+                ))).toList(),
+              );
+            }
           ),
           const SizedBox(height: 14),
           Center(

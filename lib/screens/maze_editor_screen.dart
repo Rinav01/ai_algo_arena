@@ -42,11 +42,11 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
           children: [
             // Header
             Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
+              padding: const EdgeInsets.all(16.0),
+              child: Builder(
+                builder: (context) {
+                  final isSmall = MediaQuery.of(context).size.width < 500;
+                  final titleWidget = Row(
                     children: [
                       IconButton(
                         onPressed: () => Navigator.pop(context),
@@ -59,31 +59,56 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
                           Text(
                             'Arena Architect',
                             style: TextStyle(
-                              fontSize: 20.0,
+                              fontSize: isSmall ? 16.0 : 20.0,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
                             'Editor Mode',
                             style: TextStyle(
-                              fontSize: 12.0,
+                              fontSize: isSmall ? 10.0 : 12.0,
                               color: Colors.grey[400],
                             ),
                           ),
                         ],
                       ),
                     ],
-                  ),
-                  ElevatedButton.icon(
+                  );
+
+                  final saveButton = ElevatedButton.icon(
                     onPressed: _saveArena,
-                    icon: const Icon(Icons.save),
+                    icon: const Icon(Icons.save, size: 18),
                     label: const Text('Save'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFFA500),
                       foregroundColor: Colors.black,
+                      padding: isSmall ? const EdgeInsets.symmetric(horizontal: 12, vertical: 8) : null,
                     ),
-                  ),
-                ],
+                  );
+
+                  if (isSmall) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(child: titleWidget),
+                            saveButton,
+                          ],
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      titleWidget,
+                      saveButton,
+                    ],
+                  );
+                },
               ),
             ),
             // Tabs

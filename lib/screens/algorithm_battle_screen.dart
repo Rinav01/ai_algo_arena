@@ -407,7 +407,12 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
         child: Stack(
           children: [
             SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+              padding: EdgeInsets.fromLTRB(
+                MediaQuery.of(context).size.width * 0.05,
+                20,
+                MediaQuery.of(context).size.width * 0.05,
+                32,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -462,25 +467,41 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
                   const SizedBox(height: 24),
                   AnimatedBuilder(
                     animation: _controller,
-                    builder: (context, _) => Column(
-                      children: [
-                        _buildIndividualGrid(
-                          label: 'PLAYER 1: $_algoAId',
-                          step: _stepA,
-                          executor: _executorA,
-                          color: AppTheme.accent,
-                          isWinner: isAWinner,
-                        ),
-                        const SizedBox(height: 24),
-                        _buildIndividualGrid(
-                          label: 'PLAYER 2: $_algoBId',
-                          step: _stepB,
-                          executor: _executorB,
-                          color: AppTheme.error,
-                          isWinner: isBWinner,
-                        ),
-                      ],
-                    ),
+                    builder: (context, _) {
+                      final bool isWide = MediaQuery.of(context).size.width > 720;
+                      final Widget gridA = _buildIndividualGrid(
+                        label: 'PLAYER 1: $_algoAId',
+                        step: _stepA,
+                        executor: _executorA,
+                        color: AppTheme.accent,
+                        isWinner: isAWinner,
+                      );
+                      final Widget gridB = _buildIndividualGrid(
+                        label: 'PLAYER 2: $_algoBId',
+                        step: _stepB,
+                        executor: _executorB,
+                        color: AppTheme.error,
+                        isWinner: isBWinner,
+                      );
+                      
+                      if (isWide) {
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: gridA),
+                            const SizedBox(width: 24),
+                            Expanded(child: gridB),
+                          ],
+                        );
+                      }
+                      return Column(
+                        children: [
+                          gridA,
+                          const SizedBox(height: 24),
+                          gridB,
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 24),
                   Row(
@@ -836,7 +857,12 @@ class _BattleAnalyticsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return PremiumGlassContainer(
       radius: 32,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+      padding: EdgeInsets.fromLTRB(
+        MediaQuery.of(context).size.width * 0.05,
+        12,
+        MediaQuery.of(context).size.width * 0.05,
+        40,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

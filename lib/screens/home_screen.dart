@@ -121,7 +121,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 60, 20, 24),
+              padding: EdgeInsets.fromLTRB(
+                MediaQuery.of(context).size.width * 0.05,
+                60.0 * MediaQuery.of(context).size.height / 800.0,
+                MediaQuery.of(context).size.width * 0.05,
+                24.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
