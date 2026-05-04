@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:algo_arena/core/app_theme.dart';
+import 'package:algo_arena/widgets/feature_tour.dart';
 
 /// Glassmorphism bottom navigation bar — Neural Arena design.
 class ArenaBottomNavBar extends StatelessWidget {
@@ -45,6 +46,7 @@ class ArenaBottomNavBar extends StatelessWidget {
                   isActive: isActive,
                   onTap: () {
                     if (!isActive) {
+                      FeatureTour.clearAllTours();
                       Navigator.pushNamed(context, item.route);
                     }
                   },

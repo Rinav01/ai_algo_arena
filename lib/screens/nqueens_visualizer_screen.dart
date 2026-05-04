@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:algo_arena/screens/visualizer_base_mixin.dart';
 import 'package:algo_arena/services/api_service.dart';
 import 'package:algo_arena/core/problem_definition.dart';
+import 'package:algo_arena/widgets/feature_tour.dart';
 
 class NQueensVisualizerScreen extends ConsumerStatefulWidget {
   const NQueensVisualizerScreen({super.key});
@@ -31,6 +32,9 @@ class _NQueensVisualizerScreenState extends ConsumerState<NQueensVisualizerScree
   int boardSize = 8;
   NQueensSolverMode selectedMode = NQueensSolverMode.backtracking;
 
+  final GlobalKey _boardKey = GlobalKey();
+  final GlobalKey _controlsKey = GlobalKey();
+
   // Local throttle since NQueens uses its own solve loop, not the mixin's executor
   DateTime _lastUiUpdate = DateTime.now();
 
@@ -41,6 +45,26 @@ class _NQueensVisualizerScreenState extends ConsumerState<NQueensVisualizerScree
   void initState() {
     super.initState();
     _resetBoard();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      FeatureTour.startTour(
+        context: context,
+        tourKey: 'n_queens',
+        steps: [
+          TourStep(
+            targetKey: _boardKey,
+            title: 'N-Queens Board',
+            description: 'Slide to adjust the board size or tap on squares to manually test placements.',
+          ),
+          TourStep(
+            targetKey: _controlsKey,
+            title: 'Solver Controls',
+            description: 'Run different constraint-satisfaction algorithms like Backtracking to see the solver search for a valid placement.',
+          ),
+        ],
+      );
+    });
   }
 
   @override
@@ -445,17 +469,23 @@ class _NQueensVisualizerScreenState extends ConsumerState<NQueensVisualizerScree
             .shake(hz: 3, curve: Curves.easeInOut),
           ),
           const SizedBox(height: 20),
-          !isGridReady 
-              ? SkeletonGrid(rows: boardSize, columns: boardSize, aspectRatio: 1.0)
-              : _buildBoard().animate().fadeIn(duration: 400.ms),
+          KeyedSubtree(
+            key: _boardKey,
+            child: !isGridReady 
+                ? SkeletonGrid(rows: boardSize, columns: boardSize, aspectRatio: 1.0)
+                : _buildBoard().animate().fadeIn(duration: 400.ms),
+          ),
           const SizedBox(height: 24),
-          VisualizerControls(
-            isSolving: isSolving,
-            isSolved: isSolved,
-            stepCount: stepCount,
-            onSolve: _showSolverConfig,
-            onPauseResume: _pauseResumeCustom,
-            onClear: _resetBoard,
+          KeyedSubtree(
+            key: _controlsKey,
+            child: VisualizerControls(
+              isSolving: isSolving,
+              isSolved: isSolved,
+              stepCount: stepCount,
+              onSolve: _showSolverConfig,
+              onPauseResume: _pauseResumeCustom,
+              onClear: _resetBoard,
+            ),
           ),
         ],
       ),

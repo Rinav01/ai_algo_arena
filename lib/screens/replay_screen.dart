@@ -14,9 +14,9 @@ import 'package:algo_arena/services/run_optimizer.dart';
 import 'package:algo_arena/widgets/trend_line.dart';
 import 'package:algo_arena/widgets/visualizer_widgets.dart';
 import 'package:algo_arena/widgets/explanation_bottom_sheet.dart';
-import '../services/insight_service.dart';
-import '../models/algo_info.dart';
-import '../widgets/info_cards.dart';
+import 'package:algo_arena/services/insight_service.dart';
+import 'package:algo_arena/models/algo_info.dart';
+import 'package:algo_arena/widgets/info_cards.dart';
 
 
 class ReplayScreen extends ConsumerStatefulWidget {

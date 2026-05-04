@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:algo_arena/core/app_theme.dart';
 import 'package:algo_arena/state/api_provider.dart';
 import 'package:algo_arena/widgets/bottom_nav_bar.dart';
+import 'package:algo_arena/widgets/feature_tour.dart';
 
 enum SortMode { latest, time, efficiency }
 enum FilterType { all, single, battle }
@@ -80,11 +81,48 @@ List<dynamic> _processRunsInternal(
   return processed;
 }
 
-class HistoryScreen extends ConsumerWidget {
+class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends ConsumerState<HistoryScreen> {
+  final GlobalKey _summaryKey = GlobalKey();
+  final GlobalKey _controlsKey = GlobalKey();
+  final GlobalKey _runsKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FeatureTour.startTour(
+        context: context,
+        tourKey: 'history_screen',
+        steps: [
+          TourStep(
+            targetKey: _summaryKey,
+            title: 'Summary Stats',
+            description: 'Check your overall algorithm run statistics including Total Runs, Average Steps, and your Most Used algorithm.',
+          ),
+          TourStep(
+            targetKey: _controlsKey,
+            title: 'Sort & Filter Options',
+            description: 'Sort your past runs by Latest, Fastest, or Efficiency, and use the filter button to drill down by types or grid sizes.',
+          ),
+          TourStep(
+            targetKey: _runsKey,
+            title: 'Detailed Runs',
+            description: 'View the complete breakdown of each algorithm run including time, steps, and grid details.',
+          ),
+        ],
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final processedRunsAsync = ref.watch(processedRunsProvider);
     final runsAsync = ref.watch(runsProvider);
 
@@ -101,10 +139,10 @@ class HistoryScreen extends ConsumerWidget {
             ),
             slivers: [
               _buildHeader(context, runsAsync),
-              _buildControlBar(context, ref),
+              _buildControlBar(context),
               processedRunsAsync.when(
                 data: (processedRuns) {
-                  return _buildRunsList(context, processedRuns, ref);
+                  return _buildRunsList(context, processedRuns);
                 },
                 loading: () => const SliverFillRemaining(
                   child: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
@@ -230,14 +268,17 @@ class HistoryScreen extends ConsumerWidget {
         ? 'N/A' 
         : algoCounts.entries.reduce((a, b) => a.value > b.value ? a : b).key;
 
-    return Row(
-      children: [
-        _buildSummaryItem(context, 'Total Runs', totalRuns.toString()),
-        const SizedBox(width: 12),
-        _buildSummaryItem(context, 'Avg. Steps', avgSteps.toStringAsFixed(0)),
-        const SizedBox(width: 12),
-        _buildSummaryItem(context, 'Most Used', mostUsed),
-      ],
+    return KeyedSubtree(
+      key: _summaryKey,
+      child: Row(
+        children: [
+          _buildSummaryItem(context, 'Total Runs', totalRuns.toString()),
+          const SizedBox(width: 12),
+          _buildSummaryItem(context, 'Avg. Steps', avgSteps.toStringAsFixed(0)),
+          const SizedBox(width: 12),
+          _buildSummaryItem(context, 'Most Used', mostUsed),
+        ],
+      ),
     );
   }
 
@@ -279,48 +320,51 @@ class HistoryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildControlBar(BuildContext context, WidgetRef ref) {
+  Widget _buildControlBar(BuildContext context) {
     return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildSortChip(ref, SortMode.latest, 'Latest'),
-                    _buildSortChip(ref, SortMode.time, 'Fastest'),
-                    _buildSortChip(ref, SortMode.efficiency, 'Efficiency'),
-                  ],
+      child: KeyedSubtree(
+        key: _controlsKey,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildSortChip(SortMode.latest, 'Latest'),
+                      _buildSortChip(SortMode.time, 'Fastest'),
+                      _buildSortChip(SortMode.efficiency, 'Efficiency'),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            Container(
-              height: 24,
-              width: 1,
-              color: Colors.white.withValues(alpha: 0.1),
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-            ),
-            IconButton(
-              icon: const Icon(Icons.tune_rounded, color: AppTheme.accentLight, size: 20),
-              onPressed: () => _showFilterSheet(context, ref),
-              visualDensity: VisualDensity.compact,
-            ),
-          ],
+              Container(
+                height: 24,
+                width: 1,
+                color: Colors.white.withValues(alpha: 0.1),
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              IconButton(
+                icon: const Icon(Icons.tune_rounded, color: AppTheme.accentLight, size: 20),
+                onPressed: () => _showFilterSheet(context),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildSortChip(WidgetRef ref, SortMode mode, String label) {
+  Widget _buildSortChip(SortMode mode, String label) {
     final currentMode = ref.watch(sortModeProvider);
     final isSelected = currentMode == mode;
 
@@ -348,7 +392,7 @@ class HistoryScreen extends ConsumerWidget {
     );
   }
 
-  void _showFilterSheet(BuildContext context, WidgetRef ref) {
+  void _showFilterSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -356,7 +400,7 @@ class HistoryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRunsList(BuildContext context, List<dynamic> runs, WidgetRef ref) {
+  Widget _buildRunsList(BuildContext context, List<dynamic> runs) {
     if (runs.isEmpty) {
       return SliverFillRemaining(
         hasScrollBody: false,
@@ -382,6 +426,12 @@ class HistoryScreen extends ConsumerWidget {
         delegate: SliverChildBuilderDelegate(
           (context, index) {
             final run = runs[index];
+            if (index == 0) {
+              return KeyedSubtree(
+                key: _runsKey,
+                child: _RunCard(run: run),
+              );
+            }
             return _RunCard(run: run);
           },
           childCount: runs.length,

@@ -26,6 +26,7 @@ import 'package:algo_arena/services/performance_monitor.dart';
 import 'dart:typed_data';
 import 'package:algo_arena/widgets/explanation_bottom_sheet.dart';
 import 'package:algo_arena/widgets/performance_details_modal.dart';
+import 'package:algo_arena/widgets/feature_tour.dart';
 
 
 class PathfindingVisualizerScreen extends ConsumerStatefulWidget {
@@ -69,6 +70,12 @@ class _PathfindingVisualizerScreenState
   Widget? _cachedControls;
   int _lastConfigHash = 0;
 
+  final GlobalKey _statsKey = GlobalKey();
+  final GlobalKey _toolsKey = GlobalKey();
+  final GlobalKey _gridKey = GlobalKey();
+  final GlobalKey _analyticsKey = GlobalKey();
+  final GlobalKey _controlsKey = GlobalKey();
+
   /// Hash of all config state that static widgets depend on
   int get _configHash => Object.hash(
     widget.algorithmId,
@@ -89,6 +96,41 @@ class _PathfindingVisualizerScreenState
     super.initState();
     _controller = GridController(rows: 15, columns: 25);
     _initializeProblem();
+
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      FeatureTour.startTour(
+        context: context,
+        tourKey: 'pathfinding',
+        steps: [
+          TourStep(
+            targetKey: _statsKey,
+            title: 'Algorithm Stats',
+            description: 'Monitor steps, time elapsed, and exploration efficiency in real time.',
+          ),
+          TourStep(
+            targetKey: _toolsKey,
+            title: 'Visualizer Tools',
+            description: 'Select drawing modes like walls, erasing, or weighted terrain. WARNING: Remember to add goal node in every grid!',
+          ),
+          TourStep(
+            targetKey: _gridKey,
+            title: 'Grid Canvas',
+            description: 'Draw walls, erase, or drag Start and Goal anchor nodes directly.',
+          ),
+          TourStep(
+            targetKey: _analyticsKey,
+            title: 'Performance Analysis',
+            description: 'Visualize exploration and memory curves dynamically.',
+          ),
+          TourStep(
+            targetKey: _controlsKey,
+            title: 'Execution Controls',
+            description: 'Control speed, run simulations, or clear and reset the board.',
+          ),
+        ],
+      );
+    });
   }
 
   @override
@@ -404,23 +446,38 @@ class _PathfindingVisualizerScreenState
         const SizedBox(height: 20),
         _cachedHeader!,
         const SizedBox(height: 20),
-        _cachedStatsRow!,
+        KeyedSubtree(
+          key: _statsKey,
+          child: _cachedStatsRow!,
+        ),
         const SizedBox(height: 14),
         _buildStatusSection(),
         const SizedBox(height: 14),
         GridLegend(exploredColor: exploredColor, pathColor: pathColor),
         const SizedBox(height: 14),
-        _cachedTools!,
+        KeyedSubtree(
+          key: _toolsKey,
+          child: _cachedTools!,
+        ),
         const SizedBox(height: 16),
         _buildAIRecommendation(),
         const SizedBox(height: 16),
-        _buildGridSection(),
+        KeyedSubtree(
+          key: _gridKey,
+          child: _buildGridSection(),
+        ),
         const SizedBox(height: 16),
         _buildSpeedControl(),
         const SizedBox(height: 14),
-        _cachedAnalytics!,
+        KeyedSubtree(
+          key: _analyticsKey,
+          child: _cachedAnalytics!,
+        ),
         const SizedBox(height: 16),
-        _cachedControls!,
+        KeyedSubtree(
+          key: _controlsKey,
+          child: _cachedControls!,
+        ),
         const SizedBox(height: 32),
       ],
     );

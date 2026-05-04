@@ -9,6 +9,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:algo_arena/widgets/water_jug_phase_space.dart';
 import 'package:algo_arena/models/algo_info.dart';
 import 'dart:math' as math;
+import 'package:algo_arena/widgets/feature_tour.dart';
+
 
 class WaterJugVisualizerScreen extends ConsumerStatefulWidget {
   const WaterJugVisualizerScreen({super.key});
@@ -21,6 +23,12 @@ class WaterJugVisualizerScreen extends ConsumerStatefulWidget {
 class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScreen>
     with TickerProviderStateMixin, VisualizerBaseMixin<WaterJugVisualizerScreen, WaterJugState> {
   
+  final GlobalKey _settingsKey = GlobalKey();
+  final GlobalKey _visualizerKey = GlobalKey();
+  final GlobalKey _phaseSpaceKey = GlobalKey();
+  final GlobalKey _manualKey = GlobalKey();
+  final GlobalKey _controlsKey = GlobalKey();
+
   // Jug Configurations
   int capacityA = 4;
   int capacityB = 3;
@@ -72,7 +80,43 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
     // Defer heavy content build to avoid ANR during navigation transition.
     // Use a 300ms delay to let the route transition animation finish first.
     Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) setState(() => _isContentReady = true);
+      if (mounted) {
+        setState(() => _isContentReady = true);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          FeatureTour.startTour(
+            context: context,
+            tourKey: 'water_jug',
+            steps: [
+              TourStep(
+                targetKey: _settingsKey,
+                title: 'Problem Configuration',
+                description: 'Adjust the capacities of Jug A, Jug B, and the target amount to solve.',
+              ),
+              TourStep(
+                targetKey: _visualizerKey,
+                title: 'Jugs Visualization',
+                description: 'See dynamic sloshing and pouring animations as the AI progresses through each step.',
+              ),
+              TourStep(
+                targetKey: _phaseSpaceKey,
+                title: 'Phase Space Analysis',
+                description: 'Explore state transitions in the visual phase space map.',
+              ),
+              TourStep(
+                targetKey: _manualKey,
+                title: 'Manual Controls',
+                description: 'Perform individual pour, fill, and empty steps yourself.',
+              ),
+              TourStep(
+                targetKey: _controlsKey,
+                title: 'Execution Controls',
+                description: 'Run the AI solver, pause, or clear to reset the state.',
+              ),
+            ],
+          );
+        });
+      }
     });
   }
 
@@ -399,15 +443,15 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
       children: [
         _cachedAlgoSelector!,
         const SizedBox(height: 20),
-        _cachedSettingsCard!,
+        KeyedSubtree(key: _settingsKey, child: _cachedSettingsCard!),
         const SizedBox(height: 30),
-        _buildVisualizerArea(),
+        KeyedSubtree(key: _visualizerKey, child: _buildVisualizerArea()),
         const SizedBox(height: 20),
-        _buildPhaseSpaceAndStats(),
+        KeyedSubtree(key: _phaseSpaceKey, child: _buildPhaseSpaceAndStats()),
         const SizedBox(height: 20),
-        _cachedManualControls!,
+        KeyedSubtree(key: _manualKey, child: _cachedManualControls!),
         const SizedBox(height: 20),
-        _cachedControlPanel!,
+        KeyedSubtree(key: _controlsKey, child: _cachedControlPanel!),
         const SizedBox(height: 20),
         StatusBanner(
           message: statusMessage,

@@ -25,6 +25,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool _otpSent = false;
   String? _verificationId;
 
+  final List<Map<String, String>> _countryCodes = [
+    {'name': 'India', 'code': '+91', 'flag': '🇮🇳'},
+    {'name': 'USA', 'code': '+1', 'flag': '🇺🇸'},
+    {'name': 'UK', 'code': '+44', 'flag': '🇬🇧'},
+    {'name': 'Australia', 'code': '+61', 'flag': '🇦🇺'},
+    {'name': 'Canada', 'code': '+1', 'flag': '🇨🇦'},
+    {'name': 'Germany', 'code': '+49', 'flag': '🇩🇪'},
+    {'name': 'UAE', 'code': '+971', 'flag': '🇦🇪'},
+    {'name': 'Singapore', 'code': '+65', 'flag': '🇸🇬'},
+  ];
+  String _selectedCountryCode = '+91';
+
   @override
   void dispose() {
     _phoneController.dispose();
@@ -35,12 +47,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   Future<void> _handleSendOtp() async {
     final phone = _phoneController.text.trim();
-    if (phone.isEmpty || !phone.startsWith('+')) {
+    if (phone.isEmpty) {
       setState(() {
-        _errorMessage = 'Please enter a valid phone number including country code (e.g. +1234567890)';
+        _errorMessage = 'Please enter a valid phone number';
       });
       return;
     }
+
+    final fullPhone = '$_selectedCountryCode$phone';
 
     setState(() {
       _isLoading = true;
@@ -49,7 +63,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
     try {
       await AuthService.verifyPhoneNumber(
-        phoneNumber: phone,
+        phoneNumber: fullPhone,
         onCodeSent: (verificationId) {
           setState(() {
             _verificationId = verificationId;
@@ -346,30 +360,75 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 12),
-                                TextField(
-                                  controller: _phoneController,
-                                  keyboardType: TextInputType.phone,
-                                  style: const TextStyle(color: Colors.white, fontSize: 15),
-                                  decoration: InputDecoration(
-                                    hintText: '+1234567890',
-                                    hintStyle: const TextStyle(color: Color(0xFF475569)),
-                                    filled: true,
-                                    fillColor: const Color(0xFF0F121D),
-                                    prefixIcon: const Icon(Icons.phone_outlined, color: Color(0xFF475569), size: 18),
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 14.0),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide.none,
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      height: 52,
+                                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF0F121D),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: Colors.white.withValues(alpha: 0.04),
+                                        ),
+                                      ),
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<String>(
+                                          value: _selectedCountryCode,
+                                          dropdownColor: const Color(0xFF0F121D),
+                                          icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF475569), size: 16),
+                                          items: _countryCodes.map((country) {
+                                            return DropdownMenuItem<String>(
+                                              value: country['code'],
+                                              child: Text(
+                                                '${country['flag']} ${country['code']}',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 14,
+                                                  fontFamily: 'SpaceGrotesk',
+                                                ),
+                                              ),
+                                            );
+                                          }).toList(),
+                                          onChanged: (val) {
+                                            if (val != null) {
+                                              setState(() {
+                                                _selectedCountryCode = val;
+                                              });
+                                            }
+                                          },
+                                        ),
+                                      ),
                                     ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.04)),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: TextField(
+                                        controller: _phoneController,
+                                        keyboardType: TextInputType.phone,
+                                        style: const TextStyle(color: Colors.white, fontSize: 15),
+                                        decoration: InputDecoration(
+                                          hintText: 'Phone Number',
+                                          hintStyle: const TextStyle(color: Color(0xFF475569)),
+                                          filled: true,
+                                          fillColor: const Color(0xFF0F121D),
+                                          contentPadding: const EdgeInsets.symmetric(vertical: 14.0, horizontal: 16.0),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.04)),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                            borderSide: const BorderSide(color: AppTheme.accent),
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: const BorderSide(color: AppTheme.accent),
-                                    ),
-                                  ),
+                                  ],
                                 ),
                                 if (_errorMessage != null) ...[
                                   const SizedBox(height: 12),

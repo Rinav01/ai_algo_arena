@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:algo_arena/core/app_theme.dart';
 import 'package:algo_arena/services/stats_service.dart';
 import 'package:algo_arena/widgets/bottom_nav_bar.dart';
+import 'package:algo_arena/widgets/feature_tour.dart';
 
 // ─── Home Screen ─────────────────────────────────────────────────────────────
 class HomeScreen extends ConsumerStatefulWidget {
@@ -17,6 +18,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   late AnimationController _pulseCtrl;
   late Animation<double> _pulse;
 
+  final GlobalKey _titleKey = GlobalKey();
+  final GlobalKey _categoriesKey = GlobalKey();
+
   static const _categories = ['Pathfinding', 'Puzzle', 'Search', 'Maze'];
 
   @override
@@ -30,6 +34,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       begin: 0.6,
       end: 1.0,
     ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FeatureTour.startTour(
+        context: context,
+        tourKey: 'home_screen',
+        steps: [
+          TourStep(
+            targetKey: _titleKey,
+            title: 'Neural Arena',
+            description: 'Explore AI algorithms, visualize their execution steps, and test their performance.',
+          ),
+          TourStep(
+            targetKey: _categoriesKey,
+            title: 'Algorithm Categories',
+            description: 'Navigate through Pathfinding, Puzzle solvers, Search, and Maze generators.',
+          ),
+        ],
+      );
+    });
   }
 
   @override
@@ -132,6 +155,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 children: [
                   // Tag line
                   Container(
+                    key: _titleKey,
                     padding: EdgeInsets.symmetric(
                       horizontal: 10.0,
                       vertical: 4.0,
@@ -211,6 +235,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           scrollDirection: Axis.horizontal,
           physics: const BouncingScrollPhysics(),
           child: Row(
+            key: _categoriesKey,
             children: List.generate(_categories.length, (i) {
               final isActive = i == _selectedCategory;
               return Padding(

@@ -10,6 +10,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:algo_arena/screens/visualizer_base_mixin.dart';
 import 'package:algo_arena/services/api_service.dart';
+import 'package:algo_arena/widgets/feature_tour.dart';
 
 class EightPuzzleVisualizerScreen extends ConsumerStatefulWidget {
   const EightPuzzleVisualizerScreen({super.key});
@@ -32,6 +33,10 @@ class _EightPuzzleVisualizerScreenState
   String selectedDifficulty = 'Medium';
   final Map<String, int> difficulties = {'Easy': 10, 'Medium': 25, 'Hard': 50};
   String selectedAlgorithm = 'A*';
+
+  final GlobalKey _configKey = GlobalKey();
+  final GlobalKey _puzzleGridKey = GlobalKey();
+  final GlobalKey _controlsKey = GlobalKey();
 
   // Widget caching: static sections only rebuild when config changes
   Widget? _cachedHeader;
@@ -65,6 +70,31 @@ class _EightPuzzleVisualizerScreenState
       value: 1.0,
     );
     _resetPuzzle();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      FeatureTour.startTour(
+        context: context,
+        tourKey: 'eight_puzzle',
+        steps: [
+          TourStep(
+            targetKey: _configKey,
+            title: 'Puzzle Configuration',
+            description: 'Pick the problem difficulty and scramble the tiles to initiate a new state.',
+          ),
+          TourStep(
+            targetKey: _puzzleGridKey,
+            title: 'Tile Visualization',
+            description: 'Observe the 8-puzzle board moving dynamically as the algorithm evaluates the frontier.',
+          ),
+          TourStep(
+            targetKey: _controlsKey,
+            title: 'Solver Controls',
+            description: 'Run, pause, resume, or step through the AI solver to find the optimal path.',
+          ),
+        ],
+      );
+    });
   }
 
   @override
@@ -434,11 +464,11 @@ class _EightPuzzleVisualizerScreenState
         const SizedBox(height: 14),
         _buildStatusSection(),
         const SizedBox(height: 16),
-        _cachedConfigRow!,
+        KeyedSubtree(key: _configKey, child: _cachedConfigRow!),
         const SizedBox(height: 20),
-        _buildPuzzleVisualization(),
+        KeyedSubtree(key: _puzzleGridKey, child: _buildPuzzleVisualization()),
         const SizedBox(height: 24),
-        _cachedControls!,
+        KeyedSubtree(key: _controlsKey, child: _cachedControls!),
       ],
     );
   }

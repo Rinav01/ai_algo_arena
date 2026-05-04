@@ -15,10 +15,54 @@ import 'package:algo_arena/widgets/analytics/complexity_tab_widgets.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:algo_arena/widgets/info_cards.dart';
 import 'package:algo_arena/widgets/premium_glass_container.dart';
+import 'package:algo_arena/widgets/feature_tour.dart';
 
-class AnalyticsScreen extends ConsumerWidget {
+class AnalyticsScreen extends ConsumerStatefulWidget {
   const AnalyticsScreen({super.key});
-  
+
+  @override
+  ConsumerState<AnalyticsScreen> createState() => _AnalyticsScreenState();
+}
+
+class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
+  final GlobalKey _tabsKey = GlobalKey();
+  final GlobalKey _filtersKey = GlobalKey();
+  final GlobalKey _summaryKey = GlobalKey();
+  final GlobalKey _distributionKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FeatureTour.startTour(
+        context: context,
+        tourKey: 'analytics_screen',
+        steps: [
+          TourStep(
+            targetKey: _tabsKey,
+            title: 'Analytics View tabs',
+            description: 'Switch between General metrics, Versus (head-to-head algorithm comparisons), and Complexity classes.',
+          ),
+          TourStep(
+            targetKey: _filtersKey,
+            title: 'Refine Data with Filters',
+            description: 'Filter analytics by Algorithm Type, specific Algorithm, Grid Scale, or selected metrics.',
+          ),
+          TourStep(
+            targetKey: _summaryKey,
+            title: 'Performance Summary',
+            description: 'View run metrics breakdown across algorithms in a premium visual summary chart.',
+          ),
+          TourStep(
+            targetKey: _distributionKey,
+            title: 'Usage Distribution',
+            description: 'Explore the breakdown of your past executions visually.',
+          ),
+        ],
+      );
+    });
+  }
+
   void _showDashboardInfo(BuildContext context) {
     showDialog(
       context: context,
@@ -36,7 +80,7 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -97,16 +141,22 @@ class AnalyticsScreen extends ConsumerWidget {
               ],
             ),
           ),
-          bottom: const TabBar(
-            indicatorColor: AppTheme.accent,
-            labelColor: AppTheme.accent,
-            unselectedLabelColor: AppTheme.textMuted,
-            indicatorWeight: 3,
-            tabs: [
-              Tab(text: "General"),
-              Tab(text: "Versus"),
-              Tab(text: "Complexity"),
-            ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(48),
+            child: KeyedSubtree(
+              key: _tabsKey,
+              child: const TabBar(
+                indicatorColor: AppTheme.accent,
+                labelColor: AppTheme.accent,
+                unselectedLabelColor: AppTheme.textMuted,
+                indicatorWeight: 3,
+                tabs: [
+                  Tab(text: "General"),
+                  Tab(text: "Versus"),
+                  Tab(text: "Complexity"),
+                ],
+              ),
+            ),
           ),
         ),
         body: Stack(
@@ -126,7 +176,11 @@ class AnalyticsScreen extends ConsumerWidget {
             ),
             TabBarView(
               children: [
-                _GeneralTab(),
+                _GeneralTab(
+                  filtersKey: _filtersKey,
+                  summaryKey: _summaryKey,
+                  distributionKey: _distributionKey,
+                ),
                 const VersusTabContent(),
                 const ComplexityTabContent(),
               ],
@@ -140,6 +194,15 @@ class AnalyticsScreen extends ConsumerWidget {
 }
 
 class _GeneralTab extends ConsumerWidget {
+  final GlobalKey filtersKey;
+  final GlobalKey summaryKey;
+  final GlobalKey distributionKey;
+
+  const _GeneralTab({
+    required this.filtersKey,
+    required this.summaryKey,
+    required this.distributionKey,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -160,10 +223,13 @@ class _GeneralTab extends ConsumerWidget {
         physics: const BouncingScrollPhysics(),
         slivers: [
           // ─── Filters ────────────────────────────────────────────────────────
-          const SliverToBoxAdapter(
+          SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: AnalyticsFiltersBar(),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: KeyedSubtree(
+                key: filtersKey,
+                child: const AnalyticsFiltersBar(),
+              ),
             ),
           ),
 
@@ -274,9 +340,12 @@ class _GeneralTab extends ConsumerWidget {
                     // ─── Summary Section ────────────────────────────────────────
                     const _SectionHeader(label: "PERFORMANCE SUMMARY"),
                     const SizedBox(height: 16),
-                    SummaryBarChart(
-                      data: summaryRes.data,
-                      metric: filters.metric ?? 'nodes',
+                    KeyedSubtree(
+                      key: summaryKey,
+                      child: SummaryBarChart(
+                        data: summaryRes.data,
+                        metric: filters.metric ?? 'nodes',
+                      ),
                     ),
                     const SizedBox(height: 32),
 
@@ -296,10 +365,13 @@ class _GeneralTab extends ConsumerWidget {
                     // ─── Distribution Section ────────────────────────────────────
                     const _SectionHeader(label: "USAGE DISTRIBUTION"),
                     const SizedBox(height: 16),
-                    distributionAsync.when(
-                      data: (distRes) => DistributionPieChart(data: distRes.data),
-                      loading: () => const _SkeletonPlaceholder(height: 300),
-                      error: (err, stack) => const SizedBox.shrink(),
+                    KeyedSubtree(
+                      key: distributionKey,
+                      child: distributionAsync.when(
+                        data: (distRes) => DistributionPieChart(data: distRes.data),
+                        loading: () => const _SkeletonPlaceholder(height: 300),
+                        error: (err, stack) => const SizedBox.shrink(),
+                      ),
                     ),
                     const SizedBox(height: 100),
                   ]),

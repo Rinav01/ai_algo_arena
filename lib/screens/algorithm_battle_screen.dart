@@ -21,6 +21,7 @@ import 'package:algo_arena/services/maze_generator.dart';
 import 'package:algo_arena/services/api_service.dart';
 import 'package:algo_arena/state/api_provider.dart';
 import 'package:algo_arena/services/run_optimizer.dart';
+import 'package:algo_arena/widgets/feature_tour.dart';
 
 class AlgorithmBattleScreen extends ConsumerStatefulWidget {
   final List<List<GridNode>>? initialGrid;
@@ -53,6 +54,10 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
   AlgorithmMetrics? _metricsB;
   late final GridController _controller;
 
+  final GlobalKey _selectorsKey = GlobalKey();
+  final GlobalKey _toolsKey = GlobalKey();
+  final GlobalKey _battleCtaKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -77,6 +82,30 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
         );
       }
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FeatureTour.startTour(
+        context: context,
+        tourKey: 'algorithm_battle',
+        steps: [
+          TourStep(
+            targetKey: _selectorsKey,
+            title: 'Algorithm Selectors',
+            description: 'Choose which two algorithms will compete side-by-side in real time.',
+          ),
+          TourStep(
+            targetKey: _toolsKey,
+            title: 'Grid Editor Tools',
+            description: 'Draw walls or weights, adjust starting or goal points on the arena grid.',
+          ),
+          TourStep(
+            targetKey: _battleCtaKey,
+            title: 'Launch Battle',
+            description: 'Run both algorithms simultaneously to compare speed, path length, and explored node costs.',
+          ),
+        ],
+      );
+    });
   }
 
   SearchAlgorithm<GridCoordinate> _getAlgorithm(String id) {
@@ -427,15 +456,18 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
                   const SizedBox(height: 16),
                   AnimatedBuilder(
                     animation: _controller,
-                    builder: (context, _) => Opacity(
-                      opacity: _isRunning ? 0.5 : 1.0,
-                      child: IgnorePointer(
-                        ignoring: _isRunning,
-                        child: ToolSelector(
-                          selectedTool: _controller.selectedTool,
-                          onToolSelected: (tool) =>
-                              _controller.setTool(tool as PaintTool),
-                          isSolving: _isRunning,
+                    builder: (context, _) => Container(
+                      key: _toolsKey,
+                      child: Opacity(
+                        opacity: _isRunning ? 0.5 : 1.0,
+                        child: IgnorePointer(
+                          ignoring: _isRunning,
+                          child: ToolSelector(
+                            selectedTool: _controller.selectedTool,
+                            onToolSelected: (tool) =>
+                                _controller.setTool(tool as PaintTool),
+                            isSolving: _isRunning,
+                          ),
                         ),
                       ),
                     ),
@@ -548,6 +580,7 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
                         child: GestureDetector(
                           onTap: _isRunning ? null : _runBattle,
                           child: Container(
+                            key: _battleCtaKey,
                             height: 56.0,
                             decoration: BoxDecoration(
                               gradient: AppTheme.ctaGradient,
@@ -654,6 +687,7 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
 
   Widget _buildSelectors() {
     return Row(
+      key: _selectorsKey,
       children: [
         Expanded(child: _buildAlgoSelector(true)),
         const SizedBox(width: 12),
