@@ -15,9 +15,6 @@ import 'package:algo_arena/widgets/trend_line.dart';
 import 'package:algo_arena/widgets/visualizer_widgets.dart';
 import 'package:algo_arena/widgets/explanation_bottom_sheet.dart';
 import 'package:algo_arena/services/insight_service.dart';
-import 'package:algo_arena/models/algo_info.dart';
-import 'package:algo_arena/widgets/info_cards.dart';
-
 
 class ReplayScreen extends ConsumerStatefulWidget {
   const ReplayScreen({super.key});
@@ -61,7 +58,7 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
   String? _algoName;
   List<AlgorithmStep<GridCoordinate>> _runSteps = [];
   final Map<int, List<AlgorithmStep<GridCoordinate>>> _allCompetitorSteps = {};
-  
+
   // Optimization: Pre-calculated lists for ultra-fast rendering
   final Map<int, List<GridCoordinate>> _fullExploredLists = {};
   final Map<int, List<int>> _exploredCountsAtStep = {};
@@ -73,9 +70,11 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
   List<dynamic> _competitors = [];
   Map<String, dynamic>? _metadata;
   int _selectedCompetitorIndex = 0;
+  String? _errorMessage;
+  bool _isLoading = true;
 
   static ReplayLoadResult _processAlgorithmData(Map<String, dynamic> params) {
-    final stepsRaw = params['stepsRaw'] as List<dynamic>;
+    final stepsRaw = params['stepsRaw'] as List<dynamic>? ?? [];
     final finalPathRaw = params['finalPathRaw'] as List<dynamic>?;
     final cols = params['cols'] as int;
 
@@ -106,7 +105,7 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
             ),
           )
           .toList();
-      
+
       for (int i = 0; i < steps.length; i++) {
         final step = steps[i];
         fullExplored.addAll(step.newlyExplored);
@@ -145,13 +144,15 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
           isGoalReached: isGoal,
           message: null, // Message is not currently optimized/stored
           reason: map['r'] as String?,
-          meta: map['m'] != null ? Map<String, dynamic>.from(map['m'] as Map) : null,
+          meta: map['m'] != null
+              ? Map<String, dynamic>.from(map['m'] as Map)
+              : null,
         );
-        
+
         steps.add(step);
         fullExplored.addAll(explored);
         exploredCounts.add(fullExplored.length);
-        
+
         if (current != null) {
           stateToStep[current] = i;
         }
@@ -187,68 +188,93 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
   }
 
   Future<void> _loadRunData() async {
-    final args = ModalRoute.of(context)?.settings.arguments;
-    if (args is Map<String, dynamic>) {
-      final isBattle = args['isBattle'] == true || args['type'] == 'battle';
-      final snapshot = args['snapshot'] as Map<String, dynamic>?;
+    try {
+      debugPrint('ReplayScreen: Starting to load run data...');
+      final args = ModalRoute.of(context)?.settings.arguments;
+      debugPrint('ReplayScreen: Arguments type: ${args.runtimeType}');
 
-      if (snapshot != null) {
-        _controller.loadFromSnapshot(snapshot);
-      }
+      if (args is Map<String, dynamic>) {
+        final isBattle = args['isBattle'] == true || args['type'] == 'battle';
+        final snapshot = args['snapshot'] as Map<String, dynamic>?;
 
-      final cols = _controller.columns;
+        if (snapshot != null) {
+          _controller.loadFromSnapshot(snapshot);
+        }
 
-      if (isBattle) {
-        final comps = args['competitors'] as List<dynamic>? ?? [];
-        for (int i = 0; i < comps.length; i++) {
-          final comp = comps[i];
+        final cols = _controller.columns;
+
+        if (isBattle) {
+          final comps = args['competitors'] as List<dynamic>? ?? [];
+          for (int i = 0; i < comps.length; i++) {
+            final comp = comps[i];
+            final result = await compute(_processAlgorithmData, {
+              'stepsRaw': comp['steps'],
+              'finalPathRaw': comp['path'],
+              'cols': cols,
+            });
+
+            _allCompetitorSteps[i] = result.steps;
+            _fullExploredLists[i] = result.fullExploredList;
+            _exploredCountsAtStep[i] = result.exploredCountAtStep;
+            _competitorTrends[i] = result.trend;
+            _stateToStepMaps[i] = result.stateToStep;
+          }
+        } else {
           final result = await compute(_processAlgorithmData, {
-            'stepsRaw': comp['steps'],
-            'finalPathRaw': comp['path'],
+            'stepsRaw': args['steps'],
+            'finalPathRaw': args['path'],
             'cols': cols,
           });
 
-          _allCompetitorSteps[i] = result.steps;
-          _fullExploredLists[i] = result.fullExploredList;
-          _exploredCountsAtStep[i] = result.exploredCountAtStep;
-          _competitorTrends[i] = result.trend;
-          _stateToStepMaps[i] = result.stateToStep;
+          _runSteps = result.steps;
+          _fullExploredLists[0] = result.fullExploredList;
+          _exploredCountsAtStep[0] = result.exploredCountAtStep;
+          _competitorTrends[0] = result.trend;
+          _stateToStepMaps[0] = result.stateToStep;
         }
-      } else {
-        final result = await compute(_processAlgorithmData, {
-          'stepsRaw': args['steps'],
-          'finalPathRaw': args['path'],
-          'cols': cols,
-        });
 
-        _runSteps = result.steps;
-        _fullExploredLists[0] = result.fullExploredList;
-        _exploredCountsAtStep[0] = result.exploredCountAtStep;
-        _competitorTrends[0] = result.trend;
-        _stateToStepMaps[0] = result.stateToStep;
+        if (mounted) {
+          setState(() {
+            _isBattle = isBattle;
+            _isSideBySide = isBattle;
+            _algoName = args['algorithm'] as String?;
+            _competitors = isBattle
+                ? (args['competitors'] as List<dynamic>? ?? [])
+                : [];
+            _metadata = args['metadata'] as Map<String, dynamic>?;
+
+            final notifier = ref.read(replayProvider.notifier);
+            if (isBattle) {
+              int maxSteps = 0;
+              for (final steps in _allCompetitorSteps.values) {
+                if (steps.length > maxSteps) maxSteps = steps.length;
+              }
+              notifier.setTotalSteps(maxSteps);
+              if (_allCompetitorSteps.isNotEmpty) {
+                _loadCompetitor(0);
+              }
+            } else {
+              notifier.setTotalSteps(_runSteps.length);
+            }
+            _isLoading = false;
+          });
+        } else {
+          debugPrint('ReplayScreen: Arguments is NOT a Map<String, dynamic>');
+          if (mounted) {
+            setState(() {
+              _errorMessage = 'Invalid run data format: ${args.runtimeType}';
+              _isLoading = false;
+            });
+          }
+        }
       }
-
+    } catch (e, stack) {
+      debugPrint('ReplayScreen: Error loading run data: $e');
+      debugPrint('ReplayScreen: Stack trace: $stack');
       if (mounted) {
         setState(() {
-          _isBattle = isBattle;
-          _isSideBySide = isBattle;
-          _algoName = args['algorithm'] as String?;
-          _competitors = isBattle ? (args['competitors'] as List<dynamic>? ?? []) : [];
-          _metadata = args['metadata'] as Map<String, dynamic>?;
-
-          final notifier = ref.read(replayProvider.notifier);
-          if (isBattle) {
-            int maxSteps = 0;
-            for (final steps in _allCompetitorSteps.values) {
-              if (steps.length > maxSteps) maxSteps = steps.length;
-            }
-            notifier.setTotalSteps(maxSteps);
-            if (_allCompetitorSteps.isNotEmpty) {
-              _loadCompetitor(0);
-            }
-          } else {
-            notifier.setTotalSteps(_runSteps.length);
-          }
+          _errorMessage = 'Failed to load replay: $e';
+          _isLoading = false;
         });
       }
     }
@@ -273,30 +299,32 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
     final currentPos = ref.read(replayProvider).currentStep;
 
     _runSteps = _allCompetitorSteps[index]!;
-    
+
     setState(() {
       _selectedCompetitorIndex = index;
     });
 
     // Update total steps based on current view mode
     _updateTotalSteps();
-    
+
     if (!_isSideBySide) {
-      ref.read(replayProvider.notifier).seek(math.min(currentPos, _runSteps.length));
+      ref
+          .read(replayProvider.notifier)
+          .seek(math.min(currentPos, _runSteps.length));
     }
   }
 
   void _showNodeExplanation(int row, int col, {required int competitorIndex}) {
     final coord = GridCoordinate(row: row, column: col);
     final map = _stateToStepMaps[competitorIndex];
-    final steps = _isBattle 
-        ? (_allCompetitorSteps[competitorIndex] ?? []) 
+    final steps = _isBattle
+        ? (_allCompetitorSteps[competitorIndex] ?? [])
         : _runSteps;
 
     if (map != null && map.containsKey(coord)) {
       final stepIndex = map[coord]!;
       final step = steps[stepIndex];
-      
+
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -312,13 +340,21 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
       );
     } else {
       // Check if it's the start or goal
-      final isStart = _controller.start.row == row && _controller.start.column == col;
-      final isGoal = _controller.goal?.row == row && _controller.goal?.column == col;
+      final isStart =
+          _controller.start.row == row && _controller.start.column == col;
+      final isGoal =
+          _controller.goal?.row == row && _controller.goal?.column == col;
 
       if (isStart) {
-        _showStaticExplanation('START NODE', 'The algorithm began its search here.');
+        _showStaticExplanation(
+          'START NODE',
+          'The algorithm began its search here.',
+        );
       } else if (isGoal) {
-        _showStaticExplanation('GOAL NODE', 'The target destination of the search.');
+        _showStaticExplanation(
+          'GOAL NODE',
+          'The target destination of the search.',
+        );
       }
     }
   }
@@ -342,37 +378,7 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
     );
   }
 
-
-  void _showAlgorithmInfo() {
-    AlgoInfo? info;
-    if (_isBattle) {
-      info = AlgoInfo.battleArena;
-    } else {
-      info = AlgoInfo.pathfinding[_algoName];
-    }
-
-    if (info == null) return;
-
-    showDialog(
-      context: context,
-      barrierColor: AppTheme.barrier,
-      builder: (context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Material(
-            color: Colors.transparent,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 500),
-              child: AlgorithmInfoCard(info: info!),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
-
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -380,301 +386,416 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint(
+      'ReplayScreen: build() - isLoading: $_isLoading, hasError: ${_errorMessage != null}',
+    );
     final replayState = ref.watch(replayProvider);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final screenHeight = MediaQuery.sizeOf(context).height;
+
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: AppTheme.background,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(color: AppTheme.accent),
+              const SizedBox(height: 24),
+              Text(
+                'INITIALIZING REPLAY...',
+                style: AppTheme.labelStyle.copyWith(
+                  color: AppTheme.accent,
+                  letterSpacing: 2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        backgroundColor: AppTheme.background,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline_rounded,
+                  color: AppTheme.error,
+                  size: 64,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'REPLAY ERROR',
+                  style: AppTheme.titleStyle.copyWith(color: AppTheme.error),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: AppTheme.bodyStyle.copyWith(color: Colors.white70),
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.error.withValues(alpha: 0.1),
+                    foregroundColor: AppTheme.error,
+                    side: const BorderSide(color: AppTheme.error),
+                  ),
+                  child: const Text('BACK TO HISTORY'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1400),
+              constraints: BoxConstraints(
+                maxWidth: screenWidth > 1400 ? 1400 : screenWidth,
+              ),
               child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: AppTheme.glassCard(radius: 12),
-                          child: const Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            size: 18,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'REPLAY MODE',
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(
-                                    color: AppTheme.accentLight,
-                                    letterSpacing: 1.5,
-                                  ),
-                            ),
-                            Text(
-                              _isSideBySide
-                                  ? 'Comparison View'
-                                  : '${_algoName ?? 'A*'} Run',
-                              style: Theme.of(context).textTheme.headlineSmall
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: _showAlgorithmInfo,
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: AppTheme.glassCard(radius: 10).copyWith(
-                            color: AppTheme.accent.withValues(alpha: 0.1),
-                          ),
-                          child: const Icon(
-                            Icons.info_outline_rounded,
-                            size: 18,
-                            color: AppTheme.accentLight,
-                          ),
-                        ),
-                      ).animate().fadeIn(delay: 500.ms).scale(delay: 600.ms),
-                      if (_isBattle) ...[
-                        const SizedBox(width: 8),
-                        IconButton(
-
-                          icon: Icon(
-                            _isSideBySide
-                                ? Icons.view_agenda_rounded
-                                : Icons.grid_view_rounded,
-                            color: _isSideBySide
-                                ? AppTheme.accent
-                                : AppTheme.textMuted,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _isSideBySide = !_isSideBySide;
-                              _updateTotalSteps();
-                            });
-                          },
-                          tooltip: 'Toggle Side-by-Side',
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-
-                if (_isBattle && _competitors.isNotEmpty && !_isSideBySide)
+                children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
+                    padding: EdgeInsets.all(screenWidth < 600 ? 12.0 : 20.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: VisualizerHeader(
+                            title: 'REPLAY MODE',
+                            subtitle: _algoName ?? 'Algorithm Analysis',
+                          ),
+                        ),
+                        _buildCloseButton(context),
+                      ],
                     ),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: AppTheme.glassCard(radius: 12),
-                      child: Row(
-                        children: List.generate(_competitors.length, (index) {
-                          final comp = _competitors[index];
-                          final isSelected = _selectedCompetitorIndex == index;
-                          return Expanded(
-                            child: GestureDetector(
-                              onTap: () => _loadCompetitor(index),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? AppTheme.accent.withValues(alpha: 0.2)
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    comp['name'] ?? 'Algo ${index + 1}',
-                                    style: TextStyle(
-                                      color: isSelected
-                                          ? AppTheme.accentLight
-                                          : AppTheme.textMuted,
-                                      fontWeight: isSelected
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
+                  ),
+                  if (_isBattle && _competitors.isNotEmpty && !_isSideBySide)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: AppTheme.glassCard(radius: 12),
+                        child: Row(
+                          children: List.generate(_competitors.length, (index) {
+                            final comp = _competitors[index];
+                            final isSelected =
+                                _selectedCompetitorIndex == index;
+                            return Expanded(
+                              child: GestureDetector(
+                                onTap: () => _loadCompetitor(index),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppTheme.accent.withValues(alpha: 0.2)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      comp['name'] ?? 'Algo ${index + 1}',
+                                      style: TextStyle(
+                                        color: isSelected
+                                            ? AppTheme.accentLight
+                                            : AppTheme.textMuted,
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                          );
-                        }),
+                            );
+                          }),
+                        ),
                       ),
                     ),
-                  ),
 
-                // Upgrade: Global Insight Card
-                if (replayState.currentStep >= _runSteps.length - 1 && _runSteps.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: _buildGlobalInsightCard(),
-                  ),
-
-
-
-                if (_isBattle && _isSideBySide && _allCompetitorSteps.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Algorithm 1 Column
-                        Flexible(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 650),
-                            child: Column(
-                              children: [
-                                _buildMainGrid(
-                                  steps: _allCompetitorSteps[0] ?? [],
-                                  currentStep: replayState.currentStep,
-                                  label: _competitors[0]['name'] ?? 'Algo 1',
-                                  color: AppTheme.accent,
-                                  index: 0,
-                                ),
-                                const SizedBox(height: 16),
-                                _buildSingleMetrics(
-                                  replayState.currentStep,
-                                  index: 0,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 80),
-                        // Algorithm 2 Column
-                        Flexible(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 650),
-                            child: Column(
-                              children: [
-                                _buildMainGrid(
-                                  steps: _allCompetitorSteps[1] ?? [],
-                                  currentStep: replayState.currentStep,
-                                  label: _competitors[1]['name'] ?? 'Algo 2',
-                                  color: AppTheme.error,
-                                  index: 1,
-                                ),
-                                const SizedBox(height: 16),
-                                _buildSingleMetrics(
-                                  replayState.currentStep,
-                                  index: 1,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                  // Upgrade: Global Insight Card
+                  if (replayState.currentStep >= _runSteps.length - 1 &&
+                      _runSteps.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: _buildGlobalInsightCard(),
                     ),
-                  )
-                else
-                  // Single View
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Column(
-                      children: [
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 900),
-                          child: _buildMainGrid(
-                            steps: _runSteps,
-                            currentStep: replayState.currentStep,
-                            label: _algoName ?? 'Algorithm',
-                            color: AppTheme.accent,
-                            index: _selectedCompetitorIndex,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 900),
-                          child: _buildSingleMetrics(replayState.currentStep),
-                        ),
-                      ],
-                    ),
-                  ),
 
-                // ── Trend Visualization ───────────────────────────────────
-                if (_competitorTrends.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 12,
-                    ),
-                    child: _isSideBySide && _isBattle
-                        ? Column(
+                  if (_isBattle &&
+                      _isSideBySide &&
+                      _allCompetitorSteps.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Builder(
+                        builder: (context) {
+                          final isNarrow =
+                              MediaQuery.sizeOf(context).width < 850;
+
+                          return Flex(
+                            direction: isNarrow
+                                ? Axis.vertical
+                                : Axis.horizontal,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: isNarrow
+                                ? CrossAxisAlignment.center
+                                : CrossAxisAlignment.start,
                             children: [
-                              TrendLine(
-                                data: _competitorTrends[0] ?? [0, 0],
-                                color: AppTheme.accent,
-                                currentProgress: (_allCompetitorSteps[0]?.isEmpty ?? true)
-                                    ? 0
-                                    : math.min(
-                                        1.0,
-                                        replayState.currentStep /
-                                            (_allCompetitorSteps[0]?.length ?? 1),
+                              // Algorithm 1 Column
+                              Flexible(
+                                flex: isNarrow ? 0 : 1,
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: isNarrow ? 800 : 650,
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      _buildMainGrid(
+                                        steps: _allCompetitorSteps[0] ?? [],
+                                        currentStep: replayState.currentStep,
+                                        label:
+                                            _competitors[0]['name'] ?? 'Algo 1',
+                                        color: AppTheme.accent,
+                                        index: 0,
                                       ),
-                                label:
-                                    '${_competitors[0]['name'] ?? 'P1'} Progress',
+                                      const SizedBox(height: 12),
+                                      _buildSingleMetrics(
+                                        (_allCompetitorSteps[0] ?? [])
+                                                    .isEmpty ||
+                                                replayState.currentStep == 0
+                                            ? null
+                                            : (_allCompetitorSteps[0] ??
+                                                  [])[math.min(
+                                                replayState.currentStep - 1,
+                                                (_allCompetitorSteps[0] ?? [])
+                                                        .length -
+                                                    1,
+                                              )],
+                                        replayState.currentStep,
+                                        (_exploredCountsAtStep[0] != null &&
+                                                _exploredCountsAtStep[0]!
+                                                    .isNotEmpty)
+                                            ? _exploredCountsAtStep[0]![math
+                                                  .min(
+                                                    replayState.currentStep,
+                                                    _exploredCountsAtStep[0]!
+                                                            .length -
+                                                        1,
+                                                  )]
+                                            : 0,
+                                        index: 0,
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                              const SizedBox(height: 12),
-                              TrendLine(
-                                data: _competitorTrends[1] ?? [0, 0],
-                                color: AppTheme.error,
-                                currentProgress: (_allCompetitorSteps[1]?.isEmpty ?? true)
-                                    ? 0
-                                    : math.min(
-                                        1.0,
-                                        replayState.currentStep /
-                                            (_allCompetitorSteps[1]?.length ?? 1),
+                              SizedBox(
+                                width: isNarrow ? 0 : 32,
+                                height: isNarrow ? 24 : 0,
+                              ),
+                              // Algorithm 2 Column
+                              Flexible(
+                                flex: isNarrow ? 0 : 1,
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: isNarrow ? 800 : 650,
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      _buildMainGrid(
+                                        steps: _allCompetitorSteps[1] ?? [],
+                                        currentStep: replayState.currentStep,
+                                        label:
+                                            _competitors[1]['name'] ?? 'Algo 2',
+                                        color: AppTheme.error,
+                                        index: 1,
                                       ),
-                                label:
-                                    '${_competitors[1]['name'] ?? 'P2'} Progress',
+                                      const SizedBox(height: 12),
+                                      _buildSingleMetrics(
+                                        (_allCompetitorSteps[1] ?? [])
+                                                    .isEmpty ||
+                                                replayState.currentStep == 0
+                                            ? null
+                                            : (_allCompetitorSteps[1] ??
+                                                  [])[math.min(
+                                                replayState.currentStep - 1,
+                                                (_allCompetitorSteps[1] ?? [])
+                                                        .length -
+                                                    1,
+                                              )],
+                                        replayState.currentStep,
+                                        (_exploredCountsAtStep[1] != null &&
+                                                _exploredCountsAtStep[1]!
+                                                    .isNotEmpty)
+                                            ? _exploredCountsAtStep[1]![math
+                                                  .min(
+                                                    replayState.currentStep,
+                                                    _exploredCountsAtStep[1]!
+                                                            .length -
+                                                        1,
+                                                  )]
+                                            : 0,
+                                        index: 1,
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ],
-                          )
-                        : TrendLine(
-                            data:
-                                _competitorTrends[_selectedCompetitorIndex] ??
-                                [0, 0],
-                            color: AppTheme.accent,
-                            currentProgress: (_allCompetitorSteps[_selectedCompetitorIndex]?.isEmpty ?? true)
-                                ? 0
-                                : math.min(
-                                    1.0,
-                                    replayState.currentStep /
-                                        (_allCompetitorSteps[_selectedCompetitorIndex]?.length ?? 1),
-                                  ),
-                            label: 'Exploration Trend (Nodes vs Steps)',
+                          );
+                        },
+                      ),
+                    )
+                  else
+                    // Single View
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Column(
+                        children: [
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: 900,
+                              maxHeight: screenHeight * 0.55,
+                            ),
+                            child: _buildMainGrid(
+                              steps: _runSteps,
+                              currentStep: replayState.currentStep,
+                              label: _algoName ?? 'Algorithm',
+                              color: AppTheme.accent,
+                              index: _selectedCompetitorIndex,
+                            ),
                           ),
-                  ),
+                          const SizedBox(height: 16),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 900),
+                            child: _buildSingleMetrics(
+                              _runSteps.isEmpty || replayState.currentStep == 0
+                                  ? null
+                                  : _runSteps[math.min(
+                                      replayState.currentStep - 1,
+                                      _runSteps.length - 1,
+                                    )],
+                              replayState.currentStep,
+                              (_exploredCountsAtStep[_selectedCompetitorIndex] !=
+                                          null &&
+                                      _exploredCountsAtStep[_selectedCompetitorIndex]!
+                                          .isNotEmpty)
+                                  ? _exploredCountsAtStep[_selectedCompetitorIndex]![math
+                                        .min(
+                                          replayState.currentStep,
+                                          _exploredCountsAtStep[_selectedCompetitorIndex]!
+                                                  .length -
+                                              1,
+                                        )]
+                                  : 0,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-                  child: ReplayControls(),
-                ),
-                const SizedBox(height: 40), // Bottom padding for scroll
-              ],
+                  // ── Trend Visualization ───────────────────────────────────
+                  if (_competitorTrends.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      child: _isSideBySide && _isBattle
+                          ? Column(
+                              children: [
+                                TrendLine(
+                                  data: _competitorTrends[0] ?? [0, 0],
+                                  color: AppTheme.accent,
+                                  currentProgress:
+                                      (_allCompetitorSteps[0]?.isEmpty ?? true)
+                                      ? 0
+                                      : math.min(
+                                          1.0,
+                                          replayState.currentStep /
+                                              (_allCompetitorSteps[0]?.length ??
+                                                  1),
+                                        ),
+                                  label:
+                                      '${_competitors[0]['name'] ?? 'P1'} Progress',
+                                  height: screenWidth < 600 ? 30 : 40,
+                                ),
+                                const SizedBox(height: 12),
+                                TrendLine(
+                                  data: _competitorTrends[1] ?? [0, 0],
+                                  color: AppTheme.error,
+                                  currentProgress:
+                                      (_allCompetitorSteps[1]?.isEmpty ?? true)
+                                      ? 0
+                                      : math.min(
+                                          1.0,
+                                          replayState.currentStep /
+                                              (_allCompetitorSteps[1]?.length ??
+                                                  1),
+                                        ),
+                                  label:
+                                      '${_competitors[1]['name'] ?? 'P2'} Progress',
+                                  height: screenWidth < 600 ? 30 : 40,
+                                ),
+                              ],
+                            )
+                          : TrendLine(
+                              data:
+                                  _competitorTrends[_selectedCompetitorIndex] ??
+                                  [0, 0],
+                              color: AppTheme.accent,
+                              currentProgress:
+                                  (_allCompetitorSteps[_selectedCompetitorIndex]
+                                          ?.isEmpty ??
+                                      true)
+                                  ? 0
+                                  : math.min(
+                                      1.0,
+                                      replayState.currentStep /
+                                          (_allCompetitorSteps[_selectedCompetitorIndex]
+                                                  ?.length ??
+                                              1),
+                                    ),
+                              label: 'Exploration Trend (Nodes vs Steps)',
+                              height: screenWidth < 600 ? 40 : 80,
+                            ),
+                    ),
+
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: screenWidth < 600 ? 16.0 : 24.0,
+                      vertical: 16.0,
+                    ),
+                    child: const ReplayControls(),
+                  ),
+                  SizedBox(height: screenWidth < 600 ? 20 : 40),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ));
+    );
   }
 
   Widget _buildMainGrid({
@@ -728,15 +849,28 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
                   exploredNodes: index == null
                       ? _fullExploredLists[0]
                       : _fullExploredLists[index],
-                  exploredCount: (index == null
-                      ? _exploredCountsAtStep[0]
-                      : _exploredCountsAtStep[index]) != null 
-                        ? (index == null ? _exploredCountsAtStep[0]! : _exploredCountsAtStep[index]!)[
-                            math.min(currentStep, (index == null ? _exploredCountsAtStep[0]! : _exploredCountsAtStep[index]!).length - 1)
-                          ]
-                        : 0,
+                  exploredCount:
+                      (index == null
+                              ? _exploredCountsAtStep[0]
+                              : _exploredCountsAtStep[index]) !=
+                          null
+                      ? (index == null
+                            ? _exploredCountsAtStep[0]!
+                            : _exploredCountsAtStep[index]!)[math.min(
+                          currentStep,
+                          (index == null
+                                      ? _exploredCountsAtStep[0]!
+                                      : _exploredCountsAtStep[index]!)
+                                  .length -
+                              1,
+                        )]
+                      : 0,
                   pathNodes: step?.path ?? [],
-                  onPointerDown: (row, col) => _showNodeExplanation(row, col, competitorIndex: index ?? 0),
+                  onPointerDown: (row, col) => _showNodeExplanation(
+                    row,
+                    col,
+                    competitorIndex: index ?? 0,
+                  ),
                 ),
               ),
             ),
@@ -746,53 +880,79 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
     );
   }
 
-  Widget _buildSingleMetrics(int currentStep, {int? index}) {
-    final steps = index == null ? _runSteps : _allCompetitorSteps[index] ?? [];
-
-    final step = steps.isEmpty || currentStep == 0
-        ? null
-        : steps[math.min(currentStep - 1, steps.length - 1)];
-
-    final exploredCounts = (index == null ? _exploredCountsAtStep[0] : _exploredCountsAtStep[index]);
-    final exploredCount = (exploredCounts != null && exploredCounts.isNotEmpty)
-        ? exploredCounts[math.min(currentStep, exploredCounts.length - 1)]
-        : 0;
-
-    return Row(
-      children: [
-        Expanded(
-          child: GlassStatCard(
-            label: index == null ? 'EXPLORED' : 'EXP',
-            value: exploredCount,
-          ),
+  Widget _buildCloseButton(BuildContext context) {
+    return IconButton(
+      onPressed: () => Navigator.of(context).pop(),
+      icon: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: GlassStatCard(
-            label: 'COST',
-            value: (step?.meta?['g'] ?? 
-                    step?.meta?['distance'] ?? 
-                    (step != null && step.path.isNotEmpty ? step.path.length - 1 : 0)).toDouble(),
-          ),
-        ),
-        if (index == null) ...[
-          const SizedBox(width: 8),
-          Expanded(
-            child: GlassStatCard(label: 'STEP', value: currentStep),
-          ),
-        ],
-      ],
+        child: const Icon(Icons.close, color: Colors.white, size: 20),
+      ),
+    ).animate().fadeIn(delay: 200.ms).scale(delay: 200.ms);
+  }
+
+  Widget _buildSingleMetrics(
+    AlgorithmStep<GridCoordinate>? step,
+    int currentStep,
+    int exploredCount, {
+    int? index,
+  }) {
+    // Calculate cost
+    final cost =
+        (step?.meta?['g'] ??
+                step?.meta?['distance'] ??
+                (step != null && step.path.isNotEmpty
+                    ? step.path.length - 1
+                    : 0))
+            .toDouble();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
+        final cardCount = index == null ? 3 : 2;
+        final spacing = 8.0;
+        final cardWidth =
+            (availableWidth - (spacing * (cardCount - 1))) / cardCount;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          alignment: WrapAlignment.start,
+          children: [
+            SizedBox(
+              width: cardWidth,
+              child: GlassStatCard(
+                label: index == null ? 'EXPLORED' : 'EXP',
+                value: exploredCount,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: GlassStatCard(label: 'COST', value: cost),
+            ),
+            if (index == null)
+              SizedBox(
+                width: cardWidth,
+                child: GlassStatCard(label: 'STEP', value: currentStep),
+              ),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildGlobalInsightCard() {
     final totalNodes = _controller.rows * _controller.columns;
-    
+
     num? pathCost;
     if (_isBattle && _selectedCompetitorIndex < _competitors.length) {
       final comp = _competitors[_selectedCompetitorIndex];
       pathCost = comp['pathCost'] as num?;
-      
+
       // Fallback for legacy runs: calculate cost from length
       if (pathCost == null) {
         final pathLength = comp['pathLength'] as num?;
@@ -802,7 +962,7 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
       }
     } else {
       pathCost = _metadata?['pathCost'] as num?;
-      
+
       if (pathCost == null) {
         final pathLength = _metadata?['pathLength'] as num?;
         if (pathLength != null) {
@@ -818,79 +978,102 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
       knownPathLength: pathCost?.toInt(),
     );
 
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isMobile = screenWidth < 600;
+
     return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: AppTheme.glassCard(radius: 20).copyWith(
-        border: Border.all(color: AppTheme.accent.withValues(alpha: 0.2)),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppTheme.accent.withValues(alpha: 0.05),
-            Colors.transparent,
-          ],
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.accent.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(Icons.psychology, color: AppTheme.accent, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'ANALYTICAL INTELLIGENCE',
-                    style: AppTheme.labelStyle.copyWith(
-                      color: AppTheme.accent,
-                      letterSpacing: 1.2,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const Icon(Icons.info_outline, color: Colors.white24, size: 16),
-            ],
-          ),
-          const SizedBox(height: 24),
-          ..._buildFormattedInsight(insight),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.03),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.verified_user, color: Colors.white24, size: 14),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Analysis generated via frontier expansion & heuristic telemetry.',
-                    style: AppTheme.bodyStyle.copyWith(
-                      fontSize: 11,
-                      color: Colors.white38,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ),
+          padding: EdgeInsets.all(isMobile ? 16 : 24),
+          decoration: AppTheme.glassCard(radius: 20).copyWith(
+            border: Border.all(color: AppTheme.accent.withValues(alpha: 0.2)),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppTheme.accent.withValues(alpha: 0.05),
+                Colors.transparent,
               ],
             ),
           ),
-        ],
-      ),
-    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, curve: Curves.easeOutCubic);
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.accent.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.psychology,
+                          color: AppTheme.accent,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'ANALYTICAL INTELLIGENCE',
+                        style: AppTheme.labelStyle.copyWith(
+                          color: AppTheme.accent,
+                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Icon(
+                    Icons.info_outline,
+                    color: Colors.white24,
+                    size: 16,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              ..._buildFormattedInsight(insight),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.05),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.verified_user,
+                      color: Colors.white24,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Analysis generated via frontier expansion & heuristic telemetry.',
+                        style: AppTheme.bodyStyle.copyWith(
+                          fontSize: 11,
+                          color: Colors.white38,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        )
+        .animate()
+        .fadeIn(duration: 400.ms)
+        .slideY(begin: 0.05, curve: Curves.easeOutCubic);
   }
 
   List<Widget> _buildFormattedInsight(String text) {
@@ -902,10 +1085,10 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
 
       final lines = section.split('\n');
       final header = lines[0].trim();
-      
+
       IconData icon;
       Color color;
-      
+
       if (header.startsWith('PERFORMANCE')) {
         icon = Icons.speed;
         color = Colors.blueAccent;
@@ -944,10 +1127,14 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              ...lines.skip(1).map((line) => Padding(
-                padding: const EdgeInsets.only(left: 22, bottom: 4),
-                child: _buildRichLine(line),
-              )),
+              ...lines
+                  .skip(1)
+                  .map(
+                    (line) => Padding(
+                      padding: const EdgeInsets.only(left: 22, bottom: 4),
+                      child: _buildRichLine(line),
+                    ),
+                  ),
             ],
           ),
         ),
@@ -959,28 +1146,35 @@ class _ReplayScreenState extends ConsumerState<ReplayScreen> {
 
   Widget _buildRichLine(String line) {
     final content = line.startsWith('• ') ? line.substring(2) : line;
-    
+
     // Simple regex-like splitting to bold numbers and percentages
     final words = content.split(' ');
     final spans = <TextSpan>[];
 
     for (final word in words) {
-      final isMetric = RegExp(r'^-?\d+(\.\d+)?%?$').hasMatch(word.replaceAll(RegExp(r'[(),]'), ''));
-      spans.add(TextSpan(
-        text: '$word ',
-        style: TextStyle(
-          color: isMetric ? Colors.white : Colors.white70,
-          fontWeight: isMetric ? FontWeight.bold : FontWeight.normal,
-          fontSize: 14,
+      final isMetric = RegExp(
+        r'^-?\d+(\.\d+)?%?$',
+      ).hasMatch(word.replaceAll(RegExp(r'[(),]'), ''));
+      spans.add(
+        TextSpan(
+          text: '$word ',
+          style: TextStyle(
+            color: isMetric ? Colors.white : Colors.white70,
+            fontWeight: isMetric ? FontWeight.bold : FontWeight.normal,
+            fontSize: 14,
+          ),
         ),
-      ));
+      );
     }
 
     return RichText(
       text: TextSpan(
         children: [
-          if (line.startsWith('• ')) 
-            const TextSpan(text: '• ', style: TextStyle(color: Colors.white24)),
+          if (line.startsWith('• '))
+            const TextSpan(
+              text: '• ',
+              style: TextStyle(color: Colors.white24),
+            ),
           ...spans,
         ],
         style: AppTheme.bodyStyle,

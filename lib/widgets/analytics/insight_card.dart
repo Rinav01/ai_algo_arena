@@ -22,7 +22,7 @@ class InsightCard extends StatelessWidget {
         onTap?.call();
       },
       child: PremiumGlassContainer(
-        width: 300,
+        width: MediaQuery.sizeOf(context).width * 0.75 > 350 ? 350 : MediaQuery.sizeOf(context).width * 0.75,
         radius: 24,
         margin: const EdgeInsets.only(right: 16),
         padding: EdgeInsets.zero,

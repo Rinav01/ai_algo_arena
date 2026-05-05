@@ -292,11 +292,13 @@ class _GridPainter extends CustomPainter {
     for (int r = startRow; r <= endRow; r++) {
       for (int c = startCol; c <= endCol; c++) {
         final node = controller.grid[r][c];
+        final hGap = cellWidth * 0.05;
+        final vGap = cellHeight * 0.05;
         final rect = Rect.fromLTWH(
-          c * cellWidth + 0.5,
-          r * cellHeight + 0.5,
-          cellWidth - 1,
-          cellHeight - 1,
+          c * cellWidth + hGap,
+          r * cellHeight + vGap,
+          cellWidth - (hGap * 2),
+          cellHeight - (vGap * 2),
         );
 
         if (showHeuristics && node.type == NodeType.empty) {
@@ -381,12 +383,10 @@ class _GridPainter extends CustomPainter {
 
     final paint = Paint()
       ..color = accentColor.withValues(alpha: 0.4)
-      ..strokeWidth = math.min(cellWidth, cellHeight) * 0.8
-      ..strokeCap = StrokeCap.square;
+      ..style = PaintingStyle.fill;
 
     final count = exploredCount ?? explored.length;
     int i = 0;
-    final points = <Offset>[];
     for (final state in explored) {
       if (i >= count) break;
       
@@ -396,9 +396,9 @@ class _GridPainter extends CustomPainter {
       }
 
       // Viewport culling
-      final x = state.column * cellWidth + cellWidth / 2;
-      final y = state.row * cellHeight + cellHeight / 2;
-      if (!viewport.contains(Offset(x, y))) {
+      final x = state.column * cellWidth;
+      final y = state.row * cellHeight;
+      if (!viewport.overlaps(Rect.fromLTWH(x, y, cellWidth, cellHeight))) {
         i++;
         continue;
       }
@@ -408,12 +408,16 @@ class _GridPainter extends CustomPainter {
         continue;
       }
 
-      points.add(Offset(x, y));
+      canvas.drawRect(
+        Rect.fromLTWH(
+          state.column * cellWidth,
+          state.row * cellHeight,
+          cellWidth,
+          cellHeight,
+        ),
+        paint,
+      );
       i++;
-    }
-    
-    if (points.isNotEmpty) {
-      canvas.drawPoints(ui.PointMode.points, points, paint);
     }
   }
 
@@ -446,11 +450,14 @@ class _GridPainter extends CustomPainter {
         continue;
       }
 
+      final horizontalOffset = cellWidth * 0.15;
+      final verticalOffset = cellHeight * 0.15;
+
       final rect = Rect.fromLTWH(
-        state.column * cellWidth + 1.5,
-        state.row * cellHeight + 1.5,
-        cellWidth - 3,
-        cellHeight - 3,
+        state.column * cellWidth + horizontalOffset,
+        state.row * cellHeight + verticalOffset,
+        cellWidth - (horizontalOffset * 2),
+        cellHeight - (verticalOffset * 2),
       );
       path.addRRect(RRect.fromRectAndRadius(rect, const Radius.circular(4)));
       i++;
@@ -488,7 +495,7 @@ class _GridPainter extends CustomPainter {
     );
 
     canvas.drawCircle(center, cellWidth / 3, pulsePaint);
-    canvas.drawCircle(center, 2.0, paint);
+    canvas.drawCircle(center, (cellWidth / 8).clamp(1.0, 4.0), paint);
   }
 
   @override

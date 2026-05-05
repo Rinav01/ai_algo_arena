@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBZxMTPxMlPIEBoG052XKeJNBMpDWTzvlA',
-    appId: '1:492670365608:android:deedfe642f3a260609f79d',
+    appId: '1:492670365608:android:32ca66e102dbc7a609f79d',
     messagingSenderId: '492670365608',
     projectId: 'ai-algo-arena',
     storageBucket: 'ai-algo-arena.firebasestorage.app',

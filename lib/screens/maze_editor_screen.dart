@@ -179,17 +179,22 @@ class _MazeEditorScreenState extends State<MazeEditorScreen> {
   }
 
   Widget _buildGrid() {
-    return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: 600.0),
-        child: AspectRatio(
-          aspectRatio: 1.0,
-          child: GridVisualizerCanvas(
-            controller: _controller,
-            isInteractive: true,
+    return Builder(
+      builder: (context) {
+        final screenWidth = MediaQuery.sizeOf(context).width;
+        return Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: (screenWidth - 32).clamp(200.0, 600.0)),
+            child: AspectRatio(
+              aspectRatio: 1.0,
+              child: GridVisualizerCanvas(
+                controller: _controller,
+                isInteractive: true,
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      }
     );
   }
 
@@ -640,16 +645,22 @@ class _MazeSolverScreenState extends State<_MazeSolverScreen> {
   }
 
   Widget _buildSolverGrid() {
-    return Container(
-      constraints: BoxConstraints(maxWidth: 320.0, maxHeight: 320.0),
-      child: GridVisualizerCanvas(
-        controller: GridController(
-          rows: widget.problem.grid.length,
-          columns: widget.problem.grid[0].length,
-        )..loadFromGrid(widget.problem.grid),
-        executor: _executor,
-        isInteractive: false,
-      ),
+    return Builder(
+      builder: (context) {
+        final screenWidth = MediaQuery.sizeOf(context).width;
+        final size = (screenWidth - 64).clamp(200.0, 320.0);
+        return Container(
+          constraints: BoxConstraints(maxWidth: size, maxHeight: size),
+          child: GridVisualizerCanvas(
+            controller: GridController(
+              rows: widget.problem.grid.length,
+              columns: widget.problem.grid[0].length,
+            )..loadFromGrid(widget.problem.grid),
+            executor: _executor,
+            isInteractive: false,
+          ),
+        );
+      }
     );
   }
 

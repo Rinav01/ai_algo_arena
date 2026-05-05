@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'api_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:algo_arena/services/api_service.dart';
 
 /// Service to handle Firebase Auth token management and session authentication.
 class AuthService {
@@ -21,7 +22,7 @@ class AuthService {
       }
       return currentUser;
     } catch (e) {
-      print('Firebase Sign-In Error: $e');
+      debugPrint('Firebase Sign-In Error: $e');
       return null;
     }
   }
@@ -35,7 +36,7 @@ class AuthService {
         return await user.getIdToken();
       }
     } catch (e) {
-      print('Get Firebase Token Error: $e');
+      debugPrint('Get Firebase Token Error: $e');
     }
     return null;
   }
@@ -45,7 +46,7 @@ class AuthService {
     final actionCodeSettings = ActionCodeSettings(
       url: 'https://ai-algo-arena.web.app/login', // Dynamic or fallback URL
       handleCodeInApp: true,
-      androidPackageName: 'com.example.algo_arena',
+      androidPackageName: 'com.vaishrinav.aialgoarena',
       androidInstallApp: true,
       androidMinimumVersion: '21',
     );
@@ -80,7 +81,7 @@ class AuthService {
         return userCredential.user;
       }
     } catch (e) {
-      print("Error signing in with email link: $e");
+      debugPrint("Error signing in with email link: $e");
     }
     return null;
   }

@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/performance_monitor.dart';
+import 'package:algo_arena/services/performance_monitor.dart';
 
 final performanceMonitorProvider = ChangeNotifierProvider<PerformanceMonitor>((ref) {
   final monitor = PerformanceMonitor();

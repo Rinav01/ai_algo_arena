@@ -22,6 +22,8 @@ import 'package:algo_arena/services/api_service.dart';
 import 'package:algo_arena/state/api_provider.dart';
 import 'package:algo_arena/services/run_optimizer.dart';
 import 'package:algo_arena/widgets/feature_tour.dart';
+import 'package:algo_arena/widgets/trend_line.dart';
+import 'dart:math' as math;
 
 class AlgorithmBattleScreen extends ConsumerStatefulWidget {
   final List<List<GridNode>>? initialGrid;
@@ -475,8 +477,9 @@ class _AlgorithmBattleScreenState extends ConsumerState<AlgorithmBattleScreen> {
                   ListenableBuilder(
                     listenable: _controller,
                     builder: (context, _) {
-                      if (_controller.selectedTool != PaintTool.weight)
+                      if (_controller.selectedTool != PaintTool.weight) {
                         return const SizedBox.shrink();
+                      }
                       return Animate(
                         effects: const [
                           FadeEffect(),
@@ -897,8 +900,9 @@ class _BattleAnalyticsSheet extends StatelessWidget {
         MediaQuery.of(context).size.width * 0.05,
         40,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             width: 40,
@@ -940,6 +944,40 @@ class _BattleAnalyticsSheet extends StatelessWidget {
             result.algorithm1.pathCost.toInt().toString(),
             result.algorithm2.pathCost.toInt().toString(),
             result.algorithm1.pathCost <= result.algorithm2.pathCost,
+          ),
+          const SizedBox(height: 32),
+          Text(
+            'EXPLORATION TREND',
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(letterSpacing: 2),
+          ),
+          const SizedBox(height: 12),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 1500),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, _) {
+              return Column(
+                children: [
+                  TrendLine(
+                    data: _calculateTrend(result.algorithm1),
+                    color: AppTheme.accent,
+                    currentProgress: value,
+                    label: result.algorithm1.algorithmName,
+                    height: 40,
+                  ),
+                  const SizedBox(height: 16),
+                  TrendLine(
+                    data: _calculateTrend(result.algorithm2),
+                    color: AppTheme.error,
+                    currentProgress: value,
+                    label: result.algorithm2.algorithmName,
+                    height: 40,
+                  ),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 32),
           Text(
@@ -1001,7 +1039,22 @@ class _BattleAnalyticsSheet extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
+  }
+
+  List<double> _calculateTrend(AlgorithmMetrics metrics) {
+    if (metrics.history.isEmpty) return [0, 0];
+    List<double> trend = [];
+    int runningTotal = 0;
+    final sampleRate = math.max(1, (metrics.history.length / 100).ceil());
+    for (int i = 0; i < metrics.history.length; i++) {
+      runningTotal += metrics.history[i].newlyExplored.length;
+      if (i % sampleRate == 0 || i == metrics.history.length - 1) {
+        trend.add(runningTotal.toDouble());
+      }
+    }
+    return trend.isEmpty ? [0, 0] : trend;
   }
 
   Widget _buildMetricRow(

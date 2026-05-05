@@ -313,7 +313,7 @@ class _GeneralTab extends ConsumerWidget {
 
                       // Carousel
                       SizedBox(
-                        height: 220,
+                        height: (MediaQuery.sizeOf(context).height * 0.3).clamp(200.0, 300.0),
                         child: filteredInsights.isEmpty
                             ? Center(
                                 child: Text(
@@ -357,7 +357,9 @@ class _GeneralTab extends ConsumerWidget {
                         data: trendsRes.data,
                         metric: filters.metric ?? 'nodes',
                       ),
-                      loading: () => const _SkeletonPlaceholder(height: 350),
+                      loading: () => _SkeletonPlaceholder(
+                        height: (MediaQuery.sizeOf(context).height * 0.4).clamp(300.0, 450.0),
+                      ),
                       error: (err, stack) => const SizedBox.shrink(),
                     ),
                     const SizedBox(height: 32),
@@ -369,7 +371,9 @@ class _GeneralTab extends ConsumerWidget {
                       key: distributionKey,
                       child: distributionAsync.when(
                         data: (distRes) => DistributionPieChart(data: distRes.data),
-                        loading: () => const _SkeletonPlaceholder(height: 300),
+                        loading: () => _SkeletonPlaceholder(
+                          height: (MediaQuery.sizeOf(context).height * 0.35).clamp(250.0, 400.0),
+                        ),
                         error: (err, stack) => const SizedBox.shrink(),
                       ),
                     ),

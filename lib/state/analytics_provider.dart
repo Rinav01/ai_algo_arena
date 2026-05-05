@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:algo_arena/state/api_provider.dart';
-import '../models/analytics_models.dart';
+import 'package:algo_arena/models/analytics_models.dart';
 
 // ─── Filters State ───────────────────────────────────────────────────────────
 

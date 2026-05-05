@@ -6,6 +6,7 @@ class TrendLine extends StatelessWidget {
   final Color color;
   final double currentProgress; // 0.0 to 1.0
   final String? label;
+  final double height;
 
   const TrendLine({
     super.key,
@@ -13,6 +14,7 @@ class TrendLine extends StatelessWidget {
     required this.color,
     required this.currentProgress,
     this.label,
+    this.height = 30,
   });
 
   @override
@@ -34,7 +36,7 @@ class TrendLine extends StatelessWidget {
             ),
           ),
         CustomPaint(
-          size: const Size(double.infinity, 30),
+          size: Size(double.infinity, height),
           painter: _TrendLinePainter(
             data: data,
             color: color,

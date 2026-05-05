@@ -59,7 +59,9 @@ class AnalyticsFiltersBar extends ConsumerWidget {
                         onSurface: Colors.white,
                         secondary: AppTheme.accent,
                       ),
-                      dialogBackgroundColor: AppTheme.background,
+                      dialogTheme: const DialogThemeData(
+                        backgroundColor: AppTheme.background,
+                      ),
                       textButtonTheme: TextButtonThemeData(
                         style: TextButton.styleFrom(foregroundColor: AppTheme.accentLight),
                       ),

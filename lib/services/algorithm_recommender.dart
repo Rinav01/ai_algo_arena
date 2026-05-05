@@ -1,4 +1,4 @@
-import '../core/grid_problem.dart';
+import 'package:algo_arena/core/grid_problem.dart';
 
 enum RecommendedAlgorithm {
   bfs('BFS', 'Breadth-First Search - Unrestricted, explores evenly'),

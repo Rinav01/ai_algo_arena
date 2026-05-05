@@ -92,7 +92,7 @@ class _ComplexityScatterPlot extends StatelessWidget {
     };
 
     return Container(
-      height: 400,
+      height: (MediaQuery.sizeOf(context).height * 0.45).clamp(300.0, 500.0),
       padding: const EdgeInsets.all(20),
       decoration: AppTheme.glassCard(radius: 20),
       child: Column(

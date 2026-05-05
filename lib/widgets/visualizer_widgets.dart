@@ -37,35 +37,43 @@ class GlassStatCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      label,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppTheme.textSecondary,
-                        letterSpacing: 1.2,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        label,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppTheme.textSecondary,
+                          letterSpacing: 1.2,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 6),
-                    value is int
-                        ? AnimatedNumberDisplay(
-                            value: value as int,
-                            duration: const Duration(milliseconds: 600),
-                            curve: Curves.easeOutCubic,
-                            textStyle: TextStyle(
-                              fontSize: 22.0,
-                              fontWeight: FontWeight.w800,
-                              color: AppTheme.onBackground,
-                              fontFamily: 'Inter',
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: value is int
+                          ? AnimatedNumberDisplay(
+                              value: value as int,
+                              duration: const Duration(milliseconds: 600),
+                              curve: Curves.easeOutCubic,
+                              textStyle: TextStyle(
+                                fontSize: 22.0,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.onBackground,
+                                fontFamily: 'Inter',
+                              ),
+                            )
+                          : Text(
+                              value.toString(),
+                              style: TextStyle(
+                                fontSize: 18.0,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.onBackground,
+                                fontFamily: 'Inter',
+                              ),
                             ),
-                          )
-                        : Text(
-                            value.toString(),
-                            style: TextStyle(
-                              fontSize: 18.0,
-                              fontWeight: FontWeight.w800,
-                              color: AppTheme.onBackground,
-                              fontFamily: 'Inter',
-                            ),
-                          ),
+                    ),
                   ],
                 ),
               ),
@@ -359,58 +367,70 @@ class VisualizerControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Row 1: primary actions
-        Row(
-          children: [
-            Expanded(
-              flex: 4,
-              child: _CtaButton(
-                icon: Icons.play_arrow_rounded,
-                label: 'Solve',
-                enabled: !isSolving,
-                primary: true,
-                onTap: onSolve,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 4,
-              child: _GhostBtn(
-                icon: isSolving
-                    ? Icons.pause_rounded
-                    : Icons.play_arrow_rounded,
-                label: isSolving ? 'Pause' : 'Resume',
-                enabled: stepCount > 0,
-                onTap: onPauseResume,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              flex: 3,
-              child: _GhostBtn(
-                icon: Icons.delete_sweep_rounded,
-                label: 'Clear',
-                enabled: true,
-                onTap: onClear,
-                dangerColor: AppTheme.error,
-              ),
-            ),
-          ],
-        ),
-        if (onVersus != null) ...[
-          const SizedBox(height: 12),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useVertical = constraints.maxWidth < 320;
+
+        final actions = [
           _CtaButton(
-            icon: Icons.compare_arrows_rounded,
-            label: 'BATTLE ARENA — COMPARE ALGORITHMS',
-            enabled: true,
+            icon: Icons.play_arrow_rounded,
+            label: 'Solve',
+            enabled: !isSolving,
             primary: true,
-            accentColor: AppTheme.warning,
-            onTap: onVersus!,
+            onTap: onSolve,
           ),
-        ],
-      ],
+          _GhostBtn(
+            icon: isSolving ? Icons.pause_rounded : Icons.play_arrow_rounded,
+            label: isSolving ? 'Pause' : 'Resume',
+            enabled: stepCount > 0,
+            onTap: onPauseResume,
+          ),
+          _GhostBtn(
+            icon: Icons.delete_sweep_rounded,
+            label: 'Clear',
+            enabled: true,
+            onTap: onClear,
+            dangerColor: AppTheme.error,
+          ),
+        ];
+
+        return Column(
+          children: [
+            if (useVertical)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  actions[0],
+                  const SizedBox(height: 8),
+                  actions[1],
+                  const SizedBox(height: 8),
+                  actions[2],
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(flex: 4, child: actions[0]),
+                  const SizedBox(width: 8),
+                  Expanded(flex: 4, child: actions[1]),
+                  const SizedBox(width: 8),
+                  Expanded(flex: 3, child: actions[2]),
+                ],
+              ),
+            if (onVersus != null) ...[
+              const SizedBox(height: 12),
+              _CtaButton(
+                icon: Icons.compare_arrows_rounded,
+                label: 'BATTLE ARENA — COMPARE ALGORITHMS',
+                enabled: true,
+                primary: true,
+                accentColor: AppTheme.warning,
+                onTap: onVersus!,
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }

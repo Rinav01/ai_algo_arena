@@ -29,48 +29,82 @@ class ReplayControls extends ConsumerWidget {
             inactiveColor: AppTheme.surfaceHighest,
           ),
           const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Speed Control
-              _SpeedSelector(
-                currentSpeed: state.speed,
-                onSpeedChanged: notifier.setSpeed,
-              ),
+          Builder(
+            builder: (context) {
+              final isNarrow = MediaQuery.sizeOf(context).width < 480;
+              
+              if (isNarrow) {
+                return Column(
+                  children: [
+                    // Main Playback Buttons (Center)
+                    _buildPlaybackRow(state, notifier),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _SpeedSelector(
+                          currentSpeed: state.speed,
+                          onSpeedChanged: notifier.setSpeed,
+                        ),
+                        _HeuristicsToggle(
+                          isActive: state.showHeuristics,
+                          onToggle: notifier.toggleHeuristics,
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }
 
-              // Main Playback Buttons
-              Row(
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _ReplayIconButton(
-                    icon: Icons.replay_rounded,
-                    onTap: notifier.reset,
+                  // Speed Control
+                  _SpeedSelector(
+                    currentSpeed: state.speed,
+                    onSpeedChanged: notifier.setSpeed,
                   ),
-                  const SizedBox(width: 15),
-                  _PlayPauseButton(
-                    isPlaying: state.isPlaying,
-                    onTap: notifier.togglePlay,
-                  ),
-                  const SizedBox(width: 15),
-                  _ReplayIconButton(
-                    icon: Icons.skip_next_rounded,
-                    onTap: () {
-                      if (state.currentStep < state.totalSteps) {
-                        notifier.seek(state.currentStep + 1);
-                      }
-                    },
+
+                  // Main Playback Buttons
+                  _buildPlaybackRow(state, notifier),
+
+                  // Heuristics Toggle
+                  _HeuristicsToggle(
+                    isActive: state.showHeuristics,
+                    onToggle: notifier.toggleHeuristics,
                   ),
                 ],
-              ),
-
-              // Heuristics Toggle
-              _HeuristicsToggle(
-                isActive: state.showHeuristics,
-                onToggle: notifier.toggleHeuristics,
-              ),
-            ],
+              );
+            },
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPlaybackRow(dynamic state, dynamic notifier) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _ReplayIconButton(
+          icon: Icons.replay_rounded,
+          onTap: notifier.reset,
+        ),
+        const SizedBox(width: 15),
+        _PlayPauseButton(
+          isPlaying: state.isPlaying,
+          onTap: notifier.togglePlay,
+        ),
+        const SizedBox(width: 15),
+        _ReplayIconButton(
+          icon: Icons.skip_next_rounded,
+          onTap: () {
+            if (state.currentStep < state.totalSteps) {
+              notifier.seek(state.currentStep + 1);
+            }
+          },
+        ),
+      ],
     );
   }
 }

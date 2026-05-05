@@ -590,28 +590,34 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
             color: AppTheme.surfaceHighest.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                icon: const Icon(Icons.remove_rounded, size: 16),
-                onPressed: value > 1 ? () => onChanged(value - 1) : null,
-              ),
-              Text(
-                '$value',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-              IconButton(
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                icon: const Icon(Icons.add_rounded, size: 16),
-                onPressed: value < 15 ? () => onChanged(value + 1) : null,
-              ),
-            ],
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  icon: const Icon(Icons.remove_rounded, size: 16),
+                  onPressed: value > 1 ? () => onChanged(value - 1) : null,
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: Text(
+                    '$value',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                ),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  icon: const Icon(Icons.add_rounded, size: 16),
+                  onPressed: value < 15 ? () => onChanged(value + 1) : null,
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -624,7 +630,7 @@ class _WaterJugVisualizerScreenState extends ConsumerState<WaterJugVisualizerScr
     final isPouringBtoA = currentOp.contains('Pour B ➔ A') || currentOp.contains('B to A');
 
     return Container(
-      height: 340,
+      height: (MediaQuery.sizeOf(context).height * 0.45).clamp(300.0, 450.0),
       width: double.infinity,
       decoration: BoxDecoration(
         color: AppTheme.surfaceVariant.withValues(alpha: 0.05),

@@ -215,7 +215,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(72, 40, 20, 16),
+              padding: const EdgeInsetsDirectional.fromSTEB(
+                20,
+                40,
+                20,
+                16,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -272,50 +277,49 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       key: _summaryKey,
       child: Row(
         children: [
-          _buildSummaryItem(context, 'Total Runs', totalRuns.toString()),
-          const SizedBox(width: 12),
-          _buildSummaryItem(context, 'Avg. Steps', avgSteps.toStringAsFixed(0)),
-          const SizedBox(width: 12),
-          _buildSummaryItem(context, 'Most Used', mostUsed),
+          Expanded(child: _buildSummaryItem(context, 'Total Runs', totalRuns.toString())),
+          const SizedBox(width: 8),
+          Expanded(child: _buildSummaryItem(context, 'Avg. Steps', avgSteps.toStringAsFixed(0))),
+          const SizedBox(width: 8),
+          Expanded(child: _buildSummaryItem(context, 'Most Used', mostUsed)),
         ],
       ),
     );
   }
 
   Widget _buildSummaryItem(BuildContext context, String label, String value) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.03),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label.toUpperCase(),
-              style: TextStyle(
-                color: AppTheme.accentLight.withValues(alpha: 0.6),
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1,
-              ),
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              color: AppTheme.accentLight.withValues(alpha: 0.6),
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
             ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
             ),
-          ],
-        ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
@@ -512,7 +516,11 @@ class _RunCard extends ConsumerWidget {
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () => Navigator.pushNamed(context, '/replay', arguments: run),
+          onTap: () {
+            debugPrint('HistoryScreen: Tapped card for run ${run['_id'] ?? run['id']}');
+            debugPrint('HistoryScreen: Arguments: $run');
+            Navigator.pushNamed(context, '/replay', arguments: run);
+          },
           child: IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -593,13 +601,10 @@ class _RunCard extends ConsumerWidget {
                           ),
                         Row(
                           children: [
-                            _buildMetric(context, Icons.grid_view_rounded, '$steps', 'Nodes'),
-                            const SizedBox(width: 20),
-                            _buildMetric(context, Icons.timer_outlined, '${duration}ms', 'Duration'),
-                            if (density != null) ...[
-                              const SizedBox(width: 20),
-                              _buildMetric(context, Icons.grain_rounded, '${(density * 100).toInt()}%', 'Density'),
-                            ],
+                            Expanded(child: _buildMetric(context, Icons.grid_view_rounded, '$steps', 'Nodes')),
+                            Expanded(child: _buildMetric(context, Icons.timer_outlined, '${duration}ms', 'Duration')),
+                            if (density != null)
+                              Expanded(child: _buildMetric(context, Icons.grain_rounded, '${(density * 100).toInt()}%', 'Density')),
                           ],
                         ),
                       ],
@@ -618,7 +623,10 @@ class _RunCard extends ConsumerWidget {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.play_arrow_rounded, color: AppTheme.accentLight),
-                        onPressed: () => Navigator.pushNamed(context, '/replay', arguments: run),
+                        onPressed: () {
+                          debugPrint('HistoryScreen: Pressed play button for run ${run['_id'] ?? run['id']}');
+                          Navigator.pushNamed(context, '/replay', arguments: run);
+                        },
                       ),
                       IconButton(
                         icon: Icon(Icons.delete_outline_rounded, color: AppTheme.error.withValues(alpha: 0.5), size: 20),

@@ -131,7 +131,7 @@ class _InteractiveProblemScreenState extends State<InteractiveProblemScreen> {
                             const SizedBox(height: 16),
                             Container(
                               width: double.infinity,
-                              height: 300.0,
+                              height: (MediaQuery.sizeOf(context).height * 0.35).clamp(200.0, 400.0),
                               decoration: BoxDecoration(
                                 color: Colors.black.withValues(alpha: 0.3),
                                 borderRadius: BorderRadius.circular(12.0),

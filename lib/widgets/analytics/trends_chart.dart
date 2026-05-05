@@ -15,7 +15,7 @@ class TrendsLineChart extends StatelessWidget {
     if (data.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      height: 350,
+      height: (MediaQuery.sizeOf(context).height * 0.4).clamp(300.0, 450.0),
       padding: const EdgeInsets.all(20),
       decoration: AppTheme.glassCard(radius: 20),
       child: Column(

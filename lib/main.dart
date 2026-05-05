@@ -1,27 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:algo_arena/firebase_options.dart';
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'core/app_theme.dart';
-import 'screens/home_screen.dart';
-import 'screens/splash_screen.dart';
-import 'screens/pathfinding_visualizer_screen.dart';
-import 'screens/algorithm_battle_screen.dart';
-import 'screens/eightpuzzle_visualizer_screen.dart';
-import 'screens/nqueens_visualizer_screen.dart';
-import 'screens/settings_screen.dart';
-import 'screens/replay_screen.dart';
-import 'screens/history_screen.dart';
-import 'screens/analytics_screen.dart';
-import 'screens/water_jug_visualizer_screen.dart';
-import 'screens/auth_screen.dart';
-import 'services/stats_service.dart';
+import 'package:algo_arena/core/app_theme.dart';
+import 'package:algo_arena/screens/home_screen.dart';
+import 'package:algo_arena/screens/splash_screen.dart';
+import 'package:algo_arena/screens/pathfinding_visualizer_screen.dart';
+import 'package:algo_arena/screens/algorithm_battle_screen.dart';
+import 'package:algo_arena/screens/eightpuzzle_visualizer_screen.dart';
+import 'package:algo_arena/screens/nqueens_visualizer_screen.dart';
+import 'package:algo_arena/screens/settings_screen.dart';
+import 'package:algo_arena/screens/replay_screen.dart';
+import 'package:algo_arena/screens/history_screen.dart';
+import 'package:algo_arena/screens/analytics_screen.dart';
+import 'package:algo_arena/screens/water_jug_visualizer_screen.dart';
+import 'package:algo_arena/screens/auth_screen.dart';
+import 'package:algo_arena/services/stats_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'services/api_service.dart';
+import 'package:algo_arena/services/api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -121,7 +121,6 @@ class AlgoArenaApp extends StatelessWidget {
         '/eightpuzzle': (_) => const EightPuzzleVisualizerScreen(),
         '/nqueens': (_) => const NQueensVisualizerScreen(),
         '/settings': (_) => const SettingsScreen(),
-        '/replay': (_) => const ReplayScreen(),
         '/history': (_) => const HistoryScreen(),
         '/analytics': (_) => const AnalyticsScreen(),
         '/waterjug': (_) => const WaterJugVisualizerScreen(),
@@ -130,6 +129,11 @@ class AlgoArenaApp extends StatelessWidget {
       // Named routes that need parameters use onGenerateRoute
       onGenerateRoute: (settings) {
         switch (settings.name) {
+          case '/replay':
+            return MaterialPageRoute(
+              settings: settings,
+              builder: (_) => const ReplayScreen(),
+            );
           case '/bfs':
             return MaterialPageRoute(
               builder: (_) => const PathfindingVisualizerScreen(

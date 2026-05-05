@@ -89,7 +89,7 @@ class PerformanceDetailsModal extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
                   SizedBox(
-                    height: 300,
+                    height: (MediaQuery.sizeOf(context).height * 0.35).clamp(250.0, 400.0),
                     child: LineChart(
                       LineChartData(
                         gridData: FlGridData(

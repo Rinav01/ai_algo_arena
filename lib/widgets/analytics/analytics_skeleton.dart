@@ -23,9 +23,9 @@ class AnalyticsSkeleton extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 32),
-          _SkeletonBox(width: double.infinity, height: 300), // Bar Chart
+          _SkeletonBox(width: double.infinity, height: MediaQuery.sizeOf(context).height * 0.35), // Bar Chart
           const SizedBox(height: 32),
-          _SkeletonBox(width: double.infinity, height: 350), // Line Chart
+          _SkeletonBox(width: double.infinity, height: MediaQuery.sizeOf(context).height * 0.4), // Line Chart
         ],
       ),
     );
@@ -57,8 +57,8 @@ class _SkeletonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 280,
-      height: 160,
+      width: (MediaQuery.sizeOf(context).width * 0.75).clamp(200.0, 350.0),
+      height: (MediaQuery.sizeOf(context).height * 0.3).clamp(200.0, 300.0),
       margin: const EdgeInsets.only(right: 16),
       decoration: BoxDecoration(
         color: AppTheme.surfaceVariant.withValues(alpha: 0.5),

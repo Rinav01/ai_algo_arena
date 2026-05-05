@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'auth_service.dart';
+import 'package:algo_arena/services/auth_service.dart';
 
 /// Centralized API service for handling algorithm run data and analysis.
 class ApiService {

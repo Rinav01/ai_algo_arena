@@ -92,7 +92,7 @@ class _WinRatePieChartState extends State<_WinRatePieChart> {
     final total = widget.data.fold<int>(0, (sum, item) => sum + item.count);
 
     return Container(
-      height: 300,
+      height: (MediaQuery.sizeOf(context).height * 0.35).clamp(250.0, 400.0),
       padding: const EdgeInsets.all(20),
       decoration: AppTheme.glassCard(radius: 20),
       child: Row(
@@ -200,7 +200,7 @@ class _MarginOfVictoryBarChart extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          height: 300,
+          height: (MediaQuery.sizeOf(context).height * 0.35).clamp(250.0, 400.0),
           padding: const EdgeInsets.all(20),
           decoration: AppTheme.glassCard(radius: 20),
           child: BarChart(
